@@ -35,7 +35,7 @@ export default function RootLayout({
       className={`${outfit.variable} ${syne.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">
+      <body className="antialiased">
         <ThemeProvider>
           <TooltipProvider>
             <AppProvider>

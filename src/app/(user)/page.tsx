@@ -11,6 +11,8 @@ import { LocalStorage } from '@/mock-db/storage';
 import type { Product, Course, CareGuide } from '@/types';
 import { formatPrice } from '@/constants/pricing';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/store/auth-store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const fadeIn = {
@@ -522,6 +524,17 @@ function FAQSection() {
 
 // ========== MAIN HOME PAGE ==========
 export default function HomePage() {
+  const { user } = useAuthStore();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (user?.role === 'admin') {
+      router.replace('/admin');
+    }
+  }, [user, router]);
+
+  if (user?.role === 'admin') return null;
+
   return (
     <>
       <HeroSection />

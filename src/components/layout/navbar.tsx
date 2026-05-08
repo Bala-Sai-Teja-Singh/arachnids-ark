@@ -42,9 +42,9 @@ export function Navbar() {
 
   return (
     <motion.header
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      className="sticky top-0 z-50 w-full bg-background border-b border-border"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="sticky top-0 z-[100] w-full bg-background/80 backdrop-blur-md border-b border-border"
     >
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         {/* Logo */}
