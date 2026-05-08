@@ -26,7 +26,7 @@ export function AdminHeader() {
   }, [user, loadNotifications]);
 
   return (
-    <header className="h-16 flex items-center justify-between px-4 border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-[100]">
+    <header className="h-16 flex items-center justify-between px-4 border-b border-border bg-background/80 backdrop-blur-md fixed top-0 left-0 right-0 z-40 lg:left-64">
       <div className="flex items-center gap-4">
         {/* Mobile Sidebar Toggle */}
         <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>

@@ -42,7 +42,7 @@ export function Navbar() {
 
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-[100] w-full bg-background/80 backdrop-blur-md border-b border-border transition-all"
+      className="fixed top-0 left-0 right-0 z-40 w-full bg-background/80 backdrop-blur-md border-b border-border transition-all"
     >
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         {/* Logo */}
