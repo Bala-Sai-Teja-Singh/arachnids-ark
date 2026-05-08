@@ -321,31 +321,41 @@ export default function AdminProductsPage() {
                   </div>
                 </div>
 
-                <div className="flex gap-2 pt-2">
+                <div className="flex flex-wrap gap-2 pt-2">
                   <Button
                     variant="outline"
                     className="flex-1 h-9 gap-2 text-xs border-border"
-                    onClick={() => setToggleId(product.id)}
+                    onClick={() => { setToggleId(product.id); setToggleType('visibility'); }}
                   >
-                    {product.available !== false ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                    {product.available !== false ? 'Hide' : 'Show'}
+                    {product.isVisible !== false ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                    {product.isVisible !== false ? 'Hide' : 'Show'}
                   </Button>
                   <Button
                     variant="outline"
-                    size="icon"
-                    className="h-9 w-9 text-muted-foreground border-border"
-                    onClick={() => handleOpenEdit(product)}
+                    className="flex-1 h-9 gap-2 text-xs border-border"
+                    onClick={() => { setToggleId(product.id); setToggleType('availability'); }}
                   >
-                    <Pencil className="h-4 w-4" />
+                    <Package className="h-4 w-4" />
+                    {product.available !== false ? 'Disable' : 'Enable'}
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-9 w-9 text-muted-foreground border-border hover:text-red-400"
-                    onClick={() => setDeleteId(product.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex gap-2 w-full">
+                    <Button
+                      variant="outline"
+                      className="flex-1 h-9 gap-2 text-xs text-muted-foreground border-border"
+                      onClick={() => handleOpenEdit(product)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1 h-9 gap-2 text-xs text-muted-foreground border-border hover:text-red-400 hover:bg-red-400/5"
+                      onClick={() => setDeleteId(product.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Delete
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))
