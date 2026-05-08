@@ -45,9 +45,8 @@ export default function NotificationsPage() {
           {notifications.map((notif, i) => (
             <motion.div key={notif.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}>
               <Card
-                className={`border-border border-l-2 ${typeColors[notif.type]} cursor-pointer transition-colors ${
-                  !notif.read ? 'bg-card' : 'bg-card/50 opacity-70'
-                }`}
+                className={`border-border border-l-2 ${typeColors[notif.type as keyof typeof typeColors]} cursor-pointer transition-colors ${!notif.read ? 'bg-card' : 'bg-card/50 opacity-70'
+                  }`}
                 onClick={() => markAsRead(notif.id)}
               >
                 <CardContent className="p-4 flex items-start gap-3">

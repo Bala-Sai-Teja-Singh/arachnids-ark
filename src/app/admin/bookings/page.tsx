@@ -29,36 +29,36 @@ export default function AdminBookingsPage() {
   const updateStatus = (id: string, status: BookingStatus, userId: string) => {
     LocalStorage.update<ConsultationBooking>('bookings', id, { status });
     setBookings(prev => prev.map(b => b.id === id ? { ...b, status } : b));
-    
+
     addNotification({
       userId,
       title: 'Booking Status Updated',
       message: `Your consultation booking status has been updated to ${status.replace('_', ' ')}`,
       type: 'info'
     });
-    
+
     toast.success('Status updated');
   };
 
   const handleAssignSlot = () => {
     if (!selectedBooking) return;
-    
+
     const updates = {
       slotDate,
       slotTime,
       updatedAt: new Date().toISOString(),
     };
-    
+
     LocalStorage.update<ConsultationBooking>('bookings', selectedBooking.id, updates);
     setBookings(prev => prev.map(b => b.id === selectedBooking.id ? { ...b, ...updates } : b));
-    
+
     addNotification({
       userId: selectedBooking.userId,
       title: 'Consultation Slot Assigned',
       message: `Your consultation has been scheduled for ${new Date(slotDate).toLocaleDateString()} at ${slotTime}.`,
       type: 'success'
     });
-    
+
     toast.success('Slot assigned successfully');
     setSelectedBooking(null);
   };
@@ -116,8 +116,8 @@ export default function AdminBookingsPage() {
                         <span className="text-xs text-muted-foreground">{booking.slotTime}</span>
                       </div>
                     ) : (
-                      <Button 
-                        variant="link" 
+                      <Button
+                        variant="link"
                         className="p-0 h-auto text-xs text-brand-red font-bold"
                         onClick={() => openSlotModal(booking)}
                       >
@@ -125,7 +125,7 @@ export default function AdminBookingsPage() {
                       </Button>
                     )}
                   </TableCell>
-                  <TableCell className="font-medium">{formatPrice(booking.totalPrice)}</TableCell>
+                  <TableCell className="font-medium">{formatPrice(booking.totalPrice ?? 0)}</TableCell>
                   <TableCell>
                     <Select value={booking.status} onValueChange={(val) => val && updateStatus(booking.id, val as BookingStatus, booking.userId)}>
                       <SelectTrigger className="h-8 text-xs w-[140px] border-border bg-background/50">
@@ -140,9 +140,9 @@ export default function AdminBookingsPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         className="h-8 w-8 text-muted-foreground hover:text-brand-gold"
                         onClick={() => openSlotModal(booking)}
                         title="Assign/Change Slot"
@@ -173,19 +173,19 @@ export default function AdminBookingsPage() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Date</Label>
-              <Input 
-                type="date" 
-                value={slotDate} 
-                onChange={e => setSlotDate(e.target.value)} 
+              <Input
+                type="date"
+                value={slotDate}
+                onChange={e => setSlotDate(e.target.value)}
                 className="bg-background/50"
               />
             </div>
             <div className="space-y-2">
               <Label>Time</Label>
-              <Input 
-                type="time" 
-                value={slotTime} 
-                onChange={e => setSlotTime(e.target.value)} 
+              <Input
+                type="time"
+                value={slotTime}
+                onChange={e => setSlotTime(e.target.value)}
                 className="bg-background/50"
               />
             </div>
@@ -198,8 +198,8 @@ export default function AdminBookingsPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSelectedBooking(null)}>Cancel</Button>
-            <Button 
-              className="bg-brand-gold hover:bg-brand-gold/90 text-white" 
+            <Button
+              className="bg-brand-gold hover:bg-brand-gold/90 text-white"
               onClick={handleAssignSlot}
               disabled={!slotDate || !slotTime}
             >
