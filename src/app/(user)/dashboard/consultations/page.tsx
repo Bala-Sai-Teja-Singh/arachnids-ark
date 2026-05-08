@@ -15,6 +15,7 @@ import { LocalStorage } from '@/mock-db/storage';
 import type { ConsultationBooking } from '@/types';
 import { formatPrice } from '@/constants/pricing';
 import { toast } from 'sonner';
+import { useNotificationStore } from '@/store/notification-store';
 
 export default function MyConsultationsPage() {
   const { user } = useAuthStore();
@@ -83,7 +84,7 @@ export default function MyConsultationsPage() {
                       {booking.adminNote && <p className="text-xs text-brand-gold">Admin: {booking.adminNote}</p>}
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-lg font-bold text-brand-gold">{formatPrice(booking.totalPrice)}</span>
+                      <span className="text-lg font-bold text-brand-gold">{formatPrice(booking.totalPrice || 0)}</span>
                       <StatusBadge status={booking.status} />
                       {booking.status === 'awaiting_payment' && (
                         <Dialog open={uploadId === booking.id} onOpenChange={(open) => {
@@ -116,11 +117,11 @@ export default function MyConsultationsPage() {
                                 <p className="text-[10px] text-brand-gold italic">Please include your booking ID ({booking.id.split('-')[1] || booking.id}) in the transfer remarks.</p>
                               </div>
 
-                               <div className="space-y-2 border-t border-border pt-4">
+                              <div className="space-y-2 border-t border-border pt-4">
                                 <Label>Upload Payment Screenshot</Label>
-                                <Input 
-                                  type="file" 
-                                  accept="image/*" 
+                                <Input
+                                  type="file"
+                                  accept="image/*"
                                   className={`bg-background/50 cursor-pointer ${uploadError ? 'border-red-500' : ''}`}
                                   onChange={(e) => {
                                     setSelectedFile(e.target.files?.[0] || null);

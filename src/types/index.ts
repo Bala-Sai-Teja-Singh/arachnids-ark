@@ -177,7 +177,7 @@ export interface ConsultationBooking {
 }
 
 // ============ NOTIFICATION ============
-export type NotificationType = 'info' | 'success' | 'warning' | 'error';
+export type NotificationType = 'info' | 'success' | 'warning' | 'error' | 'payment' | 'inquiry' | 'booking';
 
 export interface Notification {
   id: string;
