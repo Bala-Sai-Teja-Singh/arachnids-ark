@@ -41,10 +41,8 @@ export function Navbar() {
   };
 
   return (
-    <motion.header
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="sticky top-0 z-[100] w-full bg-background/80 backdrop-blur-md border-b border-border"
+    <header
+      className="sticky top-0 z-[100] w-full bg-background/80 backdrop-blur-md border-b border-border transition-all"
     >
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         {/* Logo */}
@@ -292,6 +290,6 @@ export function Navbar() {
           </Sheet>
         </div>
       </div>
-    </motion.header>
+    </header>
   );
 }
