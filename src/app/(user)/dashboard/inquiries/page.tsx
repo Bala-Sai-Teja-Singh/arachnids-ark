@@ -52,7 +52,7 @@ export default function MyInquiriesPage() {
       m.useNotificationStore.getState().addNotification({
         userId: 'admin',
         title: 'Product Payment Received',
-        message: `${user?.name} uploaded a payment screenshot for an inquiry.`,
+        message: `${user?.name} uploaded a payment screenshot for an order request.`,
         type: 'payment',
       });
     });
@@ -65,12 +65,12 @@ export default function MyInquiriesPage() {
   return (
     <div>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="vibe-heading text-2xl font-bold mb-1">My Inquiries</h1>
-        <p className="font-heading text-[10px] uppercase tracking-widest text-muted-foreground mb-6">Track your product inquiry status</p>
+        <h1 className="vibe-heading text-2xl font-bold mb-1">My Order Requests</h1>
+        <p className="font-heading text-[10px] uppercase tracking-widest text-muted-foreground mb-6">Track your order request status</p>
       </motion.div>
 
       {inquiries.length === 0 ? (
-        <EmptyState icon={ClipboardList} title="No inquiries yet" description="Browse our shop and raise an inquiry for species you're interested in." />
+        <EmptyState icon={ClipboardList} title="No order requests yet" description="Browse our shop and place an order request for species you're interested in." />
       ) : (
         <div className="space-y-4">
           {inquiries.map((inq, i) => (
@@ -118,7 +118,7 @@ export default function MyInquiriesPage() {
                                     <p>IFSC: <span className="select-all">HDFC0001234</span></p>
                                   </div>
                                 </div>
-                                <p className="text-[10px] text-brand-gold italic">Please include your order ID ({inq.id.split('-')[1] || inq.id}) in the transfer remarks.</p>
+                                <p className="text-[10px] text-brand-gold italic">Please include your order request ID ({inq.id.split('-')[1] || inq.id}) in the transfer remarks.</p>
                               </div>
 
                                <div className="space-y-2 border-t border-border pt-4">

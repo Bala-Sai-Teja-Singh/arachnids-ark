@@ -55,10 +55,10 @@ export default function AdminDashboardPage() {
   }, []);
 
   const statCards = [
-    { title: 'Total Revenue', value: formatPrice(stats.totalRevenue), icon: DollarSign, color: 'text-brand-gold', trend: '+12.5%' },
-    { title: 'Total Users', value: stats.users, icon: Users, color: 'text-blue-400', trend: '+5.2%' },
-    { title: 'Active Inquiries', value: stats.activeInquiries, icon: ShoppingBag, color: 'text-brand-red', trend: '+18.1%' },
-    { title: 'Upcoming Consults', value: stats.activeConsultations, icon: Calendar, color: 'text-green-400', trend: '+2.4%' },
+    { title: 'Total Revenue', value: formatPrice(stats.totalRevenue), icon: DollarSign, color: 'text-brand-gold', trend: '+12.5%', href: '/admin/revenue' },
+    { title: 'Total Users', value: stats.users, icon: Users, color: 'text-blue-400', trend: '+5.2%', href: '/admin/users' },
+    { title: 'Active Order Requests', value: stats.activeInquiries, icon: ShoppingBag, color: 'text-brand-red', trend: '+18.1%', href: '/admin/inquiries' },
+    { title: 'Upcoming Consults', value: stats.activeConsultations, icon: Calendar, color: 'text-green-400', trend: '+2.4%', href: '/admin/bookings' },
   ];
 
   return (
@@ -73,18 +73,20 @@ export default function AdminDashboardPage() {
           const Icon = stat.icon;
           return (
             <motion.div key={stat.title} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
-              <Card className="border-border">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
-                  <Icon className={`h-4 w-4 ${stat.color}`} />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stat.value}</div>
-                  <p className="text-xs flex items-center gap-1 mt-1 text-green-400">
-                    <TrendingUp className="h-3 w-3" /> {stat.trend} from last month
-                  </p>
-                </CardContent>
-              </Card>
+              <Link href={stat.href}>
+                <Card className="border-border hover:border-brand-gold/50 transition-all cursor-pointer group">
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">{stat.title}</CardTitle>
+                    <Icon className={`h-4 w-4 ${stat.color}`} />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stat.value}</div>
+                    <p className="text-xs flex items-center gap-1 mt-1 text-green-400">
+                      <TrendingUp className="h-3 w-3" /> {stat.trend} from last month
+                    </p>
+                  </CardContent>
+                </Card>
+              </Link>
             </motion.div>
           );
         })}

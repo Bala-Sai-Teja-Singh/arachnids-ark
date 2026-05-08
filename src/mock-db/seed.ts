@@ -7,98 +7,140 @@ import { DEFAULT_CONSULTATION_PRICING, DEFAULT_URGENCY_MULTIPLIERS } from '@/con
 const PRODUCTS: Product[] = [
   {
     id: 'prod-001', name: 'Mexican Red Knee', scientificName: 'Brachypelma hamorii',
-    category: 'terrestrial', origin: 'new-world', price: 4500, stock: 8, careLevel: 'beginner',
+    category: 'terrestrial', origin: 'new-world', careLevel: 'beginner',
     temperament: 'docile', humidity: '60-70%', temperature: '24-28°C',
     feeding: 'Crickets, mealworms - Weekly', description: 'One of the most iconic tarantula species in the hobby. The Mexican Red Knee is known for its stunning coloration with bright orange-red patches on its leg joints. This species is incredibly docile, making it the perfect choice for beginners. They are slow-growing and can live up to 30 years in captivity.',
     images: ['/images/mexicanRedKnee.webp'], featured: true,
+    isVisible: true, available: true,
+    sizes: [
+      { size: '1/2" Sling', price: 1500, stock: 5 },
+      { size: '1" Juvenile', price: 2500, stock: 2 },
+      { size: '3" Adult', price: 4500, stock: 1 }
+    ],
     createdAt: '2025-01-01T00:00:00Z', updatedAt: '2025-01-01T00:00:00Z'
   },
   {
     id: 'prod-002', name: 'Green Bottle Blue', scientificName: 'Chromatopelma cyaneopubescens',
-    category: 'terrestrial', origin: 'new-world', price: 3800, stock: 5, careLevel: 'beginner',
+    category: 'terrestrial', origin: 'new-world', careLevel: 'beginner',
     temperament: 'semi-aggressive', humidity: '40-60%', temperature: '26-30°C',
     feeding: 'Crickets, roaches - Twice weekly', description: 'A breathtaking species featuring metallic blue legs, a green carapace, and an orange abdomen. The Green Bottle Blue is a prolific webber, creating impressive web structures in its enclosure. Despite its beauty, this species can be skittish but is generally not aggressive.',
     images: ['/images/greenBottleBlue.webp'], featured: true,
+    isVisible: true, available: true,
+    sizes: [
+      { size: '1/4" Sling', price: 1200, stock: 10 },
+      { size: '3/4" Juvenile', price: 2200, stock: 4 },
+      { size: '2.5" Sub-adult', price: 3800, stock: 1 }
+    ],
     createdAt: '2025-01-02T00:00:00Z', updatedAt: '2025-01-02T00:00:00Z'
   },
   {
     id: 'prod-003', name: 'Cobalt Blue', scientificName: 'Cyriopagopus lividus',
-    category: 'fossorial', origin: 'old-world', price: 5500, stock: 3, careLevel: 'expert',
+    category: 'fossorial', origin: 'old-world', careLevel: 'expert',
     temperament: 'aggressive', humidity: '75-85%', temperature: '25-28°C',
     feeding: 'Crickets, roaches - Weekly', description: 'The Cobalt Blue is a stunning Old World species known for its iridescent blue coloration. This fossorial species spends most of its time in deep burrows and can be extremely defensive when disturbed. Recommended only for experienced keepers due to its potent venom and aggressive nature.',
     images: ['/images/cobaltBlue-1.webp', '/images/cobaltBlue-2.jpg'], featured: true,
+    isVisible: true, available: true,
+    sizes: [
+      { size: '1/2" Sling', price: 2000, stock: 5 },
+      { size: 'Adult Female', price: 5500, stock: 1 }
+    ],
     createdAt: '2025-01-03T00:00:00Z', updatedAt: '2025-01-03T00:00:00Z'
   },
   {
     id: 'prod-004', name: 'Pinktoe Tarantula', scientificName: 'Avicularia avicularia',
-    category: 'arboreal', origin: 'new-world', price: 2800, stock: 12, careLevel: 'intermediate',
+    category: 'arboreal', origin: 'new-world', careLevel: 'intermediate',
     temperament: 'docile', humidity: '70-80%', temperature: '24-27°C',
     feeding: 'Crickets, flying insects - Twice weekly', description: 'A charming arboreal species with a dark body and distinctive pink toes. The Pinktoe Tarantula is known for its gentle temperament and fascinating arboreal behavior. They require good ventilation and vertical space in their enclosure.',
     images: ['/images/pinkToe.webp'], featured: false,
+    isVisible: true, available: true,
+    sizes: [
+      { size: '1/2" Sling', price: 800, stock: 20 },
+      { size: 'Adult', price: 2800, stock: 5 }
+    ],
     createdAt: '2025-01-04T00:00:00Z', updatedAt: '2025-01-04T00:00:00Z'
   },
   {
     id: 'prod-005', name: 'Indian Ornamental', scientificName: 'Poecilotheria regalis',
-    category: 'arboreal', origin: 'old-world', price: 6200, stock: 4, careLevel: 'expert',
+    category: 'arboreal', origin: 'old-world', careLevel: 'expert',
     temperament: 'aggressive', humidity: '70-80%', temperature: '24-28°C',
     feeding: 'Crickets, roaches - Weekly', description: 'A magnificent Old World arboreal species known for its intricate fractal-like patterns. The Indian Ornamental is incredibly fast and possesses medically significant venom. Their stunning appearance makes them highly sought after, but they should only be kept by experienced hobbyists.',
     images: ['/images/indianOrnamental.webp'], featured: true,
+    isVisible: true, available: true,
+    sizes: [{ size: '1/2" Sling', price: 2000, stock: 4 }],
     createdAt: '2025-01-05T00:00:00Z', updatedAt: '2025-01-05T00:00:00Z'
   },
   {
     id: 'prod-006', name: 'Curly Hair Tarantula', scientificName: 'Tliltocatl albopilosus',
-    category: 'terrestrial', origin: 'new-world', price: 1800, stock: 15, careLevel: 'beginner',
+    category: 'terrestrial', origin: 'new-world', careLevel: 'beginner',
     temperament: 'docile', humidity: '65-75%', temperature: '24-28°C',
     feeding: 'Crickets, mealworms - Weekly', description: 'An adorable species covered in curly golden-brown hairs. The Curly Hair is one of the most docile tarantulas available, making it an excellent beginner species. They are hardy, easy to care for, and have a calm temperament that makes handling possible.',
     images: ['/images/curlyHair.webp', '/images/curlyHair-2.avif'], featured: false,
+    isVisible: true, available: true,
+    sizes: [
+      { size: '1/4" Sling', price: 400, stock: 50 },
+      { size: '1" Juvenile', price: 900, stock: 15 },
+      { size: 'Adult', price: 1800, stock: 10 }
+    ],
     createdAt: '2025-01-06T00:00:00Z', updatedAt: '2025-01-06T00:00:00Z'
   },
   {
     id: 'prod-007', name: 'Gooty Sapphire Ornamental', scientificName: 'Poecilotheria metallica',
-    category: 'arboreal', origin: 'old-world', price: 12000, stock: 2, careLevel: 'expert',
+    category: 'arboreal', origin: 'old-world', careLevel: 'expert',
     temperament: 'aggressive', humidity: '70-80%', temperature: '22-26°C',
     feeding: 'Crickets, roaches - Weekly', description: 'One of the most stunning and sought-after tarantula species in existence. The Gooty Sapphire features an incredible metallic blue coloration that has made it the crown jewel of many collections. Critically endangered in the wild, captive breeding programs are essential for this species.',
     images: ['/images/gootSapphire.webp'], featured: true,
+    isVisible: true, available: true,
+    sizes: [{ size: '1/2" Sling', price: 3500, stock: 2 }],
     createdAt: '2025-01-07T00:00:00Z', updatedAt: '2025-01-07T00:00:00Z'
   },
   {
     id: 'prod-008', name: 'Brazilian Black', scientificName: 'Grammostola pulchra',
-    category: 'terrestrial', origin: 'new-world', price: 8500, stock: 3, careLevel: 'beginner',
+    category: 'terrestrial', origin: 'new-world', careLevel: 'beginner',
     temperament: 'docile', humidity: '60-70%', temperature: '22-26°C',
     feeding: 'Crickets, roaches - Weekly', description: 'An elegant, jet-black species that is both stunning and incredibly docile. The Brazilian Black is a heavy-bodied terrestrial species prized for its velvety black appearance and calm demeanor. Slow-growing but long-lived, this species is a prized addition to any collection.',
     images: ['/images/brazilianBlack-1.webp', '/images/brazilianBlack-2.jpg'], featured: true,
+    isVisible: true, available: true,
+    sizes: [{ size: '1/2" Sling', price: 2500, stock: 3 }],
     createdAt: '2025-01-08T00:00:00Z', updatedAt: '2025-01-08T00:00:00Z'
   },
   {
     id: 'prod-009', name: 'King Baboon', scientificName: 'Pelinobius muticus',
-    category: 'fossorial', origin: 'old-world', price: 7000, stock: 4, careLevel: 'advanced',
+    category: 'fossorial', origin: 'old-world', careLevel: 'advanced',
     temperament: 'aggressive', humidity: '65-75%', temperature: '24-28°C',
     feeding: 'Crickets, roaches, small mice - Weekly', description: 'The King Baboon is one of the largest and most impressive Old World species. This massive tarantula can reach leg spans of up to 20cm. Known for their burrowing behavior and defensive stridulation (hissing). They are not recommended for beginners due to their defensive nature.',
     images: ['/images/kingBaboon.jpg'], featured: false,
+    isVisible: true, available: true,
+    sizes: [{ size: '1" Sling', price: 2500, stock: 4 }],
     createdAt: '2025-01-09T00:00:00Z', updatedAt: '2025-01-09T00:00:00Z'
   },
   {
     id: 'prod-010', name: 'Mexican Fireleg', scientificName: 'Brachypelma boehmei',
-    category: 'terrestrial', origin: 'new-world', price: 5000, stock: 6, careLevel: 'intermediate',
+    category: 'terrestrial', origin: 'new-world', careLevel: 'intermediate',
     temperament: 'semi-aggressive', humidity: '55-65%', temperature: '24-28°C',
     feeding: 'Crickets, mealworms - Weekly', description: 'A vibrant species with striking fire-red legs and a dark body. The Mexican Fireleg is closely related to the Red Knee but features even more vivid coloration. While generally calm, they can flick urticating hairs when stressed.',
     images: ['/images/mexicanFireleg.jpg'], featured: false,
+    isVisible: true, available: true,
+    sizes: [{ size: '1/2" Sling', price: 1800, stock: 6 }],
     createdAt: '2025-01-10T00:00:00Z', updatedAt: '2025-01-10T00:00:00Z'
   },
   {
     id: 'prod-011', name: 'Singapore Blue', scientificName: 'Omothymus violaceopes',
-    category: 'arboreal', origin: 'old-world', price: 9500, stock: 2, careLevel: 'advanced',
+    category: 'arboreal', origin: 'old-world', careLevel: 'advanced',
     temperament: 'aggressive', humidity: '75-85%', temperature: '25-30°C',
     feeding: 'Crickets, roaches - Twice weekly', description: 'One of the largest arboreal tarantulas in the world, the Singapore Blue can reach impressive leg spans of over 25cm. Featuring stunning metallic blue and yellow-gold coloration, this species is a showstopper. Fast and defensive, it requires an experienced keeper.',
     images: ['/images/singaporeBlue.webp'], featured: false,
+    isVisible: true, available: true,
+    sizes: [{ size: '2" Juvenile', price: 4500, stock: 2 }],
     createdAt: '2025-01-11T00:00:00Z', updatedAt: '2025-01-11T00:00:00Z'
   },
   {
     id: 'prod-012', name: 'Rose Hair Tarantula', scientificName: 'Grammostola rosea',
-    category: 'terrestrial', origin: 'new-world', price: 1500, stock: 20, careLevel: 'beginner',
+    category: 'terrestrial', origin: 'new-world', careLevel: 'beginner',
     temperament: 'docile', humidity: '50-60%', temperature: '22-26°C',
     feeding: 'Crickets, mealworms - Weekly', description: 'The quintessential beginner tarantula. The Rose Hair is incredibly hardy and forgiving of husbandry mistakes. With its pinkish-brown coloration and calm disposition, this species has introduced countless people to the tarantula hobby.',
     images: ['/images/roseHair.jpg'], featured: false,
+    isVisible: true, available: true,
+    sizes: [{ size: 'Unsexed Adult', price: 1500, stock: 20 }],
     createdAt: '2025-01-12T00:00:00Z', updatedAt: '2025-01-12T00:00:00Z'
   },
 ];
@@ -187,12 +229,12 @@ function generateSlots(): ConsultationSlot[] {
   const slots: ConsultationSlot[] = [];
   const times = ['10:00', '11:00', '14:00', '15:00', '16:00', '17:00'];
   const today = new Date();
-  
+
   for (let i = 1; i <= 14; i++) {
     const date = new Date(today);
     date.setDate(date.getDate() + i);
     if (date.getDay() === 0) continue; // Skip Sundays
-    
+
     const dateStr = date.toISOString().split('T')[0];
     times.forEach((time, idx) => {
       slots.push({
@@ -239,7 +281,7 @@ const CARE_GUIDES: CareGuide[] = [
 
 const DEFAULT_USERS: User[] = [
   {
-    id: 'user-admin',
+    id: 'admin',
     name: 'Admin',
     email: 'admin@arachnidsark.com',
     password: 'admin123',
@@ -263,14 +305,15 @@ export function seedDatabase(): void {
   LocalStorage.setAll('enrollments', []);
   LocalStorage.setAll('bookings', []);
   LocalStorage.setAll('notifications', []);
+  LocalStorage.setAll('reviews', []);
   LocalStorage.setAll('care_guides', CARE_GUIDES);
-  
+
   const settings: ConsultationSettings = {
     pricing: DEFAULT_CONSULTATION_PRICING,
     urgencyMultipliers: DEFAULT_URGENCY_MULTIPLIERS,
     slots: generateSlots(),
   };
   LocalStorage.setAll('consultation_settings', [settings]);
-  
+
   LocalStorage.markSeeded();
 }

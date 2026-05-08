@@ -7,7 +7,7 @@ import { ADMIN_NAV_ITEMS } from '@/constants/navigation';
 import { useAuthStore } from '@/store/auth-store';
 import { Button } from '@/components/ui/button';
 
-export function AdminSidebar() {
+export function AdminSidebar({ onItemClick }: { onItemClick?: () => void }) {
   const pathname = usePathname();
   const { logout } = useAuthStore();
   const router = useRouter();
@@ -38,6 +38,7 @@ export function AdminSidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={() => onItemClick?.()}
               className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
                 isActive
                   ? 'bg-brand-red/10 text-brand-red font-medium'
@@ -53,7 +54,10 @@ export function AdminSidebar() {
 
       {/* Footer */}
       <div className="p-4 border-t border-border shrink-0">
-        <Button variant="ghost" className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-400/10" onClick={handleLogout}>
+        <Button variant="ghost" className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-400/10" onClick={() => {
+          handleLogout();
+          onItemClick?.();
+        }}>
           <LogOut className="h-4 w-4 mr-2" />
           Logout
         </Button>

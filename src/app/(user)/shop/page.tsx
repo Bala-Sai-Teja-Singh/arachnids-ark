@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Search, Filter, X, Bug, SlidersHorizontal } from 'lucide-react';
+import { Search, X, Bug, SlidersHorizontal } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -120,7 +120,7 @@ export default function ShopPage() {
   }, []);
 
   const filtered = useMemo(() => {
-    let result = [...products];
+    let result = products.filter(p => p.isVisible !== false);
     if (search) {
       const q = search.toLowerCase();
       result = result.filter(p => p.name.toLowerCase().includes(q) || p.scientificName.toLowerCase().includes(q));
@@ -129,10 +129,15 @@ export default function ShopPage() {
     if (origin) result = result.filter(p => p.origin === origin);
     if (careLevel) result = result.filter(p => p.careLevel === careLevel);
 
+    const getMinPrice = (p: Product) => {
+      if (!p.sizes || p.sizes.length === 0) return 0;
+      return Math.min(...p.sizes.map(s => s.price));
+    };
+
     const sort = sortBy || 'name';
     switch (sort) {
-      case 'price-low': result.sort((a, b) => a.price - b.price); break;
-      case 'price-high': result.sort((a, b) => b.price - a.price); break;
+      case 'price-low': result.sort((a, b) => getMinPrice(a) - getMinPrice(b)); break;
+      case 'price-high': result.sort((a, b) => getMinPrice(b) - getMinPrice(a)); break;
       case 'newest': result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()); break;
       default: result.sort((a, b) => a.name.localeCompare(b.name));
     }
@@ -291,10 +296,20 @@ export default function ShopPage() {
                       <span>{product.humidity}</span>
                     </div>
                     <div className="flex items-center justify-between pt-2">
-                      <span className="text-lg font-bold text-brand-gold">{formatPrice(product.price)}</span>
-                      <span className={`text-xs ${product.stock > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {product.stock > 0 ? `${product.stock} available` : 'Out of stock'}
+                      <span className="text-lg font-bold text-brand-gold">
+                        {product.sizes?.length > 0 
+                          ? `Starts at ${formatPrice(Math.min(...product.sizes.map(s => s.price)))}`
+                          : 'Contact for Price'}
                       </span>
+                      {(() => {
+                        const totalStock = product.sizes?.reduce((acc, s) => acc + s.stock, 0) || 0;
+                        const isManuallyUnavailable = product.available === false;
+                        return (
+                          <span className={`text-xs ${(!isManuallyUnavailable && totalStock > 0) ? 'text-green-400' : 'text-red-400'}`}>
+                            {isManuallyUnavailable ? 'Unavailable' : (totalStock > 0 ? `${totalStock} available` : 'Out of stock')}
+                          </span>
+                        );
+                      })()}
                     </div>
                   </CardContent>
                 </Card>

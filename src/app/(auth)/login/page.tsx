@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Bug, Eye, EyeOff, Loader2 } from 'lucide-react';
@@ -14,6 +14,8 @@ import { toast } from 'sonner';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get('redirect');
   const { login, isLoading } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -26,7 +28,9 @@ export default function LoginPage() {
       toast.success('Welcome back!');
       // Check role for redirect
       const user = useAuthStore.getState().user;
-      if (user?.role === 'admin') {
+      if (redirect) {
+        router.push(redirect);
+      } else if (user?.role === 'admin') {
         router.push('/admin');
       } else {
         router.push('/dashboard');
@@ -116,10 +120,6 @@ export default function LoginPage() {
             </CardFooter>
           </form>
         </Card>
-
-        <p className="text-xs text-muted-foreground text-center mt-4">
-          Demo admin: admin@arachnidsark.com / admin123
-        </p>
       </motion.div>
     </div>
   );

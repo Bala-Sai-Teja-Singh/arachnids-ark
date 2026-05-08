@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Bell, Check, Trash2, X, Info, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { Bell, Check, Trash2, X, Info, AlertTriangle, CheckCircle, Clock, ExternalLink } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNotificationStore } from '@/store/notification-store';
 import { useAuthStore } from '@/store/auth-store';
@@ -17,6 +18,7 @@ import { formatDistanceToNow } from 'date-fns';
 
 export function NotificationCenter({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void }) {
   const { user } = useAuthStore();
+  const router = useRouter();
   const { notifications, unreadCount, loadNotifications, markAsRead, markAllAsRead, clearAll } = useNotificationStore();
 
   useEffect(() => {
@@ -36,9 +38,9 @@ export function NotificationCenter({ open, onOpenChange }: { open: boolean, onOp
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="glass border-l border-border sm:max-w-md p-0 overflow-hidden">
+      <SheetContent side="right" className="bg-background border-l border-border sm:max-w-md p-0 overflow-hidden shadow-2xl">
         <SheetHeader className="p-6 border-b border-border">
-          <div className="flex items-center justify-between pr-8">
+          <div className="flex items-center justify-between pr-10">
             <SheetTitle className="vibe-heading text-lg flex items-center gap-2">
               <Bell className="h-5 w-5 text-brand-red" />
               Notifications
@@ -78,7 +80,14 @@ export function NotificationCenter({ open, onOpenChange }: { open: boolean, onOp
                   key={notif.id}
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className={`p-5 transition-colors relative group ${!notif.read ? 'bg-brand-red/5' : 'hover:bg-accent/30'}`}
+                  onClick={() => {
+                    if (notif.link) {
+                      router.push(notif.link);
+                      onOpenChange(false);
+                      markAsRead(notif.id);
+                    }
+                  }}
+                  className={`p-5 transition-colors relative group cursor-pointer ${!notif.read ? 'bg-brand-red/5' : 'hover:bg-accent/30'}`}
                 >
                   <div className="flex gap-4">
                     <div className="mt-1">
@@ -96,6 +105,11 @@ export function NotificationCenter({ open, onOpenChange }: { open: boolean, onOp
                       <p className="text-xs text-muted-foreground leading-relaxed">
                         {notif.message}
                       </p>
+                      {notif.link && (
+                        <div className="flex items-center gap-1 text-[10px] text-brand-gold font-bold uppercase tracking-widest pt-1">
+                          View Details <ExternalLink className="h-2 w-2" />
+                        </div>
+                      )}
                     </div>
                   </div>
                   {!notif.read && (

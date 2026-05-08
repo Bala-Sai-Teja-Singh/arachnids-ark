@@ -55,7 +55,7 @@ export default function AdminSettingsPage() {
                 <Label>Payment Instructions Note</Label>
                 <Textarea 
                   className="bg-background/50"
-                  defaultValue="Please ensure you add your order/inquiry ID in the payment remarks."
+                  defaultValue="Please ensure you add your order request ID in the payment remarks."
                 />
               </div>
             </CardContent>
@@ -70,7 +70,7 @@ export default function AdminSettingsPage() {
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>Order Confirmations</Label>
-                  <p className="text-sm text-muted-foreground">Send email when a new inquiry is placed.</p>
+                  <p className="text-sm text-muted-foreground">Send email when a new order request is placed.</p>
                 </div>
                 <Switch defaultChecked />
               </div>

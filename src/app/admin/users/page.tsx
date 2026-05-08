@@ -34,7 +34,8 @@ export default function AdminUsersPage() {
     if (!roleChangeInfo) return;
     const { id, targetRole } = roleChangeInfo;
     LocalStorage.update<User>('users', id, { role: targetRole });
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, role: targetRole } : u));
+    // Refresh background content
+    setUsers(LocalStorage.getAll<User>('users'));
     toast.success(`Role updated to ${targetRole}`);
     setRoleChangeInfo(null);
   };
@@ -50,7 +51,8 @@ export default function AdminUsersPage() {
   const confirmDelete = () => {
     if (deleteId) {
       LocalStorage.delete('users', deleteId);
-      setUsers(users.filter(u => u.id !== deleteId));
+      // Refresh background content
+      setUsers(LocalStorage.getAll<User>('users'));
       setDeleteId(null);
       toast.success('User deleted');
     }

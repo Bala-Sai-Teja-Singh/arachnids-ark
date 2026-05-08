@@ -52,6 +52,23 @@ export default function ConsultationPage() {
     }
   }, []);
 
+  useEffect(() => {
+    const pending = localStorage.getItem('pending_consultation');
+    if (pending && isAuthenticated && user) {
+      try {
+        const { duration: pDur, urgency: pUrg, query: pQuery } = JSON.parse(pending);
+        setDuration(pDur);
+        setUrgency(pUrg);
+        setQuery(pQuery);
+        setStep(2);
+        localStorage.removeItem('pending_consultation');
+        toast.success('Restored your consultation details!');
+      } catch (e) {
+        console.error('Failed to parse pending consultation', e);
+      }
+    }
+  }, [isAuthenticated, user]);
+
   const selectedPricing = useMemo(() => {
     if (!settings) return null;
     return settings.pricing.find(p => p.duration === duration);
@@ -71,8 +88,11 @@ export default function ConsultationPage() {
 
   const handleSubmit = async () => {
     if (!isAuthenticated || !user) {
+      localStorage.setItem('pending_consultation', JSON.stringify({
+        duration, urgency, query
+      }));
       toast.error('Please login to book a consultation');
-      router.push('/login');
+      router.push('/login?redirect=/consultation');
       return;
     }
     const booking: ConsultationBooking = {
@@ -101,6 +121,7 @@ export default function ConsultationPage() {
       title: 'Consultation Booked',
       message: `Your ${duration}-min ${urgency} consultation has been booked. Our team will assign a slot soon.`,
       type: 'success',
+      link: '/dashboard/consultations',
     });
 
     // Notify Admin
@@ -109,6 +130,7 @@ export default function ConsultationPage() {
       title: 'New Consultation Booking',
       message: `${user.name} booked a ${duration}-min ${urgency} consultation.`,
       type: 'info',
+      link: '/admin/bookings',
     });
 
     toast.success('Consultation booked successfully!');

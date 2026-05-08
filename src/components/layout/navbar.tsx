@@ -13,7 +13,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { USER_NAV_ITEMS, DASHBOARD_NAV_ITEMS, MOBILE_NAV_ITEMS } from '@/constants/navigation';
 import { useAuthStore } from '@/store/auth-store';
@@ -59,27 +59,47 @@ export function Navbar() {
 
         {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-1">
-          {USER_NAV_ITEMS.map((item) => {
-            const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`relative px-3 py-2 text-sm font-medium rounded-lg transition-colors ${isActive
-                    ? 'text-brand-gold'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
-                  }`}
-              >
-                <span className="font-heading uppercase tracking-widest text-[10px]">{item.label}</span>
-                {isActive && (
-                  <motion.div
-                    layoutId="navbar-indicator"
-                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-0.5 bg-brand-gold rounded-full"
-                  />
-                )}
-              </Link>
-            );
-          })}
+          {user?.role === 'admin' ? (
+            <Link
+              href="/admin"
+              className={`relative px-3 py-2 text-sm font-medium rounded-lg transition-colors ${pathname.startsWith('/admin')
+                  ? 'text-brand-gold'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                }`}
+            >
+              <span className="font-heading uppercase tracking-widest text-[10px] flex items-center gap-2">
+                <Shield className="h-3 w-3" /> Admin Dashboard
+              </span>
+              {pathname.startsWith('/admin') && (
+                <motion.div
+                  layoutId="navbar-indicator"
+                  className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-0.5 bg-brand-gold rounded-full"
+                />
+              )}
+            </Link>
+          ) : (
+            USER_NAV_ITEMS.map((item) => {
+              const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`relative px-3 py-2 text-sm font-medium rounded-lg transition-colors ${isActive
+                      ? 'text-brand-gold'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                    }`}
+                >
+                  <span className="font-heading uppercase tracking-widest text-[10px]">{item.label}</span>
+                  {isActive && (
+                    <motion.div
+                      layoutId="navbar-indicator"
+                      className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-0.5 bg-brand-gold rounded-full"
+                    />
+                  )}
+                </Link>
+              );
+            })
+          )}
         </nav>
 
         {/* Right side */}
@@ -92,10 +112,10 @@ export function Navbar() {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="relative"
+                className="relative border border-border rounded-lg"
                 onClick={() => setShowNotifications(true)}
               >
-                <Bell className="h-4 w-4" />
+                <Bell className="h-5 w-5" />
                 {unreadCount > 0 && (
                   <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px] bg-brand-red border-0">
                     {unreadCount}
@@ -107,14 +127,15 @@ export function Navbar() {
               {/* User Menu - Desktop Only */}
               <div className="hidden md:block">
                 <DropdownMenu>
-                  <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="relative rounded-full border border-border overflow-hidden" />}>
-                    <Avatar className="h-full w-full">
+                  <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="relative rounded-full border border-border overflow-hidden translate-y-[2px]" />}>
+                    <Avatar className="transition-transform active:scale-95 after:hidden">
+                      {user.avatar && <AvatarImage src={user.avatar} alt={user.name} />}
                       <AvatarFallback className="bg-brand-red text-white font-bold text-xs">
                         {user.name.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56 glass border-border">
+                  <DropdownMenuContent align="end" className="w-56 bg-background border-border shadow-2xl">
                     <div className="px-2 py-1.5">
                       <p className="text-sm font-medium">{user.name}</p>
                       <p className="text-xs text-muted-foreground">{user.email}</p>
@@ -168,6 +189,7 @@ export function Navbar() {
                 {isAuthenticated && user ? (
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10 border border-border">
+                      {user.avatar && <AvatarImage src={user.avatar} alt={user.name} />}
                       <AvatarFallback className="bg-brand-red text-white font-bold">
                         {user.name.charAt(0).toUpperCase()}
                       </AvatarFallback>
@@ -186,7 +208,7 @@ export function Navbar() {
 
               <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-1">
                 {/* Only show nav items NOT in the bottom bar */}
-                {USER_NAV_ITEMS.filter(item => !MOBILE_NAV_ITEMS.some(m => m.href === item.href)).length > 0 && (
+                {user?.role !== 'admin' && USER_NAV_ITEMS.filter(item => !MOBILE_NAV_ITEMS.some(m => m.href === item.href)).length > 0 && (
                   <>
                     <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-2 px-2">More</p>
                     {USER_NAV_ITEMS.filter(item => !MOBILE_NAV_ITEMS.some(m => m.href === item.href)).map((item) => {

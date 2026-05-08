@@ -22,7 +22,7 @@ export default function DashboardPage() {
   }, [user]);
 
   const cards = [
-    { label: 'Total Inquiries', value: stats.inquiries, icon: ShoppingBag, color: 'from-brand-red/20 to-brand-red/5', iconColor: 'text-brand-red' },
+    { label: 'Order Requests', value: stats.inquiries, icon: ShoppingBag, color: 'from-brand-red/20 to-brand-red/5', iconColor: 'text-brand-red' },
     { label: 'Course Enrollments', value: stats.courses, icon: GraduationCap, color: 'from-brand-gold/20 to-brand-gold/5', iconColor: 'text-brand-gold' },
     { label: 'Consultations', value: stats.consultations, icon: Calendar, color: 'from-blue-500/20 to-blue-500/5', iconColor: 'text-blue-400' },
     { label: 'Pending Requests', value: stats.pending, icon: ClipboardList, color: 'from-yellow-500/20 to-yellow-500/5', iconColor: 'text-yellow-400' },

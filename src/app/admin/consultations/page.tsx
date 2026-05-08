@@ -96,10 +96,12 @@ export default function AdminConsultationsSettingsPage() {
                     <div className="relative">
                       <Input 
                         type="number"
-                        value={p.duration} 
+                        min="0"
+                        placeholder="0"
+                        value={p.duration === 0 ? '' : p.duration} 
                         onChange={e => {
                           const newPricing = [...settings.pricing];
-                          newPricing[idx].duration = Number(e.target.value);
+                          newPricing[idx] = { ...newPricing[idx], duration: Math.max(0, Number(e.target.value)) };
                           setSettings({ ...settings, pricing: newPricing });
                         }}
                         className="bg-background/50 pl-8"
@@ -112,10 +114,12 @@ export default function AdminConsultationsSettingsPage() {
                     <div className="flex gap-2">
                       <Input 
                         type="number"
-                        value={p.basePrice} 
+                        min="0"
+                        placeholder="0"
+                        value={p.basePrice === 0 ? '' : p.basePrice} 
                         onChange={e => {
                           const newPricing = [...settings.pricing];
-                          newPricing[idx].basePrice = Number(e.target.value);
+                          newPricing[idx] = { ...newPricing[idx], basePrice: Math.max(0, Number(e.target.value)) };
                           setSettings({ ...settings, pricing: newPricing });
                         }}
                         className="bg-background/50"
@@ -149,11 +153,13 @@ export default function AdminConsultationsSettingsPage() {
                 <div className="relative">
                   <Input 
                     type="number" 
+                    min="0"
                     step="0.1"
-                    value={u.multiplier} 
+                    placeholder="0"
+                    value={u.multiplier === 0 ? '' : u.multiplier} 
                     onChange={e => {
                       const newM = [...settings.urgencyMultipliers];
-                      newM[idx].multiplier = Number(e.target.value);
+                      newM[idx] = { ...newM[idx], multiplier: Math.max(0, Number(e.target.value)) };
                       setSettings({ ...settings, urgencyMultipliers: newM });
                     }}
                     className="bg-background/50 pr-8"

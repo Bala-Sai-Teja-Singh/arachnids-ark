@@ -11,6 +11,7 @@ import { LocalStorage } from '@/mock-db/storage';
 import type { Product, Course, CareGuide } from '@/types';
 import { formatPrice } from '@/constants/pricing';
 import { useEffect, useState } from 'react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const fadeIn = {
   hidden: { opacity: 0, y: 30 },
@@ -114,7 +115,7 @@ function FeaturedTarantulas() {
   
   useEffect(() => {
     const all = LocalStorage.getAll<Product>('products');
-    setProducts(all.filter(p => p.featured).slice(0, 4));
+    setProducts(all.filter(p => p.featured && p.isVisible !== false).slice(0, 4));
   }, []);
 
   const careLevelColors: Record<string, string> = {
@@ -157,7 +158,6 @@ function FeaturedTarantulas() {
             >
               <Link href={`/shop/${product.id}`}>
                 <Card className="vibe-card group overflow-hidden border-border bg-card/40 backdrop-blur-sm">
-                  {/* Image placeholder with gradient */}
                   <div className="h-48 bg-gradient-to-br from-brand-red/20 via-background to-brand-gold/10 relative overflow-hidden">
                     {product.images && product.images.length > 0 ? (
                       <img 
@@ -180,10 +180,20 @@ function FeaturedTarantulas() {
                     <h3 className="font-heading font-bold text-base group-hover:text-brand-gold transition-colors line-clamp-1 uppercase tracking-wide">{product.name}</h3>
                     <p className="text-xs text-muted-foreground italic">{product.scientificName}</p>
                     <div className="flex items-center justify-between pt-2">
-                      <span className="text-lg font-bold text-brand-gold">{formatPrice(product.price)}</span>
-                      <span className={`text-xs ${product.stock > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
+                      <span className="text-lg font-bold text-brand-gold">
+                        {product.sizes?.length > 0 
+                          ? `Starts at ${formatPrice(Math.min(...product.sizes.map(s => s.price)))}`
+                          : 'Contact for Price'}
                       </span>
+                      {(() => {
+                        const totalStock = product.sizes?.reduce((acc, s) => acc + s.stock, 0) || 0;
+                        const isManuallyUnavailable = product.available === false;
+                        return (
+                          <span className={`text-xs ${(!isManuallyUnavailable && totalStock > 0) ? 'text-green-400' : 'text-red-400'}`}>
+                            {isManuallyUnavailable ? 'Unavailable' : (totalStock > 0 ? `${totalStock} in stock` : 'Out of stock')}
+                          </span>
+                        );
+                      })()}
                     </div>
                   </CardContent>
                 </Card>
@@ -396,9 +406,9 @@ function ConsultationCTA() {
 // ========== TESTIMONIALS ==========
 function Testimonials() {
   const testimonials = [
-    { name: 'Rahul Sharma', role: 'Hobbyist', content: 'ArachnidsArk helped me start my tarantula collection with confidence. The care guides are incredibly detailed and the support team is amazing.', rating: 5 },
-    { name: 'Priya Menon', role: 'Breeder', content: 'The advanced courses are a game-changer. I learned breeding techniques I couldn\'t find anywhere else. Highly recommend the Old World Mastery course.', rating: 5 },
-    { name: 'Arjun Patel', role: 'Collector', content: 'Premium quality species with excellent health records. The consultation service helped me set up my enclosure perfectly. Best experience ever.', rating: 5 },
+    { name: 'Rahul Sharma', role: 'Hobbyist', content: 'ArachnidsArk helped me start my tarantula collection with confidence. The care guides are incredibly detailed and the support team is amazing.', rating: 5, avatar: 'https://i.pravatar.cc/150?u=rahul' },
+    { name: 'Priya Menon', role: 'Breeder', content: 'The advanced courses are a game-changer. I learned breeding techniques I couldn\'t find anywhere else. Highly recommend the Old World Mastery course.', rating: 5, avatar: 'https://i.pravatar.cc/150?u=priya' },
+    { name: 'Arjun Patel', role: 'Collector', content: 'Premium quality species with excellent health records. The consultation service helped me set up my enclosure perfectly. Best experience ever.', rating: 5, avatar: 'https://i.pravatar.cc/150?u=arjun' },
   ];
 
   return (
@@ -436,9 +446,17 @@ function Testimonials() {
                     ))}
                   </div>
                   <p className="text-sm text-muted-foreground leading-relaxed">&ldquo;{t.content}&rdquo;</p>
-                  <div className="pt-2 border-t border-border">
-                    <p className="font-semibold text-sm">{t.name}</p>
-                    <p className="text-xs text-brand-gold">{t.role}</p>
+                  <div className="pt-4 border-t border-border flex items-center gap-3">
+                    <Avatar className="h-10 w-10 border border-border">
+                      <AvatarImage src={t.avatar} />
+                      <AvatarFallback className="bg-brand-red text-white text-xs">
+                        {t.name.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-semibold text-sm">{t.name}</p>
+                      <p className="text-xs text-brand-gold">{t.role}</p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -453,8 +471,8 @@ function Testimonials() {
 // ========== FAQ ==========
 function FAQSection() {
   const faqs = [
-    { q: 'How do I purchase a tarantula?', a: 'Browse our shop, select your desired species, and click "Raise Inquiry." Our team will review your request and guide you through the purchase process including payment verification.' },
-    { q: 'What payment methods do you accept?', a: 'We accept UPI, bank transfers, and other digital payment methods. After raising an inquiry, we\'ll share payment details and you can upload your payment screenshot for verification.' },
+    { q: 'How do I purchase a tarantula?', a: 'Browse our shop, select your desired species, and click "Order Request." Our team will review your request and guide you through the purchase process including payment verification.' },
+    { q: 'What payment methods do you accept?', a: 'We accept UPI, bank transfers, and other digital payment methods. After placing an order request, we\'ll share payment details and you can upload your payment screenshot for verification.' },
     { q: 'Do you ship tarantulas across India?', a: 'Yes, we ship to most major cities across India using specialized packaging that ensures your tarantula arrives safely. Shipping is temperature-controlled and handled by experienced personnel.' },
     { q: 'What if my tarantula arrives in poor health?', a: 'We offer a live arrival guarantee. If your tarantula arrives in poor condition, contact us within 2 hours with photo/video evidence and we will arrange a replacement or refund.' },
     { q: 'Are the courses self-paced?', a: 'Yes, all courses are self-paced. Once your enrollment is approved and payment is verified, you\'ll have lifetime access to the course materials.' },

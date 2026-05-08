@@ -25,14 +25,16 @@ export default function AdminInquiriesPage() {
 
   const updateStatus = (id: string, status: InquiryStatus, userId: string) => {
     LocalStorage.update<Inquiry>('inquiries', id, { status });
-    setInquiries(prev => prev.map(i => i.id === id ? { ...i, status } : i));
+    // Refresh background content
+    setInquiries(LocalStorage.getAll<Inquiry>('inquiries').sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
     
     // Notify user
     addNotification({
       userId,
-      title: 'Inquiry Status Updated',
-      message: `Your inquiry status has been updated to ${status.replace('_', ' ')}`,
-      type: 'info'
+      title: 'Order Request Status Updated',
+      message: `Your order request status has been updated to ${status.replace('_', ' ')}`,
+      type: 'info',
+      link: '/dashboard/inquiries',
     });
     
     toast.success('Status updated');
@@ -41,76 +43,124 @@ export default function AdminInquiriesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Product Inquiries</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Order Requests</h1>
         <p className="text-muted-foreground">Manage customer purchase requests.</p>
       </div>
 
-      <div className="rounded-md border border-border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-border">
-              <TableHead>Customer</TableHead>
-              <TableHead>Product</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {inquiries.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                  No inquiries found.
-                </TableCell>
+      <div className="rounded-md border border-border bg-card overflow-hidden">
+        {/* Desktop Table */}
+        <div className="hidden md:block">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-border">
+                <TableHead>Customer</TableHead>
+                <TableHead>Product</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            ) : (
-              inquiries.map((inq) => (
-                <TableRow key={inq.id} className="border-border">
-                  <TableCell>
-                    <div className="font-medium">{inq.userName}</div>
-                    <div className="text-xs text-muted-foreground">{inq.userEmail}</div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="font-medium">{inq.productName}</div>
-                    <div className="text-xs text-muted-foreground">Qty: {inq.quantity}</div>
-                  </TableCell>
-                  <TableCell className="text-xs">{new Date(inq.createdAt).toLocaleDateString()}</TableCell>
-                  <TableCell>{formatPrice(inq.totalPrice)}</TableCell>
-                  <TableCell>
-                        <Select value={inq.status} onValueChange={(val) => val && updateStatus(inq.id, val as InquiryStatus, inq.userId)}>
-                          <SelectTrigger className="h-8 text-xs w-[140px] border-border">
-                            <SelectValue placeholder="Status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                        {ALL_STATUSES.map(s => (
-                          <SelectItem key={s} value={s} className="text-xs capitalize">{s.replace('_', ' ')}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="text-muted-foreground hover:text-brand-gold"
-                      onClick={() => setSelectedInquiry(inq)}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
+            </TableHeader>
+            <TableBody>
+              {inquiries.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    No inquiries found.
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : (
+                inquiries.map((inq) => (
+                  <TableRow key={inq.id} className="border-border">
+                    <TableCell>
+                      <div className="font-medium">{inq.userName}</div>
+                      <div className="text-xs text-muted-foreground">{inq.userEmail}</div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-medium">{inq.productName}</div>
+                      <div className="text-xs text-muted-foreground">Qty: {inq.quantity}</div>
+                    </TableCell>
+                    <TableCell className="text-xs">{new Date(inq.createdAt).toLocaleDateString()}</TableCell>
+                    <TableCell>{formatPrice(inq.totalPrice)}</TableCell>
+                    <TableCell>
+                      <Select value={inq.status} onValueChange={(val) => val && updateStatus(inq.id, val as InquiryStatus, inq.userId)}>
+                        <SelectTrigger className="h-8 text-xs w-[140px] border-border">
+                          <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ALL_STATUSES.map(s => (
+                            <SelectItem key={s} value={s} className="text-xs capitalize">{s.replace('_', ' ')}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground hover:text-brand-gold"
+                        onClick={() => setSelectedInquiry(inq)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Mobile List */}
+        <div className="md:hidden divide-y divide-border">
+          {inquiries.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground">No order requests found.</div>
+          ) : (
+            inquiries.map((inq) => (
+              <div key={inq.id} className="p-4 space-y-3">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-bold">{inq.productName}</h3>
+                    <p className="text-xs text-muted-foreground">By {inq.userName}</p>
+                  </div>
+                  <StatusBadge status={inq.status} />
+                </div>
+                <div className="flex justify-between items-center">
+                  <div className="text-xs text-muted-foreground">
+                    {new Date(inq.createdAt).toLocaleDateString()} • Qty: {inq.quantity}
+                  </div>
+                  <div className="font-bold text-brand-gold">{formatPrice(inq.totalPrice)}</div>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Select value={inq.status} onValueChange={(val) => val && updateStatus(inq.id, val as InquiryStatus, inq.userId)}>
+                    <SelectTrigger className="h-9 text-xs flex-1 border-border">
+                      <SelectValue placeholder="Update Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ALL_STATUSES.map(s => (
+                        <SelectItem key={s} value={s} className="text-xs capitalize">{s.replace('_', ' ')}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 text-muted-foreground border-border"
+                    onClick={() => setSelectedInquiry(inq)}
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
-      {/* Inquiry Detail Dialog */}
+      {/* Detail Dialog */}
       <Dialog open={!!selectedInquiry} onOpenChange={(open) => !open && setSelectedInquiry(null)}>
         <DialogContent className="glass border-border sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Inquiry Details</DialogTitle>
+            <DialogTitle>Order Request Details</DialogTitle>
             <DialogDescription>
               Purchase request for {selectedInquiry?.productName}
             </DialogDescription>
@@ -118,12 +168,12 @@ export default function AdminInquiriesPage() {
           
           {selectedInquiry && (
             <div className="space-y-6 py-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Order ID</p>
                   <p className="text-sm font-mono">{selectedInquiry.id.slice(0, 8)}</p>
                 </div>
-                <div className="space-y-1 text-right">
+                <div className="space-y-1 sm:text-right">
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Date</p>
                   <p className="text-sm">{new Date(selectedInquiry.createdAt).toLocaleDateString()}</p>
                 </div>

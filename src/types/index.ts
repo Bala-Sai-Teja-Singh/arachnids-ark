@@ -22,14 +22,18 @@ export type ProductOrigin = 'new-world' | 'old-world';
 export type CareLevel = 'beginner' | 'intermediate' | 'advanced' | 'expert';
 export type Temperament = 'docile' | 'semi-aggressive' | 'aggressive' | 'defensive';
 
+export interface ProductSize {
+  size: string;
+  price: number;
+  stock: number;
+}
+
 export interface Product {
   id: string;
   name: string;
   scientificName: string;
   category: ProductType;
   origin: ProductOrigin;
-  price: number;
-  stock: number;
   careLevel: CareLevel;
   temperament: Temperament;
   humidity: string;
@@ -38,6 +42,9 @@ export interface Product {
   description: string;
   images: string[];
   featured: boolean;
+  available: boolean;
+  isVisible: boolean;
+  sizes: ProductSize[];
   createdAt: string;
   updatedAt: string;
 }
@@ -187,6 +194,21 @@ export interface Notification {
   type: NotificationType;
   read: boolean;
   link?: string;
+  createdAt: string;
+}
+
+// ============ REVIEW ============
+export type ReviewStatus = 'pending' | 'approved' | 'rejected';
+
+export interface Review {
+  id: string;
+  productId: string;
+  userId: string;
+  userName: string;
+  userAvatar?: string;
+  rating: number;
+  comment: string;
+  status: ReviewStatus;
   createdAt: string;
 }
 

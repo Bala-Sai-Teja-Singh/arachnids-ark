@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
@@ -14,6 +14,8 @@ import { toast } from 'sonner';
 
 export default function SignupPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get('redirect');
   const { signup, isLoading } = useAuthStore();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -39,7 +41,11 @@ export default function SignupPage() {
     const result = await signup(name, email, password, phone);
     if (result.success) {
       toast.success('Account created successfully!');
-      router.push('/dashboard');
+      if (redirect) {
+        router.push(redirect);
+      } else {
+        router.push('/dashboard');
+      }
     } else {
       toast.error(result.error || 'Signup failed');
     }
@@ -104,7 +110,7 @@ export default function SignupPage() {
                 {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating account...</> : 'Create Account'}
               </Button>
               <p className="text-sm text-muted-foreground text-center">
-                Already have an account? <Link href="/login" className="text-brand-gold hover:underline">Sign in</Link>
+                Already have an account? <Link href={`/login${redirect ? `?redirect=${redirect}` : ''}`} className="text-brand-gold hover:underline">Sign in</Link>
               </p>
             </CardFooter>
           </form>

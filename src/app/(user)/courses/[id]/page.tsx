@@ -33,10 +33,20 @@ export default function CourseDetailPage() {
     setLoading(false);
   }, [params.id]);
 
+  useEffect(() => {
+    const pendingId = localStorage.getItem('pending_enrollment');
+    if (pendingId && isAuthenticated && user && course && pendingId === course.id) {
+      setEnrollOpen(true);
+      localStorage.removeItem('pending_enrollment');
+      toast.success('Ready to complete your enrollment!');
+    }
+  }, [isAuthenticated, user, course]);
+
   const handleEnroll = () => {
     if (!isAuthenticated || !user || !course) {
+      localStorage.setItem('pending_enrollment', course?.id || '');
       toast.error('Please login to enroll');
-      router.push('/login');
+      router.push(`/login?redirect=/courses/${params.id}`);
       return;
     }
 
@@ -68,6 +78,7 @@ export default function CourseDetailPage() {
       title: 'Enrollment Requested',
       message: `Your enrollment request for "${course.title}" has been submitted.`,
       type: 'success',
+      link: '/dashboard/courses',
     });
 
     // Notify Admin
@@ -76,6 +87,7 @@ export default function CourseDetailPage() {
       title: 'New Course Enrollment',
       message: `${user.name} requested enrollment for "${course.title}".`,
       type: 'info',
+      link: '/admin/enrollments',
     });
     toast.success('Enrollment request submitted!');
     setEnrollOpen(false);

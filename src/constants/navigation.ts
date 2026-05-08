@@ -1,6 +1,6 @@
 import { 
   Home, ShoppingBag, GraduationCap, Calendar, BookOpen,
-  LayoutDashboard, Package, Users, Settings, Bell, ClipboardList, MessageSquare
+  LayoutDashboard, Package, Users, Settings, Bell, ClipboardList, MessageSquare, DollarSign
 } from 'lucide-react';
 
 export const USER_NAV_ITEMS = [
@@ -22,18 +22,20 @@ export const MOBILE_NAV_ITEMS = [
 export const ADMIN_NAV_ITEMS = [
   { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { label: 'Products', href: '/admin/products', icon: Package },
+  { label: 'Reviews', href: '/admin/reviews', icon: MessageSquare },
   { label: 'Courses', href: '/admin/courses', icon: GraduationCap },
-  { label: 'Consultations', href: '/admin/consultations', icon: Calendar },
-  { label: 'Inquiries', href: '/admin/inquiries', icon: ClipboardList },
-  { label: 'Enrollments', href: '/admin/enrollments', icon: MessageSquare },
+  { label: 'Order Requests', href: '/admin/inquiries', icon: ClipboardList },
+  { label: 'Enrollments', href: '/admin/enrollments', icon: BookOpen },
   { label: 'Bookings', href: '/admin/bookings', icon: Calendar },
+  { label: 'Revenue', href: '/admin/revenue', icon: DollarSign },
   { label: 'Users', href: '/admin/users', icon: Users },
+  { label: 'Consultation Settings', href: '/admin/consultations', icon: Calendar },
   { label: 'Settings', href: '/admin/settings', icon: Settings },
 ];
 
 export const DASHBOARD_NAV_ITEMS = [
   { label: 'Overview', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'My Inquiries', href: '/dashboard/inquiries', icon: ClipboardList },
+  { label: 'My Order Requests', href: '/dashboard/inquiries', icon: ClipboardList },
   { label: 'My Courses', href: '/dashboard/courses', icon: GraduationCap },
   { label: 'My Consultations', href: '/dashboard/consultations', icon: Calendar },
 

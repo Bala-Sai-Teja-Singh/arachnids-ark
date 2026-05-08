@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, Loader2 } from 'lucide-react';
+import { User, Loader2, Camera, Upload } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +15,9 @@ export default function ProfilePage() {
   const { user, updateProfile } = useAuthStore();
   const [name, setName] = useState(user?.name || '');
   const [phone, setPhone] = useState(user?.phone || '');
+  const [avatar, setAvatar] = useState(user?.avatar || '');
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,9 +29,28 @@ export default function ProfilePage() {
       setLoading(false);
       return;
     }
-    updateProfile({ name, phone });
+    updateProfile({ name, phone, avatar });
     toast.success('Profile updated successfully');
     setLoading(false);
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Image size must be less than 2MB');
+      return;
+    }
+
+    setUploading(true);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setAvatar(reader.result as string);
+      setUploading(false);
+      toast.success('Image preview updated. Don\'t forget to save changes!');
+    };
+    reader.readAsDataURL(file);
   };
 
   if (!user) return null;
@@ -47,7 +69,37 @@ export default function ProfilePage() {
               <User className="h-5 w-5 text-brand-gold" /> Personal Info
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-6">
+            {/* Avatar Section */}
+            <div className="flex flex-col items-center gap-4 p-4 rounded-xl bg-accent/5 border border-dashed border-border">
+              <div className="relative group">
+                <Avatar className="h-24 w-24 border-2 border-brand-gold/20">
+                  <AvatarImage src={avatar} />
+                  <AvatarFallback className="bg-brand-red text-white text-2xl font-bold">
+                    {name.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <label 
+                  htmlFor="avatar-upload" 
+                  className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-full cursor-pointer"
+                >
+                  <Camera className="h-6 w-6 text-white" />
+                </label>
+                <input 
+                  id="avatar-upload" 
+                  type="file" 
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={handleImageUpload}
+                  disabled={uploading}
+                />
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-medium">Profile Picture</p>
+                <p className="text-[10px] text-muted-foreground mt-1">JPG, PNG or WEBP. Max 2MB.</p>
+              </div>
+            </div>
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label>Email (Read only)</Label>

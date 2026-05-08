@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 interface NotificationState {
   notifications: Notification[];
   unreadCount: number;
+  currentUserId: string | null;
   loadNotifications: (userId: string) => void;
   addNotification: (notification: Omit<Notification, 'id' | 'createdAt' | 'read'>) => void;
   markAsRead: (id: string) => void;
@@ -18,6 +19,7 @@ interface NotificationState {
 export const useNotificationStore = create<NotificationState>()((set, get) => ({
   notifications: [],
   unreadCount: 0,
+  currentUserId: null,
 
   loadNotifications: (userId: string) => {
     const all = LocalStorage.getAll<Notification>('notifications');
@@ -25,6 +27,7 @@ export const useNotificationStore = create<NotificationState>()((set, get) => ({
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
     set({
+      currentUserId: userId,
       notifications: userNotifs,
       unreadCount: userNotifs.filter(n => !n.read).length,
     });
@@ -38,11 +41,14 @@ export const useNotificationStore = create<NotificationState>()((set, get) => ({
       createdAt: new Date().toISOString(),
     };
     LocalStorage.create('notifications', notification);
-    const { notifications } = get();
-    set({
-      notifications: [notification, ...notifications],
-      unreadCount: get().unreadCount + 1,
-    });
+    
+    const state = get();
+    if (notification.userId === state.currentUserId) {
+      set({
+        notifications: [notification, ...state.notifications],
+        unreadCount: state.unreadCount + 1,
+      });
+    }
   },
 
   markAsRead: (id: string) => {
