@@ -28,7 +28,7 @@ export function AdminSidebar({ onItemClick }: { onItemClick?: () => void }) {
   return (
     <div className="flex flex-col h-full bg-card border-r border-border">
       {/* Brand */}
-      <div className="h-24 flex items-center px-6 border-b border-border shrink-0">
+      <div className="h-24 flex items-center sm:pr-6 pr-10 border-b border-border shrink-0">
         <Link href="/admin" className="flex items-center w-full">
           <div className="w-full flex items-center justify-start overflow-hidden">
             <img src="/logo.png" alt="ArachnidsArk" className="w-full h-auto object-contain object-left" />
@@ -46,11 +46,10 @@ export function AdminSidebar({ onItemClick }: { onItemClick?: () => void }) {
               key={item.href}
               href={item.href}
               onClick={() => onItemClick?.()}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                isActive
-                  ? 'bg-brand-red/10 text-brand-red font-medium'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
-              }`}
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${isActive
+                ? 'bg-brand-red/10 text-brand-red font-medium'
+                : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                }`}
             >
               <Icon className="h-4 w-4" />
               {item.label}

@@ -46,7 +46,7 @@ export function Navbar() {
     <header
       className="fixed top-0 left-0 right-0 z-40 w-full bg-background/80 backdrop-blur-md border-b border-border transition-all"
     >
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+      <div className="container mx-auto flex h-16 items-center justify-between pr-4 !pl-0 sm:!px-4">
         {/* Logo */}
         <Link href="/" className="flex items-center group">
           <div className="w-60 flex items-center justify-start overflow-hidden">
