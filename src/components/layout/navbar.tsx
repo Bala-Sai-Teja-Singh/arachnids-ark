@@ -3,9 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Menu, X, ShoppingBag, Bell, User, LogOut, LayoutDashboard, Shield, Settings } from 'lucide-react';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Menu, Bell, LogOut, Shield } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -19,17 +18,19 @@ import { USER_NAV_ITEMS, DASHBOARD_NAV_ITEMS, MOBILE_NAV_ITEMS } from '@/constan
 import { useAuthStore } from '@/store/auth-store';
 import { useNotificationStore } from '@/store/notification-store';
 import { NotificationCenter } from '../shared/notification-center';
-import { useEffect } from 'react';
+import { useTheme } from 'next-themes';
 
 export function Navbar() {
   const pathname = usePathname();
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const { user, isAuthenticated, logout } = useAuthStore();
   const { unreadCount, loadNotifications } = useNotificationStore();
   const [showNotifications, setShowNotifications] = useState(false);
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     if (user) {
       loadNotifications(user.id);
     }
@@ -40,19 +41,17 @@ export function Navbar() {
     window.location.href = '/';
   };
 
+
   return (
     <header
       className="fixed top-0 left-0 right-0 z-40 w-full bg-background/80 backdrop-blur-md border-b border-border transition-all"
     >
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 group">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-red to-brand-red-light flex items-center justify-center">
-            <span className="text-white font-bold text-sm">AA</span>
+        <Link href="/" className="flex items-center group">
+          <div className="w-60 flex items-center justify-start overflow-hidden">
+            <img src="/logo.png" alt="ArachnidsArk" className="w-full h-auto object-contain object-left" />
           </div>
-          <span className="vibe-heading text-xl font-bold hidden sm:block">
-            Arachnids<span className="text-gradient">Ark</span>
-          </span>
         </Link>
 
         {/* Desktop Nav */}
@@ -61,8 +60,8 @@ export function Navbar() {
             <Link
               href="/admin"
               className={`relative px-3 py-2 text-sm font-medium rounded-lg transition-colors ${pathname.startsWith('/admin')
-                  ? 'text-brand-gold'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                ? 'text-brand-gold'
+                : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
                 }`}
             >
               <span className="font-heading uppercase tracking-widest text-[10px] flex items-center gap-2">
@@ -83,8 +82,8 @@ export function Navbar() {
                   key={item.href}
                   href={item.href}
                   className={`relative px-3 py-2 text-sm font-medium rounded-lg transition-colors ${isActive
-                      ? 'text-brand-gold'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                    ? 'text-brand-gold'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
                     }`}
                 >
                   <span className="font-heading uppercase tracking-widest text-[10px]">{item.label}</span>
@@ -107,9 +106,9 @@ export function Navbar() {
           {isAuthenticated && user ? (
             <>
               {/* Notifications */}
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 className="relative border border-border rounded-lg"
                 onClick={() => setShowNotifications(true)}
               >
@@ -182,7 +181,7 @@ export function Navbar() {
             </SheetTrigger>
             <SheetContent side="right" className="glass border-l border-border w-72 flex flex-col p-0 overflow-hidden">
               <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
-              
+
               <div className="p-6 border-b border-border bg-accent/20">
                 {isAuthenticated && user ? (
                   <div className="flex items-center gap-3">
@@ -218,8 +217,8 @@ export function Navbar() {
                           href={item.href}
                           onClick={() => setOpen(false)}
                           className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${isActive
-                              ? 'bg-brand-red/10 text-brand-gold'
-                              : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                            ? 'bg-brand-red/10 text-brand-gold'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
                             }`}
                         >
                           <Icon className="h-4 w-4" />
@@ -240,8 +239,8 @@ export function Navbar() {
                         href={item.href}
                         onClick={() => setOpen(false)}
                         className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${pathname === item.href
-                            ? 'bg-brand-red/10 text-brand-gold'
-                            : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                          ? 'bg-brand-red/10 text-brand-gold'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
                           }`}
                       >
                         <item.icon className="h-4 w-4" />
@@ -253,8 +252,8 @@ export function Navbar() {
                         href="/admin"
                         onClick={() => setOpen(false)}
                         className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${pathname.startsWith('/admin')
-                            ? 'bg-brand-red/10 text-brand-gold'
-                            : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                          ? 'bg-brand-red/10 text-brand-gold'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
                           }`}
                       >
                         <Shield className="h-4 w-4" />
@@ -267,9 +266,9 @@ export function Navbar() {
 
               <div className="p-6 border-t border-border bg-accent/10">
                 {isAuthenticated ? (
-                  <Button 
-                    variant="ghost" 
-                    onClick={handleLogout} 
+                  <Button
+                    variant="ghost"
+                    onClick={handleLogout}
                     className="w-full justify-start gap-3 text-red-400 hover:text-red-300 hover:bg-red-400/10 px-3"
                   >
                     <LogOut className="h-4 w-4" />

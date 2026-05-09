@@ -17,7 +17,7 @@ interface AuthState {
 }
 
 function toSafeUser(user: User): SafeUser {
-  const { password: _, ...safeUser } = user;
+  const { password: _password, ...safeUser } = user;
   return safeUser;
 }
 

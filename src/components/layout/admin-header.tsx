@@ -1,9 +1,8 @@
 'use client';
 
-import { Menu, Search, Bell } from 'lucide-react';
+import { Menu, Bell } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { AdminSidebar } from './admin-sidebar';
 import { useAuthStore } from '@/store/auth-store';

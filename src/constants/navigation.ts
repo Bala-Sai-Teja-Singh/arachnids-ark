@@ -1,6 +1,6 @@
 import { 
   Home, ShoppingBag, GraduationCap, Calendar, BookOpen,
-  LayoutDashboard, Package, Users, Settings, Bell, ClipboardList, MessageSquare, DollarSign
+  LayoutDashboard, Package, Users, Settings, ClipboardList, MessageSquare, DollarSign
 } from 'lucide-react';
 
 export const USER_NAV_ITEMS = [
@@ -28,6 +28,7 @@ export const ADMIN_NAV_ITEMS = [
   { label: 'Enrollments', href: '/admin/enrollments', icon: BookOpen },
   { label: 'Bookings', href: '/admin/bookings', icon: Calendar },
   { label: 'Revenue', href: '/admin/revenue', icon: DollarSign },
+  { label: 'Care Guides', href: '/admin/care-guides', icon: BookOpen },
   { label: 'Users', href: '/admin/users', icon: Users },
   { label: 'Consultation Settings', href: '/admin/consultations', icon: Calendar },
   { label: 'Settings', href: '/admin/settings', icon: Settings },

@@ -12,9 +12,10 @@ import { StatusBadge } from '@/components/shared/status-badge';
 import { EmptyState } from '@/components/shared/empty-state';
 import { useAuthStore } from '@/store/auth-store';
 import { LocalStorage } from '@/mock-db/storage';
-import type { CourseEnrollment } from '@/types';
+import type { CourseEnrollment, SystemSettings } from '@/types';
 import { formatPrice } from '@/constants/pricing';
 import { toast } from 'sonner';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function MyCoursesPage() {
   const { user } = useAuthStore();
@@ -22,6 +23,8 @@ export default function MyCoursesPage() {
   const [uploadId, setUploadId] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [systemSettings, setSystemSettings] = useState<SystemSettings | null>(null);
+  const [selectedUPI, setSelectedUPI] = useState<string>('');
 
   useEffect(() => {
     if (!user) return;
@@ -29,6 +32,13 @@ export default function MyCoursesPage() {
       .filter(e => e.userId === user.id)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     setEnrollments(data);
+
+    const settingsData = LocalStorage.getAll<SystemSettings>('system_settings');
+    if (settingsData.length > 0) {
+      setSystemSettings(settingsData[0]);
+      const defaultUPI = settingsData[0].upiIds.find(u => u.isDefault) || settingsData[0].upiIds[0];
+      if (defaultUPI) setSelectedUPI(defaultUPI.value);
+    }
   }, [user]);
 
   const handleUpload = (id: string) => {
@@ -98,21 +108,51 @@ export default function MyCoursesPage() {
                           <DialogContent className="glass border-border">
                             <DialogHeader><DialogTitle>Complete Your Payment</DialogTitle></DialogHeader>
                             <div className="py-4 space-y-6">
-                              <div className="bg-background/50 border border-border p-4 rounded-lg space-y-3">
-                                <div>
-                                  <p className="text-xs text-muted-foreground mb-1">UPI ID</p>
-                                  <p className="font-mono text-sm bg-muted/50 p-2 rounded border border-border select-all">payments@arachnidsark</p>
+                              <div className="bg-background/50 border border-border p-4 rounded-lg space-y-4">
+                                <div className="space-y-2">
+                                  <Label className="text-xs text-muted-foreground">Select UPI ID</Label>
+                                  {systemSettings && systemSettings.upiIds.length > 0 ? (
+                                    <Select value={selectedUPI} onValueChange={(val) => setSelectedUPI(val ?? '')}>
+                                      <SelectTrigger className="w-full bg-background/50">
+                                        <SelectValue placeholder="Select UPI ID" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {systemSettings.upiIds.map((upi) => (
+                                          <SelectItem key={upi.id} value={upi.value}>
+                                            {upi.label} ({upi.value})
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  ) : (
+                                    <p className="font-mono text-sm bg-muted/50 p-2 rounded border border-border select-all">payments@arachnidsark</p>
+                                  )}
+                                  {selectedUPI && (
+                                    <div className="mt-2 p-2 bg-muted/30 rounded border border-border flex items-center justify-between">
+                                      <span className="font-mono text-sm select-all">{selectedUPI}</span>
+                                      <span className="text-[10px] text-muted-foreground uppercase tracking-widest">Copy</span>
+                                    </div>
+                                  )}
                                 </div>
-                                <div className="space-y-1 mt-2">
+                                
+                                <div className="space-y-1 mt-2 border-t border-border pt-3">
                                   <p className="text-xs text-muted-foreground">Bank Transfer Details</p>
                                   <div className="font-mono text-xs bg-muted/50 p-2 rounded border border-border space-y-1">
-                                    <p>Bank: HDFC Bank</p>
-                                    <p>Account Name: ArachnidsArk Pvt Ltd</p>
-                                    <p>A/C Number: <span className="select-all">50200001234567</span></p>
-                                    <p>IFSC: <span className="select-all">HDFC0001234</span></p>
+                                    {systemSettings?.bankDetails ? (
+                                      <pre className="whitespace-pre-wrap font-mono text-[10px]">{systemSettings.bankDetails}</pre>
+                                    ) : (
+                                      <>
+                                        <p>Bank: HDFC Bank</p>
+                                        <p>Account Name: ArachnidsArk Pvt Ltd</p>
+                                        <p>A/C Number: <span className="select-all">50200001234567</span></p>
+                                        <p>IFSC: <span className="select-all">HDFC0001234</span></p>
+                                      </>
+                                    )}
                                   </div>
                                 </div>
-                                <p className="text-[10px] text-brand-gold italic">Please include your enrollment ID ({enr.id.split('-')[1] || enr.id}) in the transfer remarks.</p>
+                                <p className="text-[10px] text-brand-gold italic">
+                                  {systemSettings?.paymentInstructions || `Please include your enrollment ID (${enr.id.split('-')[1] || enr.id}) in the transfer remarks.`}
+                                </p>
                               </div>
 
                                <div className="space-y-2 border-t border-border pt-4">

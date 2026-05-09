@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { LocalStorage } from '@/mock-db/storage';
 import type { CareGuide } from '@/types';
+import Link from 'next/link';
 
 export default function CareGuidesPage() {
   const [guides, setGuides] = useState<CareGuide[]>([]);
@@ -38,28 +39,30 @@ export default function CareGuidesPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
           >
-            <Card className="group border-border bg-card hover:border-brand-red/20 transition-all h-full cursor-pointer">
-              <CardContent className="p-6 flex gap-4">
-                <div className="w-24 h-24 rounded-xl bg-gradient-to-br from-brand-red/20 to-brand-gold/10 overflow-hidden shrink-0 border border-border">
-                  {guide.image ? (
-                    <img src={guide.image} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <BookOpen className="h-8 w-8 text-brand-red/50" />
-                    </div>
-                  )}
-                </div>
-                <div className="space-y-2 flex-1">
-                  <Badge variant="outline" className="text-xs border-border">{guide.category}</Badge>
-                  <h3 className="font-semibold group-hover:text-brand-gold transition-colors">{guide.title}</h3>
-                  <p className="text-sm text-muted-foreground line-clamp-2">{guide.excerpt}</p>
-                  <div className="flex items-center gap-1 text-xs text-brand-gold">
-                    <Clock className="h-3 w-3" />
-                    {guide.readTime}
+            <Link href={`/care-guides/${guide.id}`}>
+              <Card className="group border-border bg-card hover:border-brand-red/20 transition-all h-full cursor-pointer hover:shadow-lg hover:shadow-brand-red/5">
+                <CardContent className="p-6 flex gap-4">
+                  <div className="w-24 h-24 rounded-xl bg-gradient-to-br from-brand-red/20 to-brand-gold/10 overflow-hidden shrink-0 border border-border group-hover:border-brand-gold/50 transition-colors">
+                    {guide.image ? (
+                      <img src={guide.image} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <BookOpen className="h-8 w-8 text-brand-red/50" />
+                      </div>
+                    )}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                  <div className="space-y-2 flex-1">
+                    <Badge variant="outline" className="text-xs border-border group-hover:border-brand-gold/30 group-hover:text-brand-gold transition-colors">{guide.category}</Badge>
+                    <h3 className="font-semibold group-hover:text-brand-gold transition-colors">{guide.title}</h3>
+                    <p className="text-sm text-muted-foreground line-clamp-2">{guide.excerpt}</p>
+                    <div className="flex items-center gap-1 text-xs text-brand-gold">
+                      <Clock className="h-3 w-3" />
+                      {guide.readTime}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
           </motion.div>
         ))}
       </div>

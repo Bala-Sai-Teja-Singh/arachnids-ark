@@ -71,6 +71,29 @@ export type InquiryStatus =
   | 'completed'
   | 'cancelled';
 
+// ============ SYSTEM SETTINGS ============
+export interface UPIId {
+  id: string;
+  label: string;
+  value: string;
+  isDefault: boolean;
+}
+
+export interface SystemSettings {
+  upiIds: UPIId[];
+  bankDetails: string;
+  paymentInstructions: string;
+  emailNotifications: {
+    orderConfirmations: boolean;
+    paymentVerification: boolean;
+    consultationReminders: boolean;
+  };
+  storeStatus: {
+    maintenanceMode: boolean;
+    acceptingConsultations: boolean;
+  };
+}
+
 export interface Inquiry {
   id: string;
   userId: string;
@@ -87,6 +110,7 @@ export interface Inquiry {
   deliveryPhone: string;
   deliveryAddress: string;
   totalPrice: number;
+  upiId?: string; // The UPI ID used for payment
   createdAt: string;
   updatedAt: string;
 }

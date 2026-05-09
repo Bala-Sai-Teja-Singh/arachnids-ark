@@ -409,7 +409,7 @@ export default function AdminProductsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Category</Label>
-                <Select value={formData.category} onValueChange={(val) => setFormData({ ...formData, category: val as ProductType })}>
+                <Select value={formData.category} onValueChange={(val) => setFormData({ ...formData, category: (val as ProductType) ?? 'terrestrial' })}>
                   <SelectTrigger className="bg-background/50">
                     <SelectValue placeholder="Select Category" />
                   </SelectTrigger>
@@ -422,7 +422,7 @@ export default function AdminProductsPage() {
               </div>
               <div className="space-y-2">
                 <Label>Origin</Label>
-                <Select value={formData.origin} onValueChange={(val) => setFormData({ ...formData, origin: val as ProductOrigin })}>
+                <Select value={formData.origin} onValueChange={(val) => setFormData({ ...formData, origin: (val as ProductOrigin) ?? 'new-world' })}>
                   <SelectTrigger className="bg-background/50">
                     <SelectValue placeholder="Select Origin" />
                   </SelectTrigger>
@@ -437,7 +437,7 @@ export default function AdminProductsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Care Level</Label>
-                <Select value={formData.careLevel} onValueChange={(val) => setFormData({ ...formData, careLevel: val as CareLevel })}>
+                <Select value={formData.careLevel} onValueChange={(val) => setFormData({ ...formData, careLevel: (val as CareLevel) ?? 'beginner' })}>
                   <SelectTrigger className="bg-background/50">
                     <SelectValue placeholder="Select Care Level" />
                   </SelectTrigger>
@@ -451,7 +451,7 @@ export default function AdminProductsPage() {
               </div>
               <div className="space-y-2">
                 <Label>Temperament</Label>
-                <Select value={formData.temperament} onValueChange={(val) => setFormData({ ...formData, temperament: val as Temperament })}>
+                <Select value={formData.temperament} onValueChange={(val) => setFormData({ ...formData, temperament: (val as Temperament) ?? 'docile' })}>
                   <SelectTrigger className="bg-background/50">
                     <SelectValue placeholder="Select Temperament" />
                   </SelectTrigger>

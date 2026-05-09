@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Bell, Check, Trash2, X, Info, AlertTriangle, CheckCircle, Clock, ExternalLink } from 'lucide-react';
+import { useEffect } from 'react';
+import { Bell, Check, Trash2, Info, CheckCircle, Clock, ExternalLink } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useNotificationStore } from '@/store/notification-store';
 import { useAuthStore } from '@/store/auth-store';
 import { Button } from '@/components/ui/button';

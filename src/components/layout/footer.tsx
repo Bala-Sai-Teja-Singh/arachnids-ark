@@ -1,20 +1,26 @@
+import { useTheme } from 'next-themes';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Bug, Mail, MapPin, Phone, Link as LinkIcon, Globe, MessageCircle } from 'lucide-react';
+import { Mail, MapPin, Phone, Link as LinkIcon, Globe, MessageCircle } from 'lucide-react';
 
 export function Footer() {
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   return (
     <footer className="border-t border-border bg-background">
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-red to-brand-red-light flex items-center justify-center">
-                <span className="text-white font-bold text-sm">AA</span>
+            <div className="flex items-center">
+              <div className="w-64 flex items-center justify-start overflow-hidden">
+                <img src="/logo.png" alt="ArachnidsArk" className="w-full h-auto object-contain object-left" />
               </div>
-              <span className="text-lg font-bold">
-                Arachnids<span className="text-gradient">Ark</span>
-              </span>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Your premier destination for exotic tarantulas, expert care guidance, and professional consultation services.

@@ -11,6 +11,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { useAuthStore } from '@/store/auth-store';
 import { toast } from 'sonner';
+import { useTheme } from 'next-themes';
+import { useEffect } from 'react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -20,6 +22,13 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,13 +63,10 @@ export default function LoginPage() {
         className="w-full max-w-md relative z-10"
       >
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 mb-6 group">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-brand-red to-brand-red-light flex items-center justify-center">
-              <span className="text-white font-bold">AA</span>
+          <Link href="/" className="inline-flex items-center mb-6 group">
+            <div className="w-80 flex items-center justify-center overflow-hidden">
+              <img src="/logo.png" alt="ArachnidsArk" className="w-full h-auto object-contain" />
             </div>
-            <span className="vibe-heading text-xl font-bold">
-              Arachnids<span className="text-gradient">Ark</span>
-            </span>
           </Link>
           <h1 className="vibe-heading text-2xl font-bold">Welcome Back</h1>
           <p className="font-heading text-[10px] uppercase tracking-widest text-muted-foreground mt-1">Sign in to your account</p>

@@ -1,31 +1,38 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { LogOut, Menu, Bug } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { LogOut } from 'lucide-react';
 import { ADMIN_NAV_ITEMS } from '@/constants/navigation';
 import { useAuthStore } from '@/store/auth-store';
 import { Button } from '@/components/ui/button';
+import { useTheme } from 'next-themes';
+import { useState, useEffect } from 'react';
 
 export function AdminSidebar({ onItemClick }: { onItemClick?: () => void }) {
   const pathname = usePathname();
   const { logout } = useAuthStore();
-  const router = useRouter();
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleLogout = () => {
     logout();
     window.location.href = '/';
   };
 
+
   return (
     <div className="flex flex-col h-full bg-card border-r border-border">
       {/* Brand */}
-      <div className="h-16 flex items-center px-6 border-b border-border shrink-0">
-        <Link href="/admin" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-red to-brand-red-light flex items-center justify-center">
-            <span className="text-white font-bold text-xs">AA</span>
+      <div className="h-24 flex items-center px-6 border-b border-border shrink-0">
+        <Link href="/admin" className="flex items-center w-full">
+          <div className="w-full flex items-center justify-start overflow-hidden">
+            <img src="/logo.png" alt="ArachnidsArk" className="w-full h-auto object-contain object-left" />
           </div>
-          <span className="font-bold tracking-tight">Admin<span className="text-gradient">Panel</span></span>
         </Link>
       </div>
 

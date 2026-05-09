@@ -1,6 +1,6 @@
 'use client';
 
-import type { User, Product, Course, ConsultationSettings, ConsultationSlot, CareGuide } from '@/types';
+import type { User, Product, Course, ConsultationSettings, ConsultationSlot, CareGuide, SystemSettings } from '@/types';
 import { LocalStorage } from './storage';
 import { DEFAULT_CONSULTATION_PRICING, DEFAULT_URGENCY_MULTIPLIERS } from '@/constants/pricing';
 
@@ -251,31 +251,24 @@ function generateSlots(): ConsultationSlot[] {
 const CARE_GUIDES: CareGuide[] = [
   {
     id: 'guide-001', title: 'Complete Beginner\'s Guide to Tarantula Care',
-    excerpt: 'Everything you need to know before getting your first tarantula companion.',
-    content: 'Detailed care guide content...',
+    excerpt: 'Everything you need to know before getting your first tarantula companion. From species selection to basic housing.',
+    content: 'Tarantulas make fascinating and low-maintenance pets for the right person. Before bringing home your first eight-legged friend, there are several key things to consider.\n\n### 1. Choosing Your First Species\nFor beginners, we highly recommend New World terrestrial species. They are generally slower-moving, less defensive, and have less potent venom than Old World species. Excellent first choices include:\n- Mexican Red Knee (Brachypelma hamorii)\n- Brazilian Black (Grammostola pulchra)\n- Curly Hair (Tliltocatl albopilosus)\n\n### 2. Enclosure Basics\nA proper enclosure should be secure, well-ventilated, and appropriately sized. For terrestrial species, floor space is more important than height. A general rule is the enclosure should be 3-4 times the leg span of the spider in length.\n\n### 3. Temperature and Humidity\nMost common beginner species thrive at room temperature (22-28°C). Humidity requirements vary by species but generally range from 60-70%. Always provide a shallow water dish with fresh water.\n\n### 4. Feeding\nTarantulas are insectivores. Slings (babies) should be fed twice a week, while adults usually only need to eat once every 7-10 days. Appropriate prey includes crickets, roaches, and mealworms.',
     image: '/images/curlyHair-2.avif', category: 'Beginner',
     readTime: '8 min read'
   },
   {
     id: 'guide-002', title: 'Understanding Tarantula Molting',
-    excerpt: 'Learn the signs of pre-molt, what to do during molting, and post-molt care.',
-    content: 'Molting guide content...',
+    excerpt: 'Learn the signs of pre-molt, what to do during molting, and post-molt care. This is a critical time for your pet.',
+    content: 'Molting is the process by which tarantulas grow by shedding their old exoskeleton. It can be a stressful time for new keepers, but understanding the process helps ensure your spider stays safe.\n\n### Signs of Pre-molt\n- **Refusal of food**: This is often the first sign.\n- **Lethargy**: The spider becomes less active.\n- **Darkened abdomen**: The new skin growing underneath makes the abdomen look dark or shiny.\n- **Webbing**: Some species will web themselves into a "molting mat" or seal their burrow.\n\n### During the Molt\nThe most important rule is: **DO NOT DISTURB THE SPIDER.** Many tarantulas molt while lying on their backs. This is normal behavior—they are not dead! If you disturb them during this fragile process, it can lead to injury or death.\n\n### Post-molt Care\nAfter molting, your tarantula\'s new exoskeleton is soft and vulnerable. Their fangs are also soft, making them unable to eat. Wait at least 7-10 days (longer for large adults) before offering food again.',
     image: '/images/brazilianBlack-2.jpg', category: 'Health',
     readTime: '6 min read'
   },
   {
     id: 'guide-003', title: 'Feeding Your Tarantula: A Complete Guide',
-    excerpt: 'From prey selection to feeding schedules, master the art of tarantula nutrition.',
-    content: 'Feeding guide content...',
+    excerpt: 'From prey selection to feeding schedules, master the art of tarantula nutrition for a healthy, long-lived spider.',
+    content: 'Proper nutrition is essential for your tarantula\'s growth and health. Unlike mammals, tarantulas have very slow metabolisms and unique feeding requirements.\n\n### Types of Prey\n- **Crickets**: The most common and easily available feeder.\n- **Roaches (Dubia, Red Runners)**: Excellent nutritional value and easier to keep than crickets.\n- **Mealworms/Superworms**: Good for occasional feeding but can be fatty.\n- **Hornworms**: Great for hydration and picky eaters.\n\n### Feeding Frequency\n- **Slings (under 1")**: 2 times per week.\n- **Juveniles (1-3")**: Once a week.\n- **Adults (over 3")**: Once every 10-14 days.\n\n### Hydration\nA water dish is mandatory for all tarantulas except the smallest slings. Contrary to popular belief, tarantulas do not "drown" in shallow dishes. Mist the enclosure occasionally depending on the species\' humidity needs.',
     image: '/images/roseHair.jpg', category: 'Nutrition',
     readTime: '5 min read'
-  },
-  {
-    id: 'guide-004', title: 'Setting Up the Perfect Enclosure',
-    excerpt: 'Create the ideal habitat for your tarantula with proper substrate, humidity, and decoration.',
-    content: 'Enclosure setup content...',
-    image: '/images/kingBaboon.jpg', category: 'Housing',
-    readTime: '7 min read'
   },
 ];
 
@@ -314,6 +307,24 @@ export function seedDatabase(): void {
     slots: generateSlots(),
   };
   LocalStorage.setAll('consultation_settings', [settings]);
+
+  const systemSettings: SystemSettings = {
+    upiIds: [
+      { id: 'upi-1', label: 'Primary UPI', value: 'payments@arachnidsark', isDefault: true },
+    ],
+    bankDetails: 'Bank Name: HDFC Bank\nAccount Name: ArachnidsArk Pvt Ltd\nAccount Number: 50200001234567\nIFSC Code: HDFC0001234',
+    paymentInstructions: 'Please ensure you add your order request ID in the payment remarks.',
+    emailNotifications: {
+      orderConfirmations: true,
+      paymentVerification: true,
+      consultationReminders: true,
+    },
+    storeStatus: {
+      maintenanceMode: false,
+      acceptingConsultations: true,
+    },
+  };
+  LocalStorage.setAll('system_settings', [systemSettings]);
 
   LocalStorage.markSeeded();
 }
