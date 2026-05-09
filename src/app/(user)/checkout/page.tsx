@@ -31,8 +31,9 @@ export default function CheckoutPage() {
   const [deliveryPhone, setDeliveryPhone] = useState(user?.phone || '');
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [message, setMessage] = useState('');
-  const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [productDetails, setProductDetails] = useState<Record<string, Product>>({});
   const [shippingSettings, setShippingSettings] = useState<SystemSettings['shippingSettings'] | null>(null);
   const [shippingCharge, setShippingCharge] = useState(0);
@@ -161,11 +162,31 @@ export default function CheckoutPage() {
     try {
       LocalStorage.create('orders', order);
 
+      // Trigger Email Notification
+      const settingsData = LocalStorage.getAll<SystemSettings>('system_settings');
+      const paymentDetails = settingsData.length > 0 ? {
+        upiIds: settingsData[0].upiIds,
+        bankDetails: settingsData[0].bankDetails,
+        paymentInstructions: settingsData[0].paymentInstructions
+      } : null;
+
+      if (paymentDetails) {
+        fetch('/api/emails/order-confirmation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            order,
+            paymentDetails,
+            adminEmail: 'isopodsofindia@gmail.com'
+          })
+        }).catch(err => console.error('Failed to trigger email:', err));
+      }
+
       // User Notification
       addNotification({
         userId: user.id,
         title: 'Order Placed Successfully',
-        message: `Your order for ${items.length} item(s) has been placed.`,
+        message: `Your order for ${items.length} item(s) has been placed. Check your email for payment instructions.`,
         type: 'success',
         link: '/dashboard/orders',
       });
@@ -179,9 +200,10 @@ export default function CheckoutPage() {
         link: '/admin/orders',
       });
 
-      toast.success('Order placed successfully!');
+      toast.success('Order placed! Please check your email for payment instructions.');
       clearCart();
-      router.push('/dashboard/orders');
+      setIsSuccess(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
       toast.error('Failed to place order. Please try again.');
       setIsSubmitting(false);
@@ -189,6 +211,42 @@ export default function CheckoutPage() {
   };
 
   if (items.length === 0 && !isSubmitting) return null;
+
+  if (isSuccess) {
+    return (
+      <div className="container mx-auto px-4 py-20 min-h-[70vh] flex items-center justify-center">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }} 
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-md w-full text-center space-y-6 p-8 rounded-3xl bg-card/40 backdrop-blur-xl border border-border"
+        >
+          <div className="h-20 w-20 bg-brand-red/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <CheckCircle2 className="h-10 w-10 text-brand-red" />
+          </div>
+          <h2 className="vibe-heading text-3xl font-bold">Order Received!</h2>
+          <div className="space-y-4">
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              We have sent a confirmation email with **Payment Instructions** (UPI & Bank details) to your registered email address.
+            </p>
+            <div className="p-4 rounded-2xl bg-brand-gold/10 border border-brand-gold/20 text-brand-gold text-xs font-bold uppercase tracking-widest">
+              Please check your inbox & spam folder
+            </div>
+            <p className="text-[10px] text-muted-foreground italic">
+              Reply to the email with your payment screenshot to complete the order.
+            </p>
+          </div>
+          <div className="pt-6 flex flex-col gap-3">
+            <Button onClick={() => router.push('/dashboard/orders')} className="w-full bg-brand-red hover:bg-brand-red/90 text-white font-bold h-12 rounded-xl">
+              View Order Status
+            </Button>
+            <Button variant="ghost" onClick={() => router.push('/shop')} className="w-full text-xs uppercase tracking-widest font-bold">
+              Continue Shopping
+            </Button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -271,19 +329,22 @@ export default function CheckoutPage() {
                 </CardContent>
               </Card>
 
-              <Card className="border-border bg-card/40 backdrop-blur-sm overflow-hidden opacity-60">
+              <Card className="border-border bg-card/40 backdrop-blur-sm overflow-hidden">
                 <CardHeader className="bg-accent/10 border-b border-border">
                   <CardTitle className="text-lg flex items-center gap-2">
                     <CreditCard className="h-5 w-5 text-brand-gold" />
-                    Payment Method
+                    Next Steps
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
-                  <div className="flex items-center gap-4 p-4 rounded-xl border border-brand-gold/20 bg-brand-gold/5">
-                    <CheckCircle2 className="h-5 w-5 text-brand-gold" />
+                  <div className="flex items-start gap-4 p-4 rounded-xl border border-brand-red/20 bg-brand-red/5">
+                    <CheckCircle2 className="h-5 w-5 text-brand-red mt-0.5" />
                     <div>
-                      <p className="font-bold text-sm">UPI / Bank Transfer</p>
-                      <p className="text-xs text-muted-foreground">Pay after order confirmation. You will be able to upload the payment screenshot in your dashboard.</p>
+                      <p className="font-bold text-sm">Payment via Email</p>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        We have received your order request! An automated email with our <strong>UPI and Bank Transfer</strong> details has been sent to your registered email address. 
+                        Please reply to that email with your payment screenshot to confirm your order.
+                      </p>
                     </div>
                   </div>
                 </CardContent>

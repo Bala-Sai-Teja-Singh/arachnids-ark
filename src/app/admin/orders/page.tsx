@@ -73,6 +73,30 @@ export default function AdminOrdersPage() {
     toast.success('Status updated');
   };
 
+  const sendPaymentEmail = (order: Order) => {
+    const settingsData = LocalStorage.getAll<any>('system_settings');
+    if (settingsData.length > 0) {
+      fetch('/api/emails/order-confirmation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order,
+          paymentDetails: {
+            upiIds: settingsData[0].upiIds,
+            bankDetails: settingsData[0].bankDetails,
+            paymentInstructions: settingsData[0].paymentInstructions
+          },
+          adminEmail: 'isopodsofindia@gmail.com'
+        })
+      })
+      .then(() => toast.success('Payment instruction email sent!'))
+      .catch(err => {
+        console.error('Failed to send email:', err);
+        toast.error('Failed to send email');
+      });
+    }
+  };
+
   const updateTrackingInfo = () => {
     if (!selectedOrder) return;
     
@@ -234,18 +258,30 @@ export default function AdminOrdersPage() {
           {selectedOrder && (
             <div className="space-y-6 py-4">
               {/* Status Update in Dialog */}
-              <div className="flex items-center justify-between p-4 rounded-xl bg-accent/20 border border-border">
-                <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Current Status</div>
-                <Select value={selectedOrder.status} onValueChange={(val) => val && updateStatus(selectedOrder.id, val as OrderStatus, selectedOrder.userId)}>
-                  <SelectTrigger className="h-9 text-xs w-[160px] border-border bg-background">
-                    <SelectValue placeholder="Update Status" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background border-border">
-                    {ALL_STATUSES.map(s => (
-                      <SelectItem key={s} value={s} className="text-xs capitalize">{s.replace(/_/g, ' ')}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-accent/20 border border-border">
+                <div className="space-y-1">
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Current Status</div>
+                  <Select value={selectedOrder.status} onValueChange={(val) => val && updateStatus(selectedOrder.id, val as OrderStatus, selectedOrder.userId)}>
+                    <SelectTrigger className="h-9 text-xs w-[160px] border-border bg-background">
+                      <SelectValue placeholder="Update Status" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border-border">
+                      {ALL_STATUSES.map(s => (
+                        <SelectItem key={s} value={s} className="text-xs capitalize">{s.replace(/_/g, ' ')}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <Button 
+                    onClick={() => sendPaymentEmail(selectedOrder)}
+                    className="bg-brand-red hover:bg-brand-red/90 text-white font-bold text-xs gap-2"
+                  >
+                    <ShoppingBag className="h-4 w-4" /> Send Payment Email
+                  </Button>
+                  <p className="text-[9px] text-muted-foreground text-center italic">Sends UPI & Bank details to customer</p>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

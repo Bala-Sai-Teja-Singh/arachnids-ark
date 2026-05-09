@@ -132,15 +132,22 @@ export default function MyOrdersPage() {
                   <CardContent className="p-0">
                     {/* Order Header */}
                     <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-lg bg-brand-red/10 flex items-center justify-center">
-                          <Package className="h-5 w-5 text-brand-red" />
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                          <div className="flex items-center gap-4">
+                            <div className="h-10 w-10 rounded-lg bg-brand-red/10 flex items-center justify-center">
+                              <Package className="h-5 w-5 text-brand-red" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold uppercase tracking-wider">Order #{order.id.split('-')[0]}</p>
+                              <p className="text-[10px] text-muted-foreground">{new Date(order.createdAt).toLocaleDateString()} at {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                            </div>
+                          </div>
+                          {order.status !== 'completed' && order.status !== 'cancelled' && (
+                            <div className="flex items-center gap-1.5 text-[9px] font-bold text-brand-red uppercase tracking-wider bg-brand-red/10 px-3 py-1 rounded-full w-fit">
+                              Check Email for Updates
+                            </div>
+                          )}
                         </div>
-                        <div>
-                          <p className="text-xs font-bold uppercase tracking-wider">Order #{order.id.split('-')[0]}</p>
-                          <p className="text-[10px] text-muted-foreground">{new Date(order.createdAt).toLocaleDateString()} at {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                        </div>
-                      </div>
                       
                       <div className="flex items-center gap-3">
                         <div className="text-right mr-2">
@@ -217,105 +224,15 @@ export default function MyOrdersPage() {
 
                         {/* Action Buttons */}
                         <div className="flex justify-end pt-2">
-                          {order.status === 'awaiting_payment' && (
-                            <Dialog open={uploadId === order.id} onOpenChange={(open) => {
-                              setUploadId(open ? order.id : null);
-                              if (!open) {
-                                setSelectedFile(null);
-                                setUploadError(null);
-                              }
-                            }}>
-                              <DialogTrigger render={<Button size="sm" className="bg-brand-gold hover:bg-brand-gold-light text-white font-bold px-6" />}>
-                                Complete Payment
-                              </DialogTrigger>
-                              <DialogContent className="glass border-border">
-                                <DialogHeader><DialogTitle>Complete Your Payment</DialogTitle></DialogHeader>
-                                <div className="py-4 space-y-6">
-                                  <div className="bg-background/50 border border-border p-4 rounded-lg space-y-4">
-                                    <div className="space-y-2">
-                                      <Label className="text-xs text-muted-foreground uppercase tracking-widest">Select UPI ID</Label>
-                                      {systemSettings && systemSettings.upiIds.length > 0 ? (
-                                        <Select value={selectedUPI} onValueChange={(val) => setSelectedUPI(val ?? '')}>
-                                          <SelectTrigger className="w-full bg-background/50">
-                                            <SelectValue placeholder="Select UPI ID" />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            {systemSettings.upiIds.map((upi) => (
-                                              <SelectItem key={upi.id} value={upi.value}>
-                                                {upi.label} ({upi.value})
-                                              </SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
-                                      ) : (
-                                        <p className="font-mono text-sm bg-muted/50 p-2 rounded border border-border select-all">payments@arachnidsark</p>
-                                      )}
-                                      {selectedUPI && (
-                                        <div 
-                                          onClick={() => handleCopy(selectedUPI)}
-                                          className={`mt-2 p-2 rounded border transition-all duration-300 flex items-center justify-between cursor-pointer group ${copiedUPI ? 'bg-green-500/10 border-green-500/50' : 'bg-muted/30 border-border hover:bg-muted/50'}`}
-                                        >
-                                          <span className="font-mono text-sm select-all">{selectedUPI}</span>
-                                          <div className="flex items-center gap-1.5">
-                                            {copiedUPI ? (
-                                              <>
-                                                <Check className="h-3 w-3 text-green-500" />
-                                                <span className="text-[10px] text-green-500 uppercase tracking-widest font-black">Copied!</span>
-                                              </>
-                                            ) : (
-                                              <>
-                                                <Copy className="h-3 w-3 text-muted-foreground group-hover:text-brand-gold transition-colors" />
-                                                <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold group-hover:text-brand-gold transition-colors">Copy</span>
-                                              </>
-                                            )}
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
-                                    
-                                    <div className="space-y-1 mt-2 border-t border-border pt-3">
-                                      <p className="text-xs text-muted-foreground uppercase tracking-widest">Bank Transfer Details</p>
-                                      <div className="font-mono text-xs bg-muted/50 p-2 rounded border border-border space-y-1">
-                                        {systemSettings?.bankDetails ? (
-                                          <pre className="whitespace-pre-wrap font-mono">{systemSettings.bankDetails}</pre>
-                                        ) : (
-                                          <>
-                                            <p>Bank: HDFC Bank</p>
-                                            <p>Account Name: ArachnidsArk Pvt Ltd</p>
-                                            <p>A/C Number: <span className="select-all">50200001234567</span></p>
-                                            <p>IFSC: <span className="select-all">HDFC0001234</span></p>
-                                          </>
-                                        )}
-                                      </div>
-                                    </div>
-                                    <p className="text-[10px] text-brand-gold italic">
-                                      {systemSettings?.paymentInstructions || `Please include your order ID (${order.id.split('-')[0]}) in the transfer remarks.`}
-                                    </p>
-                                  </div>
-
-                                  <div className="space-y-2 border-t border-border pt-4">
-                                    <Label className="text-xs uppercase tracking-widest">Upload Payment Screenshot</Label>
-                                    <Input 
-                                      type="file" 
-                                      accept="image/*" 
-                                      className={`bg-background/50 cursor-pointer ${uploadError ? 'border-red-500' : ''}`}
-                                      onChange={(e) => {
-                                        setSelectedFile(e.target.files?.[0] || null);
-                                        setUploadError(null);
-                                      }}
-                                    />
-                                    {uploadError && <p className="text-xs text-red-500 font-medium">{uploadError}</p>}
-                                    <p className="text-[10px] text-muted-foreground">Upload a screenshot of your successful transaction for verification.</p>
-                                  </div>
-                                </div>
-                                <DialogFooter>
-                                  <Button variant="outline" onClick={() => setUploadId(null)}>Cancel</Button>
-                                  <Button onClick={() => handleUploadScreenshot(order.id)} className="bg-brand-red hover:bg-brand-red-light text-white font-bold">
-                                    Submit for Verification
-                                  </Button>
-                                </DialogFooter>
-                              </DialogContent>
-                            </Dialog>
+                          {order.status !== 'completed' && order.status !== 'cancelled' && (
+                            <div className="p-3 px-5 rounded-2xl bg-brand-gold/10 border border-brand-gold/20 flex flex-col items-end gap-1">
+                              <p className="text-[10px] text-brand-gold font-bold uppercase tracking-widest">
+                                {order.status === 'awaiting_payment' ? 'Payment Required' : 'Order in Progress'}
+                              </p>
+                              <p className="text-[9px] text-muted-foreground italic">
+                                Please check your email for payment instructions and further updates.
+                              </p>
+                            </div>
                           )}
                         </div>
                       </motion.div>
@@ -346,11 +263,11 @@ export default function MyOrdersPage() {
           </div>
           <div className="space-y-1">
             <p className="text-[10px] font-black text-blue-400 uppercase tracking-tighter">Awaiting Payment</p>
-            <p className="text-[11px] text-muted-foreground leading-relaxed">Order approved. Please complete the payment and upload the screenshot for verification.</p>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">Check your email for payment details. Reply to that email with your payment screenshot.</p>
           </div>
           <div className="space-y-1">
-            <p className="text-[10px] font-black text-purple-400 uppercase tracking-tighter">Payment Uploaded / Verified</p>
-            <p className="text-[11px] text-muted-foreground leading-relaxed">Admin is verifying your payment. Once verified, your order will be confirmed and prepared for shipping.</p>
+            <p className="text-[10px] font-black text-purple-400 uppercase tracking-tighter">Payment Verification</p>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">Admin is verifying your payment screenshot received via email.</p>
           </div>
           <div className="space-y-1">
             <p className="text-[10px] font-black text-emerald-400 uppercase tracking-tighter">Confirmed / Confirmed</p>
