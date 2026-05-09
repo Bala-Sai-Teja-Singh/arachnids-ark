@@ -55,12 +55,12 @@ export default function AdminOrdersPage() {
     LocalStorage.update<Order>('orders', id, { status, updatedAt: new Date().toISOString() });
     const updatedOrders = LocalStorage.getAll<Order>('orders').sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     setOrders(updatedOrders);
-    
+
     // Update selected order if open
     if (selectedOrder?.id === id) {
       setSelectedOrder(updatedOrders.find(o => o.id === id) || null);
     }
-    
+
     // Notify user
     addNotification({
       userId,
@@ -69,7 +69,7 @@ export default function AdminOrdersPage() {
       type: 'info',
       link: `/dashboard/orders?id=${id}`,
     });
-    
+
     toast.success('Status updated');
   };
 
@@ -86,30 +86,30 @@ export default function AdminOrdersPage() {
             bankDetails: settingsData[0].bankDetails,
             paymentInstructions: settingsData[0].paymentInstructions
           },
-          adminEmail: 'isopodsofindia@gmail.com'
+          adminEmail: 'harrysweettt@gmail.com'
         })
       })
-      .then(() => toast.success('Payment instruction email sent!'))
-      .catch(err => {
-        console.error('Failed to send email:', err);
-        toast.error('Failed to send email');
-      });
+        .then(() => toast.success('Payment instruction email sent!'))
+        .catch(err => {
+          console.error('Failed to send email:', err);
+          toast.error('Failed to send email');
+        });
     }
   };
 
   const updateTrackingInfo = () => {
     if (!selectedOrder) return;
-    
-    LocalStorage.update<Order>('orders', selectedOrder.id, { 
-      trackingId, 
+
+    LocalStorage.update<Order>('orders', selectedOrder.id, {
+      trackingId,
       courierPartner,
-      updatedAt: new Date().toISOString() 
+      updatedAt: new Date().toISOString()
     });
-    
+
     const updatedOrders = LocalStorage.getAll<Order>('orders').sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     setOrders(updatedOrders);
     setSelectedOrder(updatedOrders.find(o => o.id === selectedOrder.id) || null);
-    
+
     // Notify user
     addNotification({
       userId: selectedOrder.userId,
@@ -118,7 +118,7 @@ export default function AdminOrdersPage() {
       type: 'success',
       link: `/dashboard/orders?id=${selectedOrder.id}`,
     });
-    
+
     toast.success('Tracking information updated');
   };
 
@@ -254,7 +254,7 @@ export default function AdminOrdersPage() {
               Placed by {selectedOrder?.userName} on {selectedOrder && new Date(selectedOrder.createdAt).toLocaleString()}
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedOrder && (
             <div className="space-y-6 py-4">
               {/* Status Update in Dialog */}
@@ -274,7 +274,7 @@ export default function AdminOrdersPage() {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <Button 
+                  <Button
                     onClick={() => sendPaymentEmail(selectedOrder)}
                     className="bg-brand-red hover:bg-brand-red/90 text-white font-bold text-xs gap-2"
                   >
@@ -366,8 +366,8 @@ export default function AdminOrdersPage() {
                     <div className="grid grid-cols-1 gap-3">
                       <div className="space-y-1.5">
                         <Label className="text-[10px] uppercase text-muted-foreground">Courier Partner</Label>
-                        <Input 
-                          placeholder="e.g. Delhivery, BlueDart, DTDC" 
+                        <Input
+                          placeholder="e.g. Delhivery, BlueDart, DTDC"
                           value={courierPartner}
                           onChange={(e) => setCourierPartner(e.target.value)}
                           className="h-9 text-xs bg-background/50 border-border"
@@ -375,15 +375,15 @@ export default function AdminOrdersPage() {
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-[10px] uppercase text-muted-foreground">Tracking ID / AWB</Label>
-                        <Input 
-                          placeholder="Enter tracking number" 
+                        <Input
+                          placeholder="Enter tracking number"
                           value={trackingId}
                           onChange={(e) => setTrackingId(e.target.value)}
                           className="h-9 text-xs bg-background/50 border-border"
                         />
                       </div>
-                      <Button 
-                        onClick={updateTrackingInfo} 
+                      <Button
+                        onClick={updateTrackingInfo}
                         className="w-full h-9 bg-brand-gold hover:bg-brand-gold/90 text-black font-bold text-xs gap-2"
                       >
                         <Save className="h-3 w-3" /> Save Tracking Details

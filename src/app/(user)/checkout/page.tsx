@@ -177,7 +177,7 @@ export default function CheckoutPage() {
           body: JSON.stringify({
             order,
             paymentDetails,
-            adminEmail: 'isopodsofindia@gmail.com'
+            adminEmail: 'harrysweettt@gmail.com'
           })
         }).catch(err => console.error('Failed to trigger email:', err));
       }
@@ -215,8 +215,8 @@ export default function CheckoutPage() {
   if (isSuccess) {
     return (
       <div className="container mx-auto px-4 py-20 min-h-[70vh] flex items-center justify-center">
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.9 }} 
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           className="max-w-md w-full text-center space-y-6 p-8 rounded-3xl bg-card/40 backdrop-blur-xl border border-border"
         >
@@ -342,7 +342,7 @@ export default function CheckoutPage() {
                     <div>
                       <p className="font-bold text-sm">Payment via Email</p>
                       <p className="text-xs text-muted-foreground leading-relaxed">
-                        We have received your order request! An automated email with our <strong>UPI and Bank Transfer</strong> details has been sent to your registered email address. 
+                        We have received your order request! An automated email with our <strong>UPI and Bank Transfer</strong> details has been sent to your registered email address.
                         Please reply to that email with your payment screenshot to confirm your order.
                       </p>
                     </div>

@@ -11,4 +11,4 @@ export const resend = new Resend(process.env.RESEND_API_KEY || 're_placeholder_1
 // --- SANDBOX CONFIGURATION ---
 // Set IS_SANDBOX_MODE to false once you have verified your domain on Resend.com
 export const IS_SANDBOX_MODE = true;
-export const TEST_EMAIL = 'isopodsofindia@gmail.com';
+export const TEST_EMAIL = 'harrysweettt@gmail.com';
