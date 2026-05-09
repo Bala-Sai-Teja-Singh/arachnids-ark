@@ -25,10 +25,10 @@ import { useCartStore } from '@/store/cart-store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const careLevelColors: Record<string, string> = {
-  beginner: 'text-green-400 bg-green-400/10 border-green-400/20',
-  intermediate: 'text-blue-400 bg-blue-400/10 border-blue-400/20',
-  advanced: 'text-orange-400 bg-orange-400/10 border-orange-400/20',
-  expert: 'text-red-400 bg-red-400/10 border-red-400/20',
+  beginner: 'bg-green-500 text-black hover:bg-green-400',
+  intermediate: 'bg-blue-500 text-white hover:bg-blue-400',
+  advanced: 'bg-orange-500 text-black hover:bg-orange-400',
+  expert: 'bg-red-500 text-white hover:bg-red-400',
 };
 
 const temperamentColors: Record<string, string> = {
@@ -48,6 +48,7 @@ export default function ProductDetailPage() {
   const [inquiryOpen, setInquiryOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [quantity, setQuantity] = useState(1);
+  const [isLiked, setIsLiked] = useState(false);
   const [deliveryName, setDeliveryName] = useState(user?.name || '');
   const [deliveryPhone, setDeliveryPhone] = useState(user?.phone || '');
   const [deliveryAddress, setDeliveryAddress] = useState('');
@@ -83,8 +84,56 @@ export default function ProductDetailPage() {
         );
         setHasPurchased(purchased);
       }
+
+      // Load liked status from local storage
+      const savedLikes = localStorage.getItem('arachnidsark_liked_products');
+      if (savedLikes) {
+        const likedIds = JSON.parse(savedLikes);
+        setIsLiked(likedIds.includes(params.id as string));
+      }
     }, 0);
   }, [params.id, loadReviews, user]);
+
+  const handleLike = () => {
+    if (!product) return;
+
+    if (!isAuthenticated) {
+      toast.error('Please login to save favorites', {
+        action: {
+          label: 'Login',
+          onClick: () => router.push('/login'),
+        },
+      });
+      return;
+    }
+    
+    const savedLikes = localStorage.getItem('arachnidsark_liked_products');
+    let likedIds = savedLikes ? JSON.parse(savedLikes) : [];
+    const currentlyLiked = likedIds.includes(product.id);
+    
+    let newLikedIds: string[];
+    if (currentlyLiked) {
+      newLikedIds = likedIds.filter((id: string) => id !== product.id);
+    } else {
+      newLikedIds = [...likedIds, product.id];
+    }
+    
+    localStorage.setItem('arachnidsark_liked_products', JSON.stringify(newLikedIds));
+    setIsLiked(!currentlyLiked);
+    
+    // Update the like count in the mock database
+    const newLikes = currentlyLiked ? Math.max(0, (product.likes || 0) - 1) : (product.likes || 0) + 1;
+    LocalStorage.update<Product>('products', product.id, { likes: newLikes });
+    
+    // Update local state to reflect new like count
+    setProduct({ ...product, likes: newLikes });
+    
+    if (!currentlyLiked) {
+      toast.success(`You liked ${product.name}!`, {
+        icon: <Heart className="h-4 w-4 text-red-500 fill-red-500" />,
+      });
+    }
+  };
 
   useEffect(() => {
     const pending = localStorage.getItem('pending_inquiry');
@@ -170,10 +219,28 @@ export default function ProductDetailPage() {
                 <Bug className="h-32 w-32 text-brand-red/20" />
               </div>
             )}
-            <div className="absolute top-4 right-4 flex gap-2">
+            <div className="absolute top-4 right-4 flex gap-2 items-center">
               <Badge className={careLevelColors[product.careLevel]}>
                 {product.careLevel}
               </Badge>
+              <button
+                onClick={handleLike}
+                className={`p-2 rounded-full backdrop-blur-md border border-white/20 shadow-xl transition-all duration-300 ${
+                  isLiked 
+                    ? 'bg-red-500 text-white border-red-400' 
+                    : 'bg-black/60 text-white hover:bg-black/80'
+                }`}
+              >
+                <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
+              </button>
+            </div>
+            
+            {/* Like Count Overlay */}
+            <div className="absolute bottom-4 right-4 z-10 bg-black/60 backdrop-blur-md border border-white/20 rounded-full px-3 py-1 shadow-xl">
+              <span className="text-xs font-bold text-white flex items-center gap-2">
+                <Heart className="h-3 w-3 fill-red-500 text-red-500" />
+                {product.likes || 0} Likes
+              </span>
             </div>
           </div>
 
@@ -209,8 +276,8 @@ export default function ProductDetailPage() {
                 <Badge variant="outline" className="border-red-400/40 bg-red-400/10 text-red-400 text-[10px] capitalize backdrop-blur-sm">{product.centipedeMeta.venomPotency} Venom</Badge>
               )}
             </div>
-            <h1 className="text-3xl font-bold mb-1">{product.name}</h1>
-            <p className="text-lg text-muted-foreground italic">{product.scientificName}</p>
+            <h1 className="text-2xl sm:text-4xl font-bold mb-1 uppercase tracking-tight">{product.name}</h1>
+            <p className="text-base sm:text-lg text-muted-foreground italic">{product.scientificName}</p>
           </div>
 
           <div className="flex items-center gap-4">
@@ -401,8 +468,13 @@ export default function ProductDetailPage() {
                 <ShoppingCart className="mr-2 h-5 w-5" /> 
                 {product.available === false ? 'Unavailable' : (product.sizes?.[selectedSize]?.stock || 0) === 0 ? 'Out of Stock' : 'Add to Cart'}
               </Button>
-              <Button size="lg" variant="outline" className="border-border h-14 w-14 p-0">
-                <Heart className="h-5 w-5" />
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className={`border-border h-14 w-14 p-0 transition-all duration-300 ${isLiked ? 'bg-red-500 text-white border-red-400' : 'hover:bg-red-500/10 hover:text-red-500'}`}
+                onClick={handleLike}
+              >
+                <Heart className={`h-5 w-5 ${isLiked ? 'fill-current' : ''}`} />
               </Button>
             </div>
           </div>

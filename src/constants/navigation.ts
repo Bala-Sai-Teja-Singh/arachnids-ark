@@ -1,5 +1,5 @@
 import { 
-  Home, ShoppingBag, GraduationCap, Calendar, BookOpen,
+  Home, ShoppingBag, GraduationCap, Calendar, BookOpen, Heart,
   LayoutDashboard, Package, Users, Settings, ClipboardList, MessageSquare, DollarSign
 } from 'lucide-react';
 
@@ -39,6 +39,7 @@ export const DASHBOARD_NAV_ITEMS = [
   { label: 'My Orders', href: '/dashboard/orders', icon: ClipboardList },
   { label: 'My Courses', href: '/dashboard/courses', icon: GraduationCap },
   { label: 'My Consultations', href: '/dashboard/consultations', icon: Calendar },
+  { label: 'Favorites', href: '/liked', icon: Heart },
 
   { label: 'Profile', href: '/dashboard/profile', icon: Settings },
 ];

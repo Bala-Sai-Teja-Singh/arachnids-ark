@@ -4,7 +4,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Search, X, Bug, SlidersHorizontal, ShoppingCart } from 'lucide-react';
+import { Search, X, Bug, SlidersHorizontal, ShoppingCart, Heart } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -20,6 +20,8 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCartStore } from '@/store/cart-store';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { useAuthStore } from '@/store/auth-store';
+import { useRouter } from 'next/navigation';
 
 const CATEGORIES: { value: MainCategory; label: string }[] = [
   { value: 'Tarantulas', label: 'Tarantulas' },
@@ -53,10 +55,10 @@ const CARE_LEVELS: { value: CareLevel | ''; label: string }[] = [
 ];
 
 const careLevelColors: Record<string, string> = {
-  beginner: 'text-green-400 bg-green-500/20 border-green-500/30 backdrop-blur-md',
-  intermediate: 'text-blue-400 bg-blue-500/20 border-blue-500/30 backdrop-blur-md',
-  advanced: 'text-orange-400 bg-orange-500/20 border-orange-500/30 backdrop-blur-md',
-  expert: 'text-red-400 bg-red-500/20 border-red-500/30 backdrop-blur-md',
+  beginner: 'bg-green-500 text-black hover:bg-green-400',
+  intermediate: 'bg-blue-500 text-white hover:bg-blue-400',
+  advanced: 'bg-orange-500 text-black hover:bg-orange-400',
+  expert: 'bg-red-500 text-white hover:bg-red-400',
 };
 
 function FilterPanel({ mainCategory, category, setCategory, origin, setOrigin, careLevel, setCareLevel, sortBy, setSortBy }: {
@@ -135,6 +137,7 @@ function FilterPanel({ mainCategory, category, setCategory, origin, setOrigin, c
 export default function ShopPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [likedIds, setLikedIds] = useState<string[]>([]);
   const [search, setSearch] = useState('');
   const [mainCategory, setMainCategory] = useState<MainCategory>('Tarantulas');
   const [habitat, setHabitat] = useState('');
@@ -144,13 +147,66 @@ export default function ShopPage() {
   const [quickSelectProduct, setQuickSelectProduct] = useState<Product | null>(null);
   const [selectedQuickSize, setSelectedQuickSize] = useState<number>(0);
   const addItem = useCartStore((state) => state.addItem);
+  const { isAuthenticated } = useAuthStore();
+  const router = useRouter();
 
   useEffect(() => {
     setTimeout(() => {
       setProducts(LocalStorage.getAll<Product>('products'));
       setLoading(false);
     }, 300);
+
+    // Load liked products from local storage
+    const savedLikes = localStorage.getItem('arachnidsark_liked_products');
+    if (savedLikes) {
+      setLikedIds(JSON.parse(savedLikes));
+    }
   }, []);
+
+  const handleLike = (e: React.MouseEvent, productId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!isAuthenticated) {
+      toast.error('Please login to save favorites', {
+        action: {
+          label: 'Login',
+          onClick: () => router.push('/login'),
+        },
+      });
+      return;
+    }
+    
+    const isLiked = likedIds.includes(productId);
+    let newLikedIds: string[];
+    
+    if (isLiked) {
+      newLikedIds = likedIds.filter(id => id !== productId);
+    } else {
+      newLikedIds = [...likedIds, productId];
+    }
+    
+    setLikedIds(newLikedIds);
+    localStorage.setItem('arachnidsark_liked_products', JSON.stringify(newLikedIds));
+    
+    // Update the like count in the mock database
+    const product = products.find(p => p.id === productId);
+    if (product) {
+      const newLikes = isLiked ? Math.max(0, (product.likes || 0) - 1) : (product.likes || 0) + 1;
+      LocalStorage.update<Product>('products', productId, { likes: newLikes });
+      
+      // Update local state to reflect new like count
+      setProducts(prev => prev.map(p => 
+        p.id === productId ? { ...p, likes: newLikes } : p
+      ));
+      
+      if (!isLiked) {
+        toast.success(`You liked ${product.name}!`, {
+          icon: <Heart className="h-4 w-4 text-red-500 fill-red-500" />,
+        });
+      }
+    }
+  };
 
   const filtered = useMemo(() => {
     let result = products.filter(p => p.isVisible !== false && p.mainCategory === mainCategory);
@@ -212,10 +268,10 @@ export default function ShopPage() {
     <div className="container mx-auto px-4 py-8">
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-        <h1 className="vibe-heading text-3xl font-bold mb-2">
+        <h1 className="vibe-heading text-2xl sm:text-4xl font-bold mb-2">
           Shop <span className="text-gradient-red">Exotics</span>
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-sm sm:text-base text-muted-foreground">
           Browse our curated collection of {products.length} exotic species
         </p>
       </motion.div>
@@ -223,12 +279,12 @@ export default function ShopPage() {
       {/* Tabs for Main Categories */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mb-8">
         <Tabs value={mainCategory} onValueChange={(val) => setMainCategory(val as MainCategory)} className="w-full">
-          <TabsList className="bg-black/40 border border-border p-1.5 pl-4 pr-4 gap-2 w-full sm:w-auto flex justify-start overflow-x-auto no-scrollbar rounded-xl sm:rounded-full backdrop-blur-md">
+          <TabsList className="bg-black/40 border border-border/50 p-1.5 gap-1.5 sm:gap-3 w-full sm:w-auto flex justify-start overflow-x-auto no-scrollbar rounded-xl sm:rounded-full backdrop-blur-xl h-auto min-h-[48px] sm:min-h-[56px] shadow-2xl">
             {CATEGORIES.map((cat) => (
               <TabsTrigger
                 key={cat.value}
                 value={cat.value}
-                className="data-[state=active]:bg-brand-gold data-[state=active]:text-black data-[state=active]:shadow-[0_0_20px_rgba(197,150,58,0.4)] transition-all duration-300 font-heading uppercase tracking-widest text-[11px] px-6 sm:px-10 h-9 rounded-full border border-transparent data-[state=active]:border-black/10 whitespace-nowrap font-bold"
+                className="data-[state=active]:bg-brand-gold data-[state=active]:text-black data-[state=active]:shadow-[0_8px_25px_rgba(197,150,58,0.5)] transition-all duration-500 font-heading uppercase tracking-[0.15em] sm:tracking-[0.2em] text-[10px] sm:text-[12px] px-5 sm:px-12 h-9 sm:h-11 rounded-lg sm:rounded-full border border-transparent data-[state=active]:border-black/5 whitespace-nowrap font-black flex items-center gap-3 group"
               >
                 {cat.label}
               </TabsTrigger>
@@ -368,14 +424,77 @@ export default function ShopPage() {
                   <Badge className={`absolute top-3 right-3 z-10 border border-white/20 shadow-xl capitalize px-3 py-1 text-[10px] font-bold ${careLevelColors[product.careLevel]}`}>
                     {product.careLevel}
                   </Badge>
+                  
+                  {/* Like Button */}
+                  <button
+                    onClick={(e) => handleLike(e, product.id)}
+                    className={`absolute bottom-3 right-3 z-10 p-2 rounded-full backdrop-blur-md border border-white/20 shadow-xl transition-all duration-300 group/like ${
+                      likedIds.includes(product.id) 
+                        ? 'bg-red-500 text-white border-red-400' 
+                        : 'bg-black/60 text-white hover:bg-black/80'
+                    }`}
+                  >
+                    <Heart className={`h-4 w-4 ${likedIds.includes(product.id) ? 'fill-current' : 'group-hover/like:scale-110 transition-transform'}`} />
+                  </button>
+                  
+                  {/* Like Count */}
+                  <div className="absolute bottom-3 right-14 z-10 bg-black/60 backdrop-blur-md border border-white/20 rounded-full px-2 py-0.5 shadow-xl">
+                    <span className="text-[10px] font-bold text-white flex items-center gap-1">
+                      <Heart className="h-2.5 w-2.5 fill-red-500 text-red-500" />
+                      {product.likes || 0}
+                    </span>
+                  </div>
                   <div className="absolute top-3 left-3 flex flex-col gap-1 z-10">
                     <Badge variant="outline" className="border-white/30 bg-black/70 text-white text-[9px] font-black uppercase tracking-widest backdrop-blur-md px-2 py-0.5 shadow-2xl w-fit">
-                      {product.category}
+                      {product.mainCategory}
                     </Badge>
-                    {product.origin && (
-                      <Badge variant="outline" className="border-brand-gold/40 bg-black/80 text-brand-gold text-[9px] font-black uppercase tracking-widest backdrop-blur-md px-2 py-0.5 shadow-2xl w-fit">
-                        {product.origin.replace('-', ' ')}
-                      </Badge>
+
+                    {/* Tarantula Specific Badges */}
+                    {product.mainCategory === 'Tarantulas' && product.tarantulaMeta && (
+                      <>
+                        {product.tarantulaMeta.type && (
+                          <Badge variant="outline" className="border-brand-gold/40 bg-black/80 text-brand-gold text-[9px] font-black uppercase tracking-widest backdrop-blur-md px-2 py-0.5 shadow-2xl w-fit">
+                            {product.tarantulaMeta.type}
+                          </Badge>
+                        )}
+                        {product.tarantulaMeta.world && (
+                          <Badge variant="outline" className="border-brand-gold/40 bg-black/80 text-brand-gold text-[9px] font-black uppercase tracking-widest backdrop-blur-md px-2 py-0.5 shadow-2xl w-fit">
+                            {product.tarantulaMeta.world}
+                          </Badge>
+                        )}
+                      </>
+                    )}
+
+                    {/* Scorpion Specific Badges */}
+                    {product.mainCategory === 'Scorpions' && product.scorpionMeta && (
+                      <>
+                        {product.scorpionMeta.venomPotency && (
+                          <Badge variant="outline" className="border-red-500/40 bg-black/80 text-red-400 text-[9px] font-black uppercase tracking-widest backdrop-blur-md px-2 py-0.5 shadow-2xl w-fit">
+                            {product.scorpionMeta.venomPotency} Venom
+                          </Badge>
+                        )}
+                        {product.scorpionMeta.habitatType && (
+                          <Badge variant="outline" className="border-purple-500/40 bg-black/80 text-purple-400 text-[9px] font-black uppercase tracking-widest backdrop-blur-md px-2 py-0.5 shadow-2xl w-fit">
+                            {product.scorpionMeta.habitatType}
+                          </Badge>
+                        )}
+                      </>
+                    )}
+
+                    {/* Centipede Specific Badges */}
+                    {product.mainCategory === 'Centipedes' && product.centipedeMeta && (
+                      <>
+                        {product.centipedeMeta.venomPotency && (
+                          <Badge variant="outline" className="border-red-500/40 bg-black/80 text-red-400 text-[9px] font-black uppercase tracking-widest backdrop-blur-md px-2 py-0.5 shadow-2xl w-fit">
+                            {product.centipedeMeta.venomPotency} Venom
+                          </Badge>
+                        )}
+                        {product.centipedeMeta.habitatType && (
+                          <Badge variant="outline" className="border-green-500/40 bg-black/80 text-green-400 text-[9px] font-black uppercase tracking-widest backdrop-blur-md px-2 py-0.5 shadow-2xl w-fit">
+                            {product.centipedeMeta.habitatType}
+                          </Badge>
+                        )}
+                      </>
                     )}
                   </div>
                 </Link>

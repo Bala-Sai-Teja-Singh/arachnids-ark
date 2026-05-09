@@ -17,6 +17,7 @@ const PRODUCTS: Product[] = [
       { size: '1/2" Sling', price: 1500, stock: 5 },
       { size: '3" Adult', price: 4500, stock: 1 }
     ],
+    likes: 124,
     createdAt: '2025-01-01T00:00:00Z', updatedAt: '2025-01-01T00:00:00Z'
   },
   {
@@ -31,6 +32,7 @@ const PRODUCTS: Product[] = [
       { size: '1/4" Sling', price: 1200, stock: 10 },
       { size: '2.5" Sub-adult', price: 3800, stock: 1 }
     ],
+    likes: 89,
     createdAt: '2025-01-02T00:00:00Z', updatedAt: '2025-01-02T00:00:00Z'
   },
   {
@@ -45,6 +47,7 @@ const PRODUCTS: Product[] = [
       { size: '1/2" Sling', price: 2000, stock: 5 },
       { size: 'Adult Female', price: 5500, stock: 1 }
     ],
+    likes: 56,
     createdAt: '2025-01-03T00:00:00Z', updatedAt: '2025-01-03T00:00:00Z'
   },
   {
@@ -59,6 +62,7 @@ const PRODUCTS: Product[] = [
       { size: '1/2" Sling', price: 800, stock: 20 },
       { size: 'Adult', price: 2800, stock: 5 }
     ],
+    likes: 42,
     createdAt: '2025-01-04T00:00:00Z', updatedAt: '2025-01-04T00:00:00Z'
   },
   {
@@ -73,6 +77,7 @@ const PRODUCTS: Product[] = [
       { size: '1/2" Sling', price: 1800, stock: 10 },
       { size: 'Juvenile', price: 3500, stock: 2 }
     ],
+    likes: 215,
     createdAt: '2025-01-05T00:00:00Z', updatedAt: '2025-01-05T00:00:00Z'
   },
   {
@@ -87,6 +92,7 @@ const PRODUCTS: Product[] = [
       { size: '1/4" Sling', price: 600, stock: 30 },
       { size: 'Adult', price: 2500, stock: 5 }
     ],
+    likes: 187,
     createdAt: '2025-01-06T00:00:00Z', updatedAt: '2025-01-06T00:00:00Z'
   },
   {
@@ -98,6 +104,7 @@ const PRODUCTS: Product[] = [
     images: ['/images/gootSapphire.webp'], featured: true, isVisible: true, available: true,
     tarantulaMeta: { world: 'Old World', type: 'Arboreal', temperament: 'aggressive', growthRate: 'Medium', sizeCategory: 'Sling', gender: 'Unsexed' },
     sizes: [{ size: '1" Sling', price: 4500, stock: 3 }],
+    likes: 312,
     createdAt: '2025-01-08T00:00:00Z', updatedAt: '2025-01-08T00:00:00Z'
   },
   {
@@ -109,6 +116,7 @@ const PRODUCTS: Product[] = [
     images: ['/images/indianOrnamental.webp'], featured: false, isVisible: true, available: true,
     tarantulaMeta: { world: 'Old World', type: 'Arboreal', temperament: 'aggressive', growthRate: 'Fast', sizeCategory: 'Juvenile', gender: 'Unsexed' },
     sizes: [{ size: '1.5" Juvenile', price: 3200, stock: 4 }],
+    likes: 156,
     createdAt: '2025-01-09T00:00:00Z', updatedAt: '2025-01-09T00:00:00Z'
   },
   {
@@ -120,6 +128,7 @@ const PRODUCTS: Product[] = [
     images: ['/images/kingBaboon.jpg'], featured: false, isVisible: true, available: true,
     tarantulaMeta: { world: 'Old World', type: 'Fossorial', temperament: 'aggressive', growthRate: 'Slow', sizeCategory: 'Sub-adult', gender: 'Unsexed' },
     sizes: [{ size: '2" Sub-adult', price: 4800, stock: 2 }],
+    likes: 98,
     createdAt: '2025-01-10T00:00:00Z', updatedAt: '2025-01-10T00:00:00Z'
   },
   {
@@ -131,6 +140,7 @@ const PRODUCTS: Product[] = [
     images: ['/images/mexicanFireleg.jpg'], featured: true, isVisible: true, available: true,
     tarantulaMeta: { world: 'New World', type: 'Terrestrial', temperament: 'docile', growthRate: 'Slow', sizeCategory: 'Sling', gender: 'Unsexed' },
     sizes: [{ size: '1/2" Sling', price: 1800, stock: 10 }],
+    likes: 210,
     createdAt: '2025-01-11T00:00:00Z', updatedAt: '2025-01-11T00:00:00Z'
   },
   {
@@ -142,6 +152,7 @@ const PRODUCTS: Product[] = [
     images: ['/images/singaporeBlue.webp'], featured: true, isVisible: true, available: true,
     tarantulaMeta: { world: 'Old World', type: 'Arboreal', temperament: 'aggressive', growthRate: 'Fast', sizeCategory: 'Juvenile', gender: 'Unsexed' },
     sizes: [{ size: '2" Juvenile', price: 4200, stock: 3 }],
+    likes: 145,
     createdAt: '2025-01-12T00:00:00Z', updatedAt: '2025-01-12T00:00:00Z'
   },
   {
@@ -153,26 +164,31 @@ const PRODUCTS: Product[] = [
     images: ['/images/roseHair.jpg'], featured: false, isVisible: true, available: true,
     tarantulaMeta: { world: 'New World', type: 'Terrestrial', temperament: 'docile', growthRate: 'Slow', sizeCategory: 'Adult', gender: 'Female' },
     sizes: [{ size: 'Adult', price: 3500, stock: 2 }],
+    likes: 67,
     createdAt: '2025-01-15T00:00:00Z', updatedAt: '2025-01-15T00:00:00Z'
   },
   {
     id: 'prod-016', name: 'Emperor Scorpion', scientificName: 'Pandinus imperator',
     mainCategory: 'Scorpions', careLevel: 'beginner',
+    category: 'tropical forest', sizeCategory: 'Adult', gender: 'Unsexed',
     humidity: '70-80%', temperature: '26-30°C',
     feeding: 'Crickets, mealworms - Weekly', description: 'The most popular pet scorpion. Large, glossy black, and one of the mildest-venomed species. Their thick pincers indicate they rely on grip over sting.',
     images: ['/images/emperorScorpion.webp'], featured: true, isVisible: true, available: true,
     scorpionMeta: { habitatType: 'Tropical Forest', venomPotency: 'Mild', pincerType: 'Thick', communal: true, sizeCategory: 'Adult', gender: 'Unsexed' },
     sizes: [{ size: 'Adult', price: 2500, stock: 5 }],
+    likes: 432,
     createdAt: '2025-02-01T00:00:00Z', updatedAt: '2025-02-01T00:00:00Z'
   },
   {
     id: 'prod-017', name: 'Vietnamese Centipede', scientificName: 'Scolopendra subspinipes',
     mainCategory: 'Centipedes', careLevel: 'expert',
+    category: 'tropical', sizeCategory: 'Adult', gender: 'Unsexed',
     humidity: '75-85%', temperature: '24-28°C',
     feeding: 'Crickets, roaches, mealworms - Weekly', description: 'One of the largest and most impressive centipede species. Fast, aggressive, and carries potent venom. Strictly solitary — never cohabitate.',
     images: ['/images/vietnameseGiantCentipede.webp'], featured: true, isVisible: true, available: true,
     centipedeMeta: { habitatType: 'Tropical', venomPotency: 'Potent', legPairs: '21', sizeCategory: 'Adult', gender: 'Unsexed' },
     sizes: [{ size: 'Large', price: 1800, stock: 3 }],
+    likes: 278,
     createdAt: '2025-02-02T00:00:00Z', updatedAt: '2025-02-02T00:00:00Z'
   },
 ];
@@ -252,7 +268,7 @@ const DEFAULT_USERS: User[] = [
   },
   {
     id: 'user-001',
-    name: 'Teja',
+    name: 'User',
     email: 'user@example.com',
     password: 'user123',
     role: 'user',

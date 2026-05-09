@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ClipboardList, Upload, Package, ChevronDown, ChevronUp, Check, Copy } from 'lucide-react';
+import { ClipboardList, Upload, Package, ChevronDown, ChevronUp, Check, Copy, Truck, MapPin, Phone, User } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -200,6 +200,18 @@ export default function MyOrdersPage() {
                                 <span className="font-bold">Admin Note:</span> {order.adminNote}
                               </div>
                             )}
+
+                            {(order.trackingId || order.courierPartner) && (
+                              <div className="p-3 bg-accent/20 border border-border rounded-xl space-y-2 mt-4">
+                                <div className="flex items-center gap-2 text-xs font-bold text-brand-gold uppercase tracking-widest">
+                                  <Truck className="h-4 w-4" /> Shipping Updates
+                                </div>
+                                <div className="text-[11px] space-y-1 pl-6">
+                                  {order.courierPartner && <p><span className="text-muted-foreground uppercase tracking-tighter mr-2">Courier:</span> {order.courierPartner}</p>}
+                                  {order.trackingId && <p><span className="text-muted-foreground uppercase tracking-tighter mr-2">Tracking ID:</span> <span className="font-mono text-brand-gold">{order.trackingId}</span></p>}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
 
@@ -327,18 +339,26 @@ export default function MyOrdersPage() {
           <ClipboardList className="h-4 w-4 text-brand-gold" />
           Understanding Order Statuses
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           <div className="space-y-1">
-            <p className="text-[10px] font-black text-brand-gold uppercase tracking-tighter">Pending / Awaiting Payment</p>
-            <p className="text-[11px] text-muted-foreground leading-relaxed">Order received. Please complete the payment and upload the screenshot for verification to start processing.</p>
+            <p className="text-[10px] font-black text-yellow-400 uppercase tracking-tighter">Pending</p>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">Order request sent. Awaiting admin approval to proceed to payment.</p>
           </div>
           <div className="space-y-1">
-            <p className="text-[10px] font-black text-blue-400 uppercase tracking-tighter">Payment Uploaded / Processing</p>
-            <p className="text-[11px] text-muted-foreground leading-relaxed">We are verifying your payment and preparing your items for safe transit. You will be notified of any updates.</p>
+            <p className="text-[10px] font-black text-blue-400 uppercase tracking-tighter">Awaiting Payment</p>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">Order approved. Please complete the payment and upload the screenshot for verification.</p>
           </div>
           <div className="space-y-1">
-            <p className="text-[10px] font-black text-green-400 uppercase tracking-tighter">Shipped / Completed</p>
-            <p className="text-[11px] text-muted-foreground leading-relaxed">Your order is on its way or has been delivered. Tracking details are usually added to the admin notes.</p>
+            <p className="text-[10px] font-black text-purple-400 uppercase tracking-tighter">Payment Uploaded / Verified</p>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">Admin is verifying your payment. Once verified, your order will be confirmed and prepared for shipping.</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-[10px] font-black text-emerald-400 uppercase tracking-tighter">Confirmed / Confirmed</p>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">Payment verified! Your order is being packed and prepared for safe transit.</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-[10px] font-black text-brand-gold uppercase tracking-tighter">Completed / Shipped</p>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">Your order has been shipped. You can find the Tracking ID and Courier details in the order info.</p>
           </div>
           <div className="space-y-1">
             <p className="text-[10px] font-black text-red-400 uppercase tracking-tighter">Cancelled / Rejected</p>

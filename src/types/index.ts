@@ -16,7 +16,7 @@ export interface User {
 export type SafeUser = Omit<User, 'password'>;
 
 // ============ PRODUCT ============
-export type ProductType = 'terrestrial' | 'arboreal' | 'fossorial';
+export type ProductType = 'terrestrial' | 'arboreal' | 'fossorial' | 'tropical forest' | 'desert' | 'tropical' | 'arid';
 export type ProductOrigin = 'new-world' | 'old-world';
 export type MainCategory = 'Tarantulas' | 'Centipedes' | 'Scorpions';
 
@@ -87,6 +87,7 @@ export interface Product {
   available: boolean;
   isVisible: boolean;
   sizes: ProductSize[];
+  likes: number;
 
   // Entity-specific metadata (only one will be populated based on mainCategory)
   tarantulaMeta?: TarantulaMetadata;
@@ -172,7 +173,8 @@ export interface Order {
   deliveryPhone: string;
   deliveryAddress: string;
   totalPrice: number;
-  upiId?: string; // The UPI ID used for payment
+  trackingId?: string;
+  courierPartner?: string;
   createdAt: string;
   updatedAt: string;
 }

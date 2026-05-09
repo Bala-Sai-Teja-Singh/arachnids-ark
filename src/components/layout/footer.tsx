@@ -43,10 +43,11 @@ export function Footer() {
             <h4 className="font-semibold mb-4 text-brand-gold text-sm uppercase tracking-wider">Quick Links</h4>
             <ul className="space-y-2.5">
               {[
-                { label: 'Shop Tarantulas', href: '/shop' },
+                { label: 'Shop Exotics', href: '/shop' },
+                { label: 'About Us', href: '/#about' },
+                { label: 'Care Guides', href: '/care-guides' },
                 { label: 'Courses', href: '/courses' },
                 { label: 'Consultation', href: '/consultation' },
-                { label: 'Care Guides', href: '/care-guides' },
               ].map(link => (
                 <li key={link.href}>
                   <Link href={link.href} className="text-sm text-muted-foreground hover:text-brand-gold transition-colors">
@@ -63,7 +64,8 @@ export function Footer() {
             <ul className="space-y-2.5">
               {[
                 { label: 'My Dashboard', href: '/dashboard' },
-                { label: 'Track Orders', href: '/dashboard/inquiries' },
+                { label: 'My Favorites', href: '/liked' },
+                { label: 'Track Orders', href: '/dashboard/orders' },
                 { label: 'FAQs', href: '/#faq' },
                 { label: 'Shipping Info', href: '#' },
               ].map(link => (

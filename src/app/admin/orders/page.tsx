@@ -1,8 +1,9 @@
 'use client';
+/* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Eye, CheckCircle, XCircle, Phone, MapPin, User, Package, ShoppingBag, ExternalLink } from 'lucide-react';
+import { Eye, CheckCircle, Phone, MapPin, User, Package, ShoppingBag, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -10,6 +11,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { StatusBadge } from '@/components/shared/status-badge';
 import { LocalStorage } from '@/mock-db/storage';
 import { useNotificationStore } from '@/store/notification-store';
+import { Truck, Save } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import type { Order, OrderStatus } from '@/types';
 import { formatPrice } from '@/constants/pricing';
 import { ALL_STATUSES } from '@/constants/statuses';
@@ -19,6 +23,8 @@ import { Separator } from '@/components/ui/separator';
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [trackingId, setTrackingId] = useState('');
+  const [courierPartner, setCourierPartner] = useState('');
   const { addNotification } = useNotificationStore();
   const searchParams = useSearchParams();
 
@@ -30,9 +36,20 @@ export default function AdminOrdersPage() {
     const orderId = searchParams.get('id');
     if (orderId) {
       const order = allOrders.find(o => o.id === orderId);
-      if (order) setSelectedOrder(order);
+      if (order) {
+        setSelectedOrder(order);
+        setTrackingId(order.trackingId || '');
+        setCourierPartner(order.courierPartner || '');
+      }
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    if (selectedOrder) {
+      setTrackingId(selectedOrder.trackingId || '');
+      setCourierPartner(selectedOrder.courierPartner || '');
+    }
+  }, [selectedOrder]);
 
   const updateStatus = (id: string, status: OrderStatus, userId: string) => {
     LocalStorage.update<Order>('orders', id, { status, updatedAt: new Date().toISOString() });
@@ -54,6 +71,31 @@ export default function AdminOrdersPage() {
     });
     
     toast.success('Status updated');
+  };
+
+  const updateTrackingInfo = () => {
+    if (!selectedOrder) return;
+    
+    LocalStorage.update<Order>('orders', selectedOrder.id, { 
+      trackingId, 
+      courierPartner,
+      updatedAt: new Date().toISOString() 
+    });
+    
+    const updatedOrders = LocalStorage.getAll<Order>('orders').sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    setOrders(updatedOrders);
+    setSelectedOrder(updatedOrders.find(o => o.id === selectedOrder.id) || null);
+    
+    // Notify user
+    addNotification({
+      userId: selectedOrder.userId,
+      title: 'Order Shipped / Tracking Updated',
+      message: `Shipping update for order #${selectedOrder.id.split('-')[0]}: ${courierPartner} - ${trackingId}`,
+      type: 'success',
+      link: `/dashboard/orders?id=${selectedOrder.id}`,
+    });
+    
+    toast.success('Tracking information updated');
   };
 
   return (
@@ -266,7 +308,7 @@ export default function AdminOrdersPage() {
                     <div className="space-y-2">
                       <h4 className="text-xs font-bold text-brand-gold uppercase tracking-widest">Customer Note</h4>
                       <div className="p-3 rounded-xl border border-border bg-background/30 italic text-xs text-muted-foreground">
-                        "{selectedOrder.message}"
+                        &quot;{selectedOrder.message}&quot;
                       </div>
                     </div>
                   )}
@@ -279,6 +321,39 @@ export default function AdminOrdersPage() {
                       </Button>
                     </div>
                   )}
+
+                  {/* Tracking Info Section */}
+                  <div className="space-y-4 pt-4 border-t border-border">
+                    <h4 className="text-xs font-bold text-brand-gold uppercase tracking-widest flex items-center gap-2">
+                      <Truck className="h-3 w-3" /> Shipping Information
+                    </h4>
+                    <div className="grid grid-cols-1 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] uppercase text-muted-foreground">Courier Partner</Label>
+                        <Input 
+                          placeholder="e.g. Delhivery, BlueDart, DTDC" 
+                          value={courierPartner}
+                          onChange={(e) => setCourierPartner(e.target.value)}
+                          className="h-9 text-xs bg-background/50 border-border"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] uppercase text-muted-foreground">Tracking ID / AWB</Label>
+                        <Input 
+                          placeholder="Enter tracking number" 
+                          value={trackingId}
+                          onChange={(e) => setTrackingId(e.target.value)}
+                          className="h-9 text-xs bg-background/50 border-border"
+                        />
+                      </div>
+                      <Button 
+                        onClick={updateTrackingInfo} 
+                        className="w-full h-9 bg-brand-gold hover:bg-brand-gold/90 text-black font-bold text-xs gap-2"
+                      >
+                        <Save className="h-3 w-3" /> Save Tracking Details
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Plus, Search, Edit, Trash2, Bug, Package, Eye, EyeOff, Pencil } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Bug, Package, Eye, EyeOff, Pencil, Heart } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -221,6 +221,7 @@ export default function AdminProductsPage() {
                 <TableHead>Attributes</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>Stock</TableHead>
+                <TableHead>Popularity</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -255,27 +256,27 @@ export default function AdminProductsPage() {
                     <TableCell>
                       <div className="flex flex-col gap-1">
                         <Badge variant="outline" className="w-fit text-[10px] uppercase tracking-tighter">
-                          {product.category || 'N/A'}
+                          {product.mainCategory || 'N/A'}
                         </Badge>
-                        {product.mainCategory === 'Tarantulas' && product.tarantulaMeta && (
+                        {product.mainCategory === 'Tarantulas' && product.tarantulaMeta && (product.tarantulaMeta.world || product.tarantulaMeta.growthRate) && (
                           <div className="text-[10px] text-muted-foreground flex items-center gap-1">
-                            <span className="text-brand-gold/70">{product.tarantulaMeta.world}</span>
-                            <span>•</span>
-                            <span>{product.tarantulaMeta.growthRate} Growth</span>
+                            {product.tarantulaMeta.world && <span className="text-brand-gold/70">{product.tarantulaMeta.world}</span>}
+                            {product.tarantulaMeta.world && product.tarantulaMeta.growthRate && <span>•</span>}
+                            {product.tarantulaMeta.growthRate && <span>{product.tarantulaMeta.growthRate} Growth</span>}
                           </div>
                         )}
-                        {product.mainCategory === 'Scorpions' && product.scorpionMeta && (
+                        {product.mainCategory === 'Scorpions' && product.scorpionMeta && (product.scorpionMeta.venomPotency || product.scorpionMeta.pincerType) && (
                           <div className="text-[10px] text-muted-foreground flex items-center gap-1">
-                            <span className="text-red-400/70">{product.scorpionMeta.venomPotency} Venom</span>
-                            <span>•</span>
-                            <span>{product.scorpionMeta.pincerType} Pincers</span>
+                            {product.scorpionMeta.venomPotency && <span className="text-red-400/70">{product.scorpionMeta.venomPotency} Venom</span>}
+                            {product.scorpionMeta.venomPotency && product.scorpionMeta.pincerType && <span>•</span>}
+                            {product.scorpionMeta.pincerType && <span>{product.scorpionMeta.pincerType} Pincers</span>}
                           </div>
                         )}
-                        {product.mainCategory === 'Centipedes' && product.centipedeMeta && (
+                        {product.mainCategory === 'Centipedes' && product.centipedeMeta && (product.centipedeMeta.venomPotency || product.centipedeMeta.legPairs) && (
                           <div className="text-[10px] text-muted-foreground flex items-center gap-1">
-                            <span className="text-red-400/70">{product.centipedeMeta.venomPotency} Venom</span>
-                            <span>•</span>
-                            <span>{product.centipedeMeta.legPairs} Pairs</span>
+                            {product.centipedeMeta.venomPotency && <span className="text-red-400/70">{product.centipedeMeta.venomPotency} Venom</span>}
+                            {product.centipedeMeta.venomPotency && product.centipedeMeta.legPairs && <span>•</span>}
+                            {product.centipedeMeta.legPairs && <span>{product.centipedeMeta.legPairs} Pairs</span>}
                           </div>
                         )}
                       </div>
@@ -298,6 +299,12 @@ export default function AdminProductsPage() {
                             <span className="font-medium">{s.stock}</span>
                           </div>
                         ))}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground">
+                        <Heart className="h-3 w-3 fill-red-500/50 text-red-500/50" />
+                        {product.likes || 0}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -386,19 +393,19 @@ export default function AdminProductsPage() {
                 <div className="flex items-center justify-between text-xs">
                   <div className="space-y-1">
                     <div className="flex flex-col gap-1">
-                      <p className="text-muted-foreground capitalize font-medium">{product.category}</p>
+                      <p className="text-muted-foreground capitalize font-medium">{product.mainCategory}</p>
                       <div className="flex flex-wrap gap-1">
-                        {product.mainCategory === 'Tarantulas' && product.tarantulaMeta && (
+                        {product.mainCategory === 'Tarantulas' && product.tarantulaMeta && product.tarantulaMeta.world && (
                           <Badge variant="outline" className="text-[9px] border-brand-gold/30 text-brand-gold py-0 h-4">
                             {product.tarantulaMeta.world}
                           </Badge>
                         )}
-                        {product.mainCategory === 'Scorpions' && product.scorpionMeta && (
+                        {product.mainCategory === 'Scorpions' && product.scorpionMeta && product.scorpionMeta.venomPotency && (
                           <Badge variant="outline" className="text-[9px] border-red-500/30 text-red-400 py-0 h-4">
                             {product.scorpionMeta.venomPotency} Venom
                           </Badge>
                         )}
-                        {product.mainCategory === 'Centipedes' && product.centipedeMeta && (
+                        {product.mainCategory === 'Centipedes' && product.centipedeMeta && product.centipedeMeta.venomPotency && (
                           <Badge variant="outline" className="text-[9px] border-red-500/30 text-red-400 py-0 h-4">
                             {product.centipedeMeta.venomPotency} Venom
                           </Badge>

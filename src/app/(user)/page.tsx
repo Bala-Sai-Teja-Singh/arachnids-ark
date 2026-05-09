@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { ArrowRight, Bug, Zap, Star, ChevronDown, GraduationCap, Calendar, BookOpen, ShoppingBag } from 'lucide-react';
+import { ArrowRight, Bug, Zap, Star, ChevronDown, GraduationCap, Calendar, BookOpen, ShoppingBag, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,7 @@ import type { Product, Course, CareGuide } from '@/types';
 import { formatPrice } from '@/constants/pricing';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { useAuthStore } from '@/store/auth-store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
@@ -36,7 +37,7 @@ function HeroSection() {
       <div className="absolute inset-0" style={{
         backgroundImage: 'radial-gradient(circle at 70% 30%, rgba(139, 26, 26, 0.15) 0%, transparent 50%), radial-gradient(circle at 20% 80%, rgba(197, 150, 58, 0.08) 0%, transparent 50%)',
       }} />
-      
+
       {/* Grid pattern */}
       <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]" style={{
         backgroundImage: 'linear-gradient(var(--foreground) 1px, transparent 1px), linear-gradient(90deg, var(--foreground) 1px, transparent 1px)',
@@ -106,10 +107,10 @@ function HeroSection() {
             transition={{ duration: 1.2, delay: 0.2, ease: "easeOut" }}
             className="absolute inset-0 rounded-2xl overflow-hidden border border-white/10 shadow-2xl z-20"
           >
-            <video 
-              autoPlay 
-              loop 
-              muted 
+            <video
+              autoPlay
+              loop
+              muted
               playsInline
               className="w-full h-full object-cover"
             >
@@ -118,15 +119,15 @@ function HeroSection() {
             <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent pointer-events-none" />
             <div className="absolute inset-0 bg-gradient-to-r from-background/40 via-transparent to-transparent pointer-events-none" />
           </motion.div>
-          
+
           {/* Decorative floating elements */}
-          <motion.div 
-            animate={{ y: [0, -20, 0], scale: [1, 1.1, 1] }} 
+          <motion.div
+            animate={{ y: [0, -20, 0], scale: [1, 1.1, 1] }}
             transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
             className="absolute -top-[5%] -right-[5%] w-32 h-32 bg-brand-red/20 rounded-full blur-3xl z-0 pointer-events-none"
           />
-          <motion.div 
-            animate={{ y: [0, 30, 0], scale: [1, 1.2, 1] }} 
+          <motion.div
+            animate={{ y: [0, 30, 0], scale: [1, 1.2, 1] }}
             transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 1 }}
             className="absolute -bottom-[10%] -left-[5%] w-48 h-48 bg-brand-gold/10 rounded-full blur-3xl z-0 pointer-events-none"
           />
@@ -148,17 +149,71 @@ function HeroSection() {
 // ========== FEATURED TARANTULAS ==========
 function FeaturedTarantulas() {
   const [products, setProducts] = useState<Product[]>([]);
-  
+  const [likedIds, setLikedIds] = useState<string[]>([]);
+  const { isAuthenticated } = useAuthStore();
+  const router = useRouter();
+
   useEffect(() => {
     const all = LocalStorage.getAll<Product>('products');
     setProducts(all.filter(p => p.featured && p.isVisible !== false).slice(0, 4));
+
+    // Load liked products from local storage
+    const savedLikes = localStorage.getItem('arachnidsark_liked_products');
+    if (savedLikes) {
+      setLikedIds(JSON.parse(savedLikes));
+    }
   }, []);
 
+  const handleLike = (e: React.MouseEvent, productId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!isAuthenticated) {
+      toast.error('Please login to save favorites', {
+        action: {
+          label: 'Login',
+          onClick: () => router.push('/login'),
+        },
+      });
+      return;
+    }
+    
+    const isLiked = likedIds.includes(productId);
+    let newLikedIds: string[];
+    
+    if (isLiked) {
+      newLikedIds = likedIds.filter(id => id !== productId);
+    } else {
+      newLikedIds = [...likedIds, productId];
+    }
+    
+    setLikedIds(newLikedIds);
+    localStorage.setItem('arachnidsark_liked_products', JSON.stringify(newLikedIds));
+    
+    // Update the like count in the mock database
+    const product = products.find(p => p.id === productId);
+    if (product) {
+      const newLikes = isLiked ? Math.max(0, (product.likes || 0) - 1) : (product.likes || 0) + 1;
+      LocalStorage.update<Product>('products', productId, { likes: newLikes });
+      
+      // Update local state to reflect new like count
+      setProducts(prev => prev.map(p => 
+        p.id === productId ? { ...p, likes: newLikes } : p
+      ));
+      
+      if (!isLiked) {
+        toast.success(`You liked ${product.name}!`, {
+          icon: <Heart className="h-4 w-4 text-red-500 fill-red-500" />,
+        });
+      }
+    }
+  };
+
   const careLevelColors: Record<string, string> = {
-    beginner: 'text-green-400 bg-green-400/10',
-    intermediate: 'text-blue-400 bg-blue-400/10',
-    advanced: 'text-orange-400 bg-orange-400/10',
-    expert: 'text-red-400 bg-red-400/10',
+    beginner: 'bg-green-500 text-black hover:bg-green-400',
+    intermediate: 'bg-blue-500 text-white hover:bg-blue-400',
+    advanced: 'bg-orange-500 text-black hover:bg-orange-400',
+    expert: 'bg-red-500 text-white hover:bg-red-400',
   };
 
   return (
@@ -196,8 +251,8 @@ function FeaturedTarantulas() {
                 <Card className="vibe-card group overflow-hidden border-border bg-card/40 backdrop-blur-sm">
                   <div className="h-48 bg-gradient-to-br from-brand-red/20 via-background to-brand-gold/10 relative overflow-hidden">
                     {product.images && product.images.length > 0 ? (
-                      <img 
-                        src={product.images[0]} 
+                      <img
+                        src={product.images[0]}
                         alt={product.name}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                       />
@@ -211,13 +266,83 @@ function FeaturedTarantulas() {
                         {product.careLevel}
                       </Badge>
                     </div>
+
+                    {/* Like Button */}
+                    <button
+                      onClick={(e) => handleLike(e, product.id)}
+                      className={`absolute bottom-3 right-3 z-10 p-2 rounded-full backdrop-blur-md border border-white/20 shadow-xl transition-all duration-300 group/like ${
+                        likedIds.includes(product.id) 
+                          ? 'bg-red-500 text-white border-red-400' 
+                          : 'bg-black/60 text-white hover:bg-black/80'
+                      }`}
+                    >
+                      <Heart className={`h-4 w-4 ${likedIds.includes(product.id) ? 'fill-current' : 'group-hover/like:scale-110 transition-transform'}`} />
+                    </button>
+                    
+                    {/* Like Count */}
+                    <div className="absolute bottom-3 right-14 z-10 bg-black/60 backdrop-blur-md border border-white/20 rounded-full px-2 py-0.5 shadow-xl">
+                      <span className="text-[10px] font-bold text-white flex items-center gap-1">
+                        <Heart className="h-2.5 w-2.5 fill-red-500 text-red-500" />
+                        {product.likes || 0}
+                      </span>
+                    </div>
+                    <div className="absolute top-3 left-3 flex flex-col gap-1 z-10">
+                      <Badge variant="outline" className="border-white/30 bg-black/70 text-white text-[9px] font-black uppercase tracking-widest backdrop-blur-md px-2 py-0.5 shadow-2xl w-fit">
+                        {product.mainCategory}
+                      </Badge>
+                      
+                      {product.mainCategory === 'Tarantulas' && product.tarantulaMeta && (
+                        <>
+                          {product.tarantulaMeta.type && (
+                            <Badge variant="outline" className="border-brand-gold/40 bg-black/80 text-brand-gold text-[9px] font-black uppercase tracking-widest backdrop-blur-md px-2 py-0.5 shadow-2xl w-fit">
+                              {product.tarantulaMeta.type}
+                            </Badge>
+                          )}
+                          {product.tarantulaMeta.world && (
+                            <Badge variant="outline" className="border-brand-gold/40 bg-black/80 text-brand-gold text-[9px] font-black uppercase tracking-widest backdrop-blur-md px-2 py-0.5 shadow-2xl w-fit">
+                              {product.tarantulaMeta.world}
+                            </Badge>
+                          )}
+                        </>
+                      )}
+
+                      {product.mainCategory === 'Scorpions' && product.scorpionMeta && (
+                        <>
+                          {product.scorpionMeta.venomPotency && (
+                            <Badge variant="outline" className="border-red-500/40 bg-black/80 text-red-400 text-[9px] font-black uppercase tracking-widest backdrop-blur-md px-2 py-0.5 shadow-2xl w-fit">
+                              {product.scorpionMeta.venomPotency} Venom
+                            </Badge>
+                          )}
+                          {product.scorpionMeta.habitatType && (
+                            <Badge variant="outline" className="border-purple-500/40 bg-black/80 text-purple-400 text-[9px] font-black uppercase tracking-widest backdrop-blur-md px-2 py-0.5 shadow-2xl w-fit">
+                              {product.scorpionMeta.habitatType}
+                            </Badge>
+                          )}
+                        </>
+                      )}
+
+                      {product.mainCategory === 'Centipedes' && product.centipedeMeta && (
+                        <>
+                          {product.centipedeMeta.venomPotency && (
+                            <Badge variant="outline" className="border-red-500/40 bg-black/80 text-red-400 text-[9px] font-black uppercase tracking-widest backdrop-blur-md px-2 py-0.5 shadow-2xl w-fit">
+                              {product.centipedeMeta.venomPotency} Venom
+                            </Badge>
+                          )}
+                          {product.centipedeMeta.habitatType && (
+                            <Badge variant="outline" className="border-green-500/40 bg-black/80 text-green-400 text-[9px] font-black uppercase tracking-widest backdrop-blur-md px-2 py-0.5 shadow-2xl w-fit">
+                              {product.centipedeMeta.habitatType}
+                            </Badge>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
                   <CardContent className="p-4 space-y-2">
                     <h3 className="font-heading font-bold text-base group-hover:text-brand-gold transition-colors line-clamp-1 uppercase tracking-wide">{product.name}</h3>
                     <p className="text-xs text-muted-foreground italic">{product.scientificName}</p>
                     <div className="flex items-center justify-between pt-2">
                       <span className="text-lg font-bold text-brand-gold">
-                        {product.sizes?.length > 0 
+                        {product.sizes?.length > 0
                           ? `Starts at ${formatPrice(Math.min(...product.sizes.map(s => s.price)))}`
                           : 'Contact for Price'}
                       </span>
@@ -254,7 +379,7 @@ function FeaturedTarantulas() {
 // ========== FEATURED COURSES ==========
 function FeaturedCourses() {
   const [courses, setCourses] = useState<Course[]>([]);
-  
+
   useEffect(() => {
     const all = LocalStorage.getAll<Course>('courses');
     setCourses(all.filter(c => c.featured).slice(0, 3));
@@ -294,8 +419,8 @@ function FeaturedCourses() {
                 <Card className="vibe-card group overflow-hidden border-border bg-card/40 backdrop-blur-sm h-full">
                   <div className="h-40 bg-gradient-to-br from-brand-gold/20 via-background to-brand-red/10 relative overflow-hidden flex items-center justify-center">
                     {course.thumbnail ? (
-                      <img 
-                        src={course.thumbnail} 
+                      <img
+                        src={course.thumbnail}
                         alt={course.title}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                       />
@@ -339,7 +464,7 @@ function FeaturedCourses() {
 // ========== CARE GUIDES PREVIEW ==========
 function CareGuidesPreview() {
   const [guides, setGuides] = useState<CareGuide[]>([]);
-  
+
   useEffect(() => {
     setGuides(LocalStorage.getAll<CareGuide>('care_guides').slice(0, 4));
   }, []);
