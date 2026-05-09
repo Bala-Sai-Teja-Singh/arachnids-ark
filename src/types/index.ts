@@ -157,6 +157,17 @@ export interface SystemSettings {
     maintenanceMode: boolean;
     acceptingConsultations: boolean;
   };
+  shippingSettings: {
+    rules: ShippingRule[];
+    disclaimer: string;
+  };
+}
+
+export interface ShippingRule {
+  id: string;
+  minQuantity: number;
+  maxQuantity: number;
+  charge: number;
 }
 
 export interface Order {
@@ -173,6 +184,7 @@ export interface Order {
   deliveryPhone: string;
   deliveryAddress: string;
   totalPrice: number;
+  shippingCharge: number;
   trackingId?: string;
   courierPartner?: string;
   createdAt: string;

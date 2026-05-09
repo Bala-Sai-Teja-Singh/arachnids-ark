@@ -19,7 +19,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { useNotificationStore } from '@/store/notification-store';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { Order, Product, ProductSize } from '@/types';
+import type { Order, Product, ProductSize, SystemSettings, ShippingRule } from '@/types';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -34,6 +34,8 @@ export default function CheckoutPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [productDetails, setProductDetails] = useState<Record<string, Product>>({});
+  const [shippingSettings, setShippingSettings] = useState<SystemSettings['shippingSettings'] | null>(null);
+  const [shippingCharge, setShippingCharge] = useState(0);
 
   const updateItemSize = useCartStore(state => state.updateItemSize);
 
@@ -41,7 +43,32 @@ export default function CheckoutPage() {
     if (items.length === 0 && !isSubmitting) {
       router.push('/shop');
     }
+
+    const sysSettings = LocalStorage.getAll<SystemSettings>('system_settings');
+    if (sysSettings.length > 0) {
+      setShippingSettings(sysSettings[0].shippingSettings);
+    }
   }, [items, router, isSubmitting]);
+
+  useEffect(() => {
+    if (!shippingSettings) return;
+
+    // Count tarantulas in the cart
+    const tarantulaCount = items.reduce((acc, item) => {
+      const product = LocalStorage.getById<Product>('products', item.productId);
+      if (product?.mainCategory === 'Tarantulas') {
+        return acc + item.quantity;
+      }
+      return acc;
+    }, 0);
+
+    // Find applicable shipping rule
+    const rule = shippingSettings.rules?.find(
+      r => tarantulaCount >= r.minQuantity && tarantulaCount <= r.maxQuantity
+    );
+
+    setShippingCharge(rule ? rule.charge : 0);
+  }, [items, shippingSettings]);
 
   useEffect(() => {
     // Load full product details for size switching
@@ -91,8 +118,11 @@ export default function CheckoutPage() {
     if (!deliveryName.trim()) newErrors.name = 'Full name is required';
     if (!deliveryPhone.trim()) {
       newErrors.phone = 'Mobile number is required';
-    } else if (!/^\d{10}$/.test(deliveryPhone.replace(/\s/g, ''))) {
-      newErrors.phone = 'Mobile number must be exactly 10 digits';
+    } else {
+      const cleanPhone = deliveryPhone.replace(/\D/g, '');
+      if (cleanPhone.length < 10) {
+        newErrors.phone = 'Mobile number must be at least 10 digits';
+      }
     }
     if (!deliveryAddress.trim()) newErrors.address = 'Delivery address is required';
 
@@ -121,7 +151,8 @@ export default function CheckoutPage() {
       deliveryName,
       deliveryPhone,
       deliveryAddress,
-      totalPrice: totalPrice(),
+      shippingCharge,
+      totalPrice: totalPrice() + shippingCharge,
       message,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -310,12 +341,17 @@ export default function CheckoutPage() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Shipping</span>
-                    <span className="text-green-400 font-medium">TBD after confirmation</span>
+                    <span className="text-brand-gold font-medium">{formatPrice(shippingCharge)}</span>
                   </div>
+                  {shippingSettings?.disclaimer && (
+                    <p className="text-[10px] text-muted-foreground italic leading-tight">
+                      {shippingSettings.disclaimer}
+                    </p>
+                  )}
                   <Separator className="bg-border/50 my-2" />
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-lg">Total</span>
-                    <span className="font-heading font-black text-2xl text-brand-gold">{formatPrice(totalPrice())}</span>
+                    <span className="font-heading font-black text-2xl text-brand-gold">{formatPrice(totalPrice() + shippingCharge)}</span>
                   </div>
                 </div>
 

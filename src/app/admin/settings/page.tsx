@@ -18,8 +18,21 @@ export default function AdminSettingsPage() {
 
   useEffect(() => {
     const data = LocalStorage.getAll<SystemSettings>('system_settings');
+    const defaultShipping = {
+      rules: [
+        { id: 'ship-1', minQuantity: 1, maxQuantity: 2, charge: 250 },
+        { id: 'ship-2', minQuantity: 3, maxQuantity: 5, charge: 400 },
+        { id: 'ship-3', minQuantity: 6, maxQuantity: 99, charge: 600 },
+      ],
+      disclaimer: 'Note: Shipping charges may vary based on the time and seasonal conditions to ensure the safety of live arrivals.',
+    };
+
     if (data.length > 0) {
-      setSettings(data[0]);
+      const currentSettings = data[0];
+      if (!currentSettings.shippingSettings) {
+        currentSettings.shippingSettings = defaultShipping;
+      }
+      setSettings(currentSettings);
     } else {
       // Fallback default settings if not seeded
       const defaultSettings: SystemSettings = {
@@ -37,6 +50,7 @@ export default function AdminSettingsPage() {
           maintenanceMode: false,
           acceptingConsultations: true,
         },
+        shippingSettings: defaultShipping,
       };
       setSettings(defaultSettings);
       LocalStorage.setAll('system_settings', [defaultSettings]);
@@ -89,6 +103,48 @@ export default function AdminSettingsPage() {
     setSettings({
       ...settings,
       upiIds: settings.upiIds.map(u => ({ ...u, isDefault: u.id === id }))
+    });
+  };
+
+  const addShippingRule = () => {
+    if (!settings) return;
+    const newRule = {
+      id: `ship-${Date.now()}`,
+      minQuantity: 1,
+      maxQuantity: 1,
+      charge: 0
+    };
+    
+    const currentShipping = settings.shippingSettings || { rules: [], disclaimer: '' };
+    
+    setSettings({
+      ...settings,
+      shippingSettings: {
+        ...currentShipping,
+        rules: [...(currentShipping.rules || []), newRule]
+      }
+    });
+  };
+
+  const removeShippingRule = (id: string) => {
+    if (!settings || !settings.shippingSettings) return;
+    setSettings({
+      ...settings,
+      shippingSettings: {
+        ...settings.shippingSettings,
+        rules: settings.shippingSettings.rules.filter(r => r.id !== id)
+      }
+    });
+  };
+
+  const updateShippingRule = (id: string, updates: any) => {
+    if (!settings || !settings.shippingSettings) return;
+    setSettings({
+      ...settings,
+      shippingSettings: {
+        ...settings.shippingSettings,
+        rules: settings.shippingSettings.rules.map(r => r.id === id ? { ...r, ...updates } : r)
+      }
     });
   };
 
@@ -231,6 +287,81 @@ export default function AdminSettingsPage() {
                   onCheckedChange={(checked) => setSettings({
                     ...settings,
                     emailNotifications: { ...settings.emailNotifications, consultationReminders: checked }
+                  })}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border bg-card">
+            <CardHeader>
+              <CardTitle>Shipping Configuration</CardTitle>
+              <CardDescription>Set quantity-based shipping charges for live animals.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-brand-gold uppercase tracking-widest text-[10px] font-bold">Shipping Rules (Tarantula Quantity)</Label>
+                  <Button variant="outline" size="sm" className="h-7 text-[10px] uppercase tracking-widest" onClick={addShippingRule}>
+                    <Plus className="mr-1 h-3 w-3" /> Add Rule
+                  </Button>
+                </div>
+
+                <div className="space-y-3">
+                  {settings.shippingSettings?.rules.map((rule) => (
+                    <div key={rule.id} className="flex flex-col sm:flex-row items-end gap-3 p-3 rounded-xl bg-background/30 border border-border">
+                      <div className="flex-1 space-y-1">
+                        <Label className="text-[10px]">Min Qty</Label>
+                        <Input 
+                          type="number"
+                          value={rule.minQuantity || ''} 
+                          onChange={(e) => updateShippingRule(rule.id, { minQuantity: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 })}
+                          className="bg-background/50 h-8 text-xs" 
+                        />
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <Label className="text-[10px]">Max Qty</Label>
+                        <Input 
+                          type="number"
+                          value={rule.maxQuantity || ''} 
+                          onChange={(e) => updateShippingRule(rule.id, { maxQuantity: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 })}
+                          className="bg-background/50 h-8 text-xs" 
+                        />
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <Label className="text-[10px]">Charge (₹)</Label>
+                        <Input 
+                          type="number"
+                          value={rule.charge || ''} 
+                          onChange={(e) => updateShippingRule(rule.id, { charge: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 })}
+                          className="bg-background/50 h-8 text-xs font-bold" 
+                        />
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-400/5"
+                        onClick={() => removeShippingRule(rule.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  {(!settings.shippingSettings?.rules || settings.shippingSettings.rules.length === 0) && (
+                    <p className="text-xs text-muted-foreground italic py-2">No shipping rules defined. Default might be free or TBD.</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-4 border-t border-border">
+                <Label>Shipping Disclaimer</Label>
+                <p className="text-[10px] text-muted-foreground mb-1">Shown during checkout to inform users about potential charge variations.</p>
+                <Textarea 
+                  className="bg-background/50 h-20 text-sm"
+                  value={settings.shippingSettings?.disclaimer}
+                  onChange={(e) => setSettings({ 
+                    ...settings, 
+                    shippingSettings: { ...settings.shippingSettings, disclaimer: e.target.value } 
                   })}
                 />
               </div>

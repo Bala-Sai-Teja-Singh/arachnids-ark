@@ -317,6 +317,14 @@ export function seedDatabase(): void {
       maintenanceMode: false,
       acceptingConsultations: true,
     },
+    shippingSettings: {
+      rules: [
+        { id: 'ship-1', minQuantity: 1, maxQuantity: 2, charge: 250 },
+        { id: 'ship-2', minQuantity: 3, maxQuantity: 5, charge: 400 },
+        { id: 'ship-3', minQuantity: 6, maxQuantity: 99, charge: 600 },
+      ],
+      disclaimer: 'Note: Shipping charges may vary based on the time and seasonal conditions to ensure the safety of live arrivals.',
+    },
   };
   LocalStorage.setAll('system_settings', [systemSettings]);
 
