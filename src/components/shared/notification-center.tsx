@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Bell, Check, Trash2, Info, CheckCircle, Clock, ExternalLink } from 'lucide-react';
+import { Bell, Check, Trash2, Info, CheckCircle, Clock, ExternalLink, ShoppingBag } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useNotificationStore } from '@/store/notification-store';
@@ -30,7 +30,7 @@ export function NotificationCenter({ open, onOpenChange }: { open: boolean, onOp
   const getIcon = (type: string) => {
     switch (type) {
       case 'payment': return <CheckCircle className="h-4 w-4 text-green-400" />;
-      case 'inquiry': return <Info className="h-4 w-4 text-blue-400" />;
+      case 'order': return <ShoppingBag className="h-4 w-4 text-blue-400" />;
       case 'booking': return <Clock className="h-4 w-4 text-brand-gold" />;
       default: return <Info className="h-4 w-4 text-muted-foreground" />;
     }
@@ -41,14 +41,16 @@ export function NotificationCenter({ open, onOpenChange }: { open: boolean, onOp
       <SheetContent side="right" className="bg-background border-l border-border sm:max-w-md p-0 overflow-hidden shadow-2xl">
         <SheetHeader className="p-6 border-b border-border">
           <div className="flex items-center justify-between pr-10">
-            <SheetTitle className="vibe-heading text-lg flex items-center gap-2">
-              <Bell className="h-5 w-5 text-brand-red" />
+            <SheetTitle className="vibe-heading text-lg flex items-center gap-3">
+              <div className="relative">
+                <Bell className="h-5 w-5 text-brand-red" />
+                {unreadCount > 0 && (
+                  <Badge className="absolute -top-2 -right-2 bg-brand-red text-white border-2 border-background text-[8px] h-4 min-w-4 flex items-center justify-center p-0">
+                    {unreadCount}
+                  </Badge>
+                )}
+              </div>
               Notifications
-              {unreadCount > 0 && (
-                <Badge className="ml-2 bg-brand-red text-white border-0 text-[10px] h-5 min-w-5 flex items-center justify-center">
-                  {unreadCount}
-                </Badge>
-              )}
             </SheetTitle>
           </div>
           <div className="flex gap-2 mt-2">

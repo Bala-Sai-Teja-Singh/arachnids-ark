@@ -12,13 +12,22 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { LocalStorage } from '@/mock-db/storage';
-import type { Product, ProductType, ProductOrigin, CareLevel, Temperament } from '@/types';
+import type { Product, CareLevel, Temperament } from '@/types';
 import { formatPrice } from '@/constants/pricing';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import type { MainCategory, TarantulaMetadata, ScorpionMetadata, CentipedeMetadata } from '@/types';
+
+const CATEGORIES: { value: MainCategory; label: string }[] = [
+  { value: 'Tarantulas', label: 'Tarantulas' },
+  { value: 'Centipedes', label: 'Centipedes' },
+  { value: 'Scorpions', label: 'Scorpions' },
+];
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState('');
+  const [mainCategory, setMainCategory] = useState<MainCategory>('Tarantulas');
 
   // Modal states
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -27,17 +36,20 @@ export default function AdminProductsPage() {
   const [toggleId, setToggleId] = useState<string | null>(null);
   const [toggleType, setToggleType] = useState<'visibility' | 'availability'>('visibility');
 
-  // Form state
   const [formData, setFormData] = useState<Partial<Product>>({
     name: '', scientificName: '', images: [], description: '', sizes: [],
-    isVisible: true, available: true
+    isVisible: true, available: true,
   });
 
   useEffect(() => {
     setProducts(LocalStorage.getAll<Product>('products'));
   }, []);
 
-  const filtered = products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = products.filter(p =>
+    p.mainCategory === mainCategory &&
+    (p.name.toLowerCase().includes(search.toLowerCase()) ||
+      p.scientificName?.toLowerCase().includes(search.toLowerCase()))
+  );
 
   const handleOpenEdit = (product: Product | null) => {
     if (product) {
@@ -47,15 +59,22 @@ export default function AdminProductsPage() {
         scientificName: product.scientificName,
         images: product.images,
         description: product.description,
-        category: product.category,
+        mainCategory: product.mainCategory,
         careLevel: product.careLevel,
-        temperament: product.temperament,
         humidity: product.humidity,
         temperature: product.temperature,
         feeding: product.feeding,
         sizes: product.sizes,
         isVisible: product.isVisible ?? true,
-        available: product.available ?? true
+        available: product.available ?? true,
+        // Legacy
+        category: product.category,
+        origin: product.origin,
+        temperament: product.temperament,
+        // Entity metadata
+        tarantulaMeta: product.tarantulaMeta,
+        scorpionMeta: product.scorpionMeta,
+        centipedeMeta: product.centipedeMeta,
       });
     } else {
       setEditingProduct(null);
@@ -64,28 +83,55 @@ export default function AdminProductsPage() {
         scientificName: '',
         images: [],
         description: '',
-        category: 'terrestrial',
-        careLevel: 'beginner',
-        temperament: 'docile',
-        humidity: '',
-        temperature: '',
-        feeding: '',
         sizes: [],
         isVisible: true,
-        available: true
+        available: true,
       });
     }
     setIsProductModalOpen(true);
   };
 
   const handleSaveProduct = () => {
+    // Map new fields to legacy fields for shop filters/badges compat
+    let legacyFields: Partial<Product> = {};
+    if (formData.mainCategory === 'Tarantulas' && formData.tarantulaMeta) {
+      const meta = formData.tarantulaMeta;
+      legacyFields = {
+        category: meta.type?.toLowerCase() as any,
+        origin: meta.world === 'New World' ? 'new-world' : 'old-world',
+        temperament: meta.temperament,
+        sizeCategory: meta.sizeCategory,
+        gender: meta.gender
+      };
+    } else if (formData.mainCategory === 'Scorpions' && formData.scorpionMeta) {
+      const meta = formData.scorpionMeta;
+      legacyFields = {
+        category: meta.habitatType?.toLowerCase() as any,
+        sizeCategory: meta.sizeCategory,
+        gender: meta.gender
+      };
+    } else if (formData.mainCategory === 'Centipedes' && formData.centipedeMeta) {
+      const meta = formData.centipedeMeta;
+      legacyFields = {
+        category: meta.habitatType?.toLowerCase() as any,
+        sizeCategory: meta.sizeCategory,
+        gender: meta.gender
+      };
+    }
+
     if (editingProduct) {
-      const updatedProduct = { ...editingProduct, ...formData };
-      LocalStorage.update('products', updatedProduct.id, updatedProduct);
+      const updatedProduct = {
+        ...editingProduct,
+        ...formData,
+        ...legacyFields,
+        updatedAt: new Date().toISOString(),
+      } as Product;
+      LocalStorage.update('products', editingProduct.id, updatedProduct);
       toast.success('Product updated');
     } else {
       const newProduct = {
         ...formData,
+        ...legacyFields,
         id: `prod-${Date.now()}`,
         featured: false,
         available: formData.available ?? true,
@@ -139,14 +185,30 @@ export default function AdminProductsPage() {
         </Button>
       </div>
 
-      <div className="flex items-center gap-2 max-w-sm">
-        <Search className="h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search products..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="bg-card border-border"
-        />
+      <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
+        <div className="flex items-center gap-2 w-full max-w-sm">
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder={`Search ${mainCategory.toLowerCase()}...`}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="bg-card border-border h-11"
+          />
+        </div>
+
+        <Tabs value={mainCategory} onValueChange={(val) => setMainCategory(val as MainCategory)} className="w-full md:w-auto">
+          <TabsList className="bg-black/40 border border-border p-1.5 pl-4 pr-4 gap-2 w-full sm:w-auto flex justify-start overflow-x-auto no-scrollbar rounded-xl sm:rounded-full backdrop-blur-md">
+            {CATEGORIES.map((cat) => (
+              <TabsTrigger
+                key={cat.value}
+                value={cat.value}
+                className="data-[state=active]:bg-brand-red data-[state=active]:text-white data-[state=active]:shadow-[0_0_20px_rgba(220,38,38,0.4)] transition-all duration-300 font-heading uppercase tracking-widest text-[11px] px-6 sm:px-8 h-8 rounded-full border border-transparent data-[state=active]:border-white/20 whitespace-nowrap font-bold"
+              >
+                {cat.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
       </div>
 
       <div className="rounded-xl border border-border bg-card overflow-hidden">
@@ -156,7 +218,7 @@ export default function AdminProductsPage() {
             <TableHeader>
               <TableRow className="border-border hover:bg-transparent">
                 <TableHead>Name</TableHead>
-                <TableHead>Category</TableHead>
+                <TableHead>Attributes</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>Stock</TableHead>
                 <TableHead>Status</TableHead>
@@ -190,7 +252,34 @@ export default function AdminProductsPage() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell><Badge variant="outline">{product.category}</Badge></TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1">
+                        <Badge variant="outline" className="w-fit text-[10px] uppercase tracking-tighter">
+                          {product.category || 'N/A'}
+                        </Badge>
+                        {product.mainCategory === 'Tarantulas' && product.tarantulaMeta && (
+                          <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                            <span className="text-brand-gold/70">{product.tarantulaMeta.world}</span>
+                            <span>•</span>
+                            <span>{product.tarantulaMeta.growthRate} Growth</span>
+                          </div>
+                        )}
+                        {product.mainCategory === 'Scorpions' && product.scorpionMeta && (
+                          <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                            <span className="text-red-400/70">{product.scorpionMeta.venomPotency} Venom</span>
+                            <span>•</span>
+                            <span>{product.scorpionMeta.pincerType} Pincers</span>
+                          </div>
+                        )}
+                        {product.mainCategory === 'Centipedes' && product.centipedeMeta && (
+                          <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                            <span className="text-red-400/70">{product.centipedeMeta.venomPotency} Venom</span>
+                            <span>•</span>
+                            <span>{product.centipedeMeta.legPairs} Pairs</span>
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-0.5">
                         {product.sizes?.map((s, i) => (
@@ -296,7 +385,26 @@ export default function AdminProductsPage() {
 
                 <div className="flex items-center justify-between text-xs">
                   <div className="space-y-1">
-                    <p className="text-muted-foreground capitalize">{product.category}</p>
+                    <div className="flex flex-col gap-1">
+                      <p className="text-muted-foreground capitalize font-medium">{product.category}</p>
+                      <div className="flex flex-wrap gap-1">
+                        {product.mainCategory === 'Tarantulas' && product.tarantulaMeta && (
+                          <Badge variant="outline" className="text-[9px] border-brand-gold/30 text-brand-gold py-0 h-4">
+                            {product.tarantulaMeta.world}
+                          </Badge>
+                        )}
+                        {product.mainCategory === 'Scorpions' && product.scorpionMeta && (
+                          <Badge variant="outline" className="text-[9px] border-red-500/30 text-red-400 py-0 h-4">
+                            {product.scorpionMeta.venomPotency} Venom
+                          </Badge>
+                        )}
+                        {product.mainCategory === 'Centipedes' && product.centipedeMeta && (
+                          <Badge variant="outline" className="text-[9px] border-red-500/30 text-red-400 py-0 h-4">
+                            {product.centipedeMeta.venomPotency} Venom
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
                     <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
                       {product.sizes?.map((s, i) => (
                         <div key={i} className="text-[10px]">
@@ -406,86 +514,266 @@ export default function AdminProductsPage() {
               />
               <p className="text-[10px] text-muted-foreground">Add multiple URLs to create a gallery.</p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Category</Label>
-                <Select value={formData.category} onValueChange={(val) => setFormData({ ...formData, category: (val as ProductType) ?? 'terrestrial' })}>
-                  <SelectTrigger className="bg-background/50">
-                    <SelectValue placeholder="Select Category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="terrestrial">Terrestrial</SelectItem>
-                    <SelectItem value="arboreal">Arboreal</SelectItem>
-                    <SelectItem value="fossorial">Fossorial</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Origin</Label>
-                <Select value={formData.origin} onValueChange={(val) => setFormData({ ...formData, origin: (val as ProductOrigin) ?? 'new-world' })}>
-                  <SelectTrigger className="bg-background/50">
-                    <SelectValue placeholder="Select Origin" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="new-world">New World</SelectItem>
-                    <SelectItem value="old-world">Old World</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Care Level</Label>
-                <Select value={formData.careLevel} onValueChange={(val) => setFormData({ ...formData, careLevel: (val as CareLevel) ?? 'beginner' })}>
-                  <SelectTrigger className="bg-background/50">
-                    <SelectValue placeholder="Select Care Level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="beginner">Beginner</SelectItem>
-                    <SelectItem value="intermediate">Intermediate</SelectItem>
-                    <SelectItem value="advanced">Advanced</SelectItem>
-                    <SelectItem value="expert">Expert</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Temperament</Label>
-                <Select value={formData.temperament} onValueChange={(val) => setFormData({ ...formData, temperament: (val as Temperament) ?? 'docile' })}>
-                  <SelectTrigger className="bg-background/50">
-                    <SelectValue placeholder="Select Temperament" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="docile">Docile</SelectItem>
-                    <SelectItem value="semi-aggressive">Semi-Aggressive</SelectItem>
-                    <SelectItem value="aggressive">Aggressive</SelectItem>
-                    <SelectItem value="defensive">Defensive</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
             <div className="space-y-2">
-              <Label>Feeding</Label>
-              <Input
-                value={formData.feeding}
-                onChange={e => setFormData({ ...formData, feeding: e.target.value })}
-                placeholder="Roaches, crickets, etc."
-                className="bg-background/50"
-              />
+              <Label>Main Category <span className="text-red-400">*</span></Label>
+              <Select value={formData.mainCategory} onValueChange={(val) => {
+                const cat = val as MainCategory;
+                setFormData({ ...formData, mainCategory: cat, tarantulaMeta: undefined, scorpionMeta: undefined, centipedeMeta: undefined });
+              }}>
+                <SelectTrigger className="bg-background/50">
+                  <SelectValue placeholder="Select Main Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Tarantulas">Tarantulas</SelectItem>
+                  <SelectItem value="Scorpions">Scorpions</SelectItem>
+                  <SelectItem value="Centipedes">Centipedes</SelectItem>
+                </SelectContent>
+              </Select>
+              {!formData.mainCategory && <p className="text-[10px] text-brand-gold italic">Select a category to see entity-specific fields.</p>}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Humidity</Label>
-                <Input value={formData.humidity || ''} placeholder="60-70%" onChange={e => setFormData({ ...formData, humidity: e.target.value })} className="bg-background/50" />
+            {/* ======== TARANTULA FIELDS ======== */}
+            {formData.mainCategory === 'Tarantulas' && (
+              <div className="space-y-4 pt-2 border-t border-brand-gold/20">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold">Tarantula Details</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>World</Label>
+                    <Select value={formData.tarantulaMeta?.world} onValueChange={(val) => setFormData({ ...formData, tarantulaMeta: { ...formData.tarantulaMeta!, world: val as any, type: formData.tarantulaMeta?.type || 'Terrestrial', temperament: formData.tarantulaMeta?.temperament || 'docile' } })}>
+                      <SelectTrigger className="bg-background/50"><SelectValue placeholder="New/Old World" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="New World">New World</SelectItem>
+                        <SelectItem value="Old World">Old World</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Type</Label>
+                    <Select value={formData.tarantulaMeta?.type} onValueChange={(val) => setFormData({ ...formData, tarantulaMeta: { ...formData.tarantulaMeta!, type: val as any } })}>
+                      <SelectTrigger className="bg-background/50"><SelectValue placeholder="Select Type" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Terrestrial">Terrestrial</SelectItem>
+                        <SelectItem value="Arboreal">Arboreal</SelectItem>
+                        <SelectItem value="Fossorial">Fossorial</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Temperament</Label>
+                    <Select value={formData.tarantulaMeta?.temperament} onValueChange={(val) => setFormData({ ...formData, tarantulaMeta: { ...formData.tarantulaMeta!, temperament: val as any } })}>
+                      <SelectTrigger className="bg-background/50"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="docile">Docile</SelectItem>
+                        <SelectItem value="semi-aggressive">Semi-Aggressive</SelectItem>
+                        <SelectItem value="aggressive">Aggressive</SelectItem>
+                        <SelectItem value="defensive">Defensive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Growth Rate</Label>
+                    <Select value={formData.tarantulaMeta?.growthRate} onValueChange={(val) => setFormData({ ...formData, tarantulaMeta: { ...formData.tarantulaMeta!, growthRate: val as any } })}>
+                      <SelectTrigger className="bg-background/50"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Slow">Slow</SelectItem>
+                        <SelectItem value="Medium">Medium</SelectItem>
+                        <SelectItem value="Fast">Fast</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Size Category</Label>
+                    <Select value={formData.tarantulaMeta?.sizeCategory} onValueChange={(val) => setFormData({ ...formData, tarantulaMeta: { ...formData.tarantulaMeta!, sizeCategory: val as any } })}>
+                      <SelectTrigger className="bg-background/50"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        {['Sling', 'Juvenile', 'Sub-adult', 'Adult'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Gender</Label>
+                    <Select value={formData.tarantulaMeta?.gender} onValueChange={(val) => setFormData({ ...formData, tarantulaMeta: { ...formData.tarantulaMeta!, gender: val as any } })}>
+                      <SelectTrigger className="bg-background/50"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        {['Unsexed', 'Male', 'Female', 'Pair'].map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>Temperature</Label>
-                <Input value={formData.temperature || ''} placeholder="24-28°C" onChange={e => setFormData({ ...formData, temperature: e.target.value })} className="bg-background/50" />
-              </div>
-            </div>
+            )}
 
+            {/* ======== SCORPION FIELDS ======== */}
+            {formData.mainCategory === 'Scorpions' && (
+              <div className="space-y-4 pt-2 border-t border-brand-gold/20">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold">Scorpion Details</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Habitat Type</Label>
+                    <Select value={formData.scorpionMeta?.habitatType} onValueChange={(val) => setFormData({ ...formData, scorpionMeta: { ...formData.scorpionMeta!, habitatType: val as any, venomPotency: formData.scorpionMeta?.venomPotency || 'Mild', pincerType: formData.scorpionMeta?.pincerType || 'Medium', communal: formData.scorpionMeta?.communal ?? false } })}>
+                      <SelectTrigger className="bg-background/50"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Desert">Desert</SelectItem>
+                        <SelectItem value="Tropical Forest">Tropical Forest</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Venom Potency</Label>
+                    <Select value={formData.scorpionMeta?.venomPotency} onValueChange={(val) => setFormData({ ...formData, scorpionMeta: { ...formData.scorpionMeta!, venomPotency: val as any } })}>
+                      <SelectTrigger className="bg-background/50"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Mild">Mild</SelectItem>
+                        <SelectItem value="Moderate">Moderate</SelectItem>
+                        <SelectItem value="Medically Significant">Medically Significant</SelectItem>
+                        <SelectItem value="Lethal">Lethal</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Pincer Type</Label>
+                    <Select value={formData.scorpionMeta?.pincerType} onValueChange={(val) => setFormData({ ...formData, scorpionMeta: { ...formData.scorpionMeta!, pincerType: val as any } })}>
+                      <SelectTrigger className="bg-background/50"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Thin">Thin (usually high venom)</SelectItem>
+                        <SelectItem value="Medium">Medium</SelectItem>
+                        <SelectItem value="Thick">Thick (usually low venom)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 flex flex-col justify-end">
+                    <div className="flex items-center gap-3 h-10">
+                      <input type="checkbox" id="communal" checked={formData.scorpionMeta?.communal ?? false} onChange={e => setFormData({ ...formData, scorpionMeta: { ...formData.scorpionMeta!, communal: e.target.checked } })} className="h-4 w-4 rounded border-gray-300" />
+                      <Label htmlFor="communal">Communal Species</Label>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Size Category</Label>
+                    <Select value={formData.scorpionMeta?.sizeCategory} onValueChange={(val) => setFormData({ ...formData, scorpionMeta: { ...formData.scorpionMeta!, sizeCategory: val as any } })}>
+                      <SelectTrigger className="bg-background/50"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        {['Scorpling', 'Juvenile', 'Sub-adult', 'Adult'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Gender</Label>
+                    <Select value={formData.scorpionMeta?.gender} onValueChange={(val) => setFormData({ ...formData, scorpionMeta: { ...formData.scorpionMeta!, gender: val as any } })}>
+                      <SelectTrigger className="bg-background/50"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        {['Unsexed', 'Male', 'Female', 'Pair'].map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ======== CENTIPEDE FIELDS ======== */}
+            {formData.mainCategory === 'Centipedes' && (
+              <div className="space-y-4 pt-2 border-t border-brand-gold/20">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold">Centipede Details</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Habitat Type</Label>
+                    <Select value={formData.centipedeMeta?.habitatType} onValueChange={(val) => setFormData({ ...formData, centipedeMeta: { ...formData.centipedeMeta!, habitatType: val as any, venomPotency: formData.centipedeMeta?.venomPotency || 'Moderate' } })}>
+                      <SelectTrigger className="bg-background/50"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Tropical">Tropical</SelectItem>
+                        <SelectItem value="Arid">Arid</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Venom Potency</Label>
+                    <Select value={formData.centipedeMeta?.venomPotency} onValueChange={(val) => setFormData({ ...formData, centipedeMeta: { ...formData.centipedeMeta!, venomPotency: val as any } })}>
+                      <SelectTrigger className="bg-background/50"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Mild">Mild</SelectItem>
+                        <SelectItem value="Moderate">Moderate</SelectItem>
+                        <SelectItem value="Severe">Severe</SelectItem>
+                        <SelectItem value="Potent">Potent</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Leg Pairs</Label>
+                    <Input value={formData.centipedeMeta?.legPairs || ''} placeholder="e.g. 21" onChange={e => setFormData({ ...formData, centipedeMeta: { ...formData.centipedeMeta!, legPairs: e.target.value } })} className="bg-background/50" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Size Category</Label>
+                    <Select value={formData.centipedeMeta?.sizeCategory} onValueChange={(val) => setFormData({ ...formData, centipedeMeta: { ...formData.centipedeMeta!, sizeCategory: val as any } })}>
+                      <SelectTrigger className="bg-background/50"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        {['Pedeling', 'Juvenile', 'Sub-adult', 'Adult'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Gender</Label>
+                    <Select value={formData.centipedeMeta?.gender} onValueChange={(val) => setFormData({ ...formData, centipedeMeta: { ...formData.centipedeMeta!, gender: val as any } })}>
+                      <SelectTrigger className="bg-background/50"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        {['Unsexed', 'Male', 'Female'].map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ======== SHARED CARE FIELDS (only when category selected) ======== */}
+            {formData.mainCategory && (
+              <div className="space-y-4 pt-2 border-t border-border/50">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Care Parameters</p>
+                <div className="space-y-2">
+                  <Label>Care Level</Label>
+                  <Select value={formData.careLevel} onValueChange={(val) => setFormData({ ...formData, careLevel: val as CareLevel })}>
+                    <SelectTrigger className="bg-background/50"><SelectValue placeholder="Select Care Level" /></SelectTrigger>
+                    <SelectContent>
+                      {formData.mainCategory === 'Centipedes' ? (
+                        <>
+                          <SelectItem value="intermediate">Intermediate</SelectItem>
+                          <SelectItem value="advanced">Advanced</SelectItem>
+                          <SelectItem value="expert">Expert</SelectItem>
+                        </>
+                      ) : (
+                        <>
+                          <SelectItem value="beginner">Beginner</SelectItem>
+                          <SelectItem value="intermediate">Intermediate</SelectItem>
+                          <SelectItem value="advanced">Advanced</SelectItem>
+                          <SelectItem value="expert">Expert</SelectItem>
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Feeding</Label>
+                  <Input value={formData.feeding || ''} onChange={e => setFormData({ ...formData, feeding: e.target.value })} placeholder="Crickets, roaches, etc." className="bg-background/50" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Humidity</Label>
+                    <Input value={formData.humidity || ''} placeholder="60-70%" onChange={e => setFormData({ ...formData, humidity: e.target.value })} className="bg-background/50" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Temperature</Label>
+                    <Input value={formData.temperature || ''} placeholder="24-28°C" onChange={e => setFormData({ ...formData, temperature: e.target.value })} className="bg-background/50" />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Sizes section */}
             <div className="space-y-3 pt-4 border-t border-border">

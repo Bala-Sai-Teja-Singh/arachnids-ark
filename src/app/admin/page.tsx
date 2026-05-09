@@ -6,17 +6,17 @@ import { Users, ShoppingBag, GraduationCap, Calendar, DollarSign, ArrowUpRight, 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LocalStorage } from '@/mock-db/storage';
 import { formatPrice } from '@/constants/pricing';
-import type { User, Product, Course, Inquiry, CourseEnrollment, ConsultationBooking } from '@/types';
+import type { User, Product, Course, Order, CourseEnrollment, ConsultationBooking } from '@/types';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area
 } from 'recharts';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import Link from 'next/link';
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState({
     users: 0, products: 0, courses: 0,
-    totalRevenue: 0, activeInquiries: 0, activeConsultations: 0
+    totalRevenue: 0, activeOrders: 0, activeConsultations: 0
   });
   const [revenueData, setRevenueData] = useState<{ name: string, total: number }[]>([]);
 
@@ -24,22 +24,24 @@ export default function AdminDashboardPage() {
     const users = LocalStorage.getAll<User>('users');
     const products = LocalStorage.getAll<Product>('products');
     const courses = LocalStorage.getAll<Course>('courses');
-    const inquiries = LocalStorage.getAll<Inquiry>('inquiries');
+    const orders = LocalStorage.getAll<Order>('orders');
     const enrollments = LocalStorage.getAll<CourseEnrollment>('enrollments');
     const bookings = LocalStorage.getAll<ConsultationBooking>('bookings');
 
     const totalRevenue =
-      inquiries.filter(i => ['payment_uploaded', 'verified', 'completed'].includes(i.status)).reduce((acc, curr) => acc + curr.totalPrice, 0) +
+      orders.filter(o => ['payment_uploaded', 'verified', 'completed'].includes(o.status)).reduce((acc, curr) => acc + curr.totalPrice, 0) +
       enrollments.filter(e => ['payment_uploaded', 'verified', 'completed'].includes(e.status)).reduce((acc, curr) => acc + curr.totalPrice, 0) +
       bookings.filter(b => ['payment_uploaded', 'verified', 'completed'].includes(b.status)).reduce((acc, curr) => acc + (curr?.totalPrice || 0), 0);
 
-    const activeInquiries = inquiries.filter(i => !['completed', 'cancelled', 'rejected'].includes(i.status)).length;
+    const activeOrders = orders.filter(o => !['completed', 'cancelled', 'rejected'].includes(o.status)).length;
     const activeConsultations = bookings.filter(b => !['completed', 'cancelled', 'rejected'].includes(b.status)).length;
 
-    setStats({
-      users: users.length, products: products.length, courses: courses.length,
-      totalRevenue, activeInquiries, activeConsultations
-    });
+    setTimeout(() => {
+      setStats({
+        users: users.length, products: products.length, courses: courses.length,
+        totalRevenue, activeOrders, activeConsultations
+      });
+    }, 0);
 
     // Mock revenue data for chart
     const data = [
@@ -51,13 +53,15 @@ export default function AdminDashboardPage() {
       { name: 'Jun', total: Math.floor(Math.random() * 50000) + 40000 },
       { name: 'Jul', total: totalRevenue || 50000 }, // Current month
     ];
-    setRevenueData(data);
+    setTimeout(() => {
+      setRevenueData(data);
+    }, 0);
   }, []);
 
   const statCards = [
     { title: 'Total Revenue', value: formatPrice(stats.totalRevenue), icon: DollarSign, color: 'text-brand-gold', trend: '+12.5%', href: '/admin/revenue' },
     { title: 'Total Users', value: stats.users, icon: Users, color: 'text-blue-400', trend: '+5.2%', href: '/admin/users' },
-    { title: 'Active Order Requests', value: stats.activeInquiries, icon: ShoppingBag, color: 'text-brand-red', trend: '+18.1%', href: '/admin/inquiries' },
+    { title: 'Active Orders', value: stats.activeOrders, icon: ShoppingBag, color: 'text-brand-red', trend: '+18.1%', href: '/admin/orders' },
     { title: 'Upcoming Consults', value: stats.activeConsultations, icon: Calendar, color: 'text-green-400', trend: '+2.4%', href: '/admin/bookings' },
   ];
 

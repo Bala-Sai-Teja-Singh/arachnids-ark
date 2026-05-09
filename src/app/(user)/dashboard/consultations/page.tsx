@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, Upload } from 'lucide-react';
+import { Calendar, Upload, Check, Copy } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
@@ -17,6 +17,7 @@ import { formatPrice } from '@/constants/pricing';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNotificationStore } from '@/store/notification-store';
+import { Badge } from '@/components/ui/badge';
 
 export default function MyConsultationsPage() {
   const { user } = useAuthStore();
@@ -26,6 +27,7 @@ export default function MyConsultationsPage() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [systemSettings, setSystemSettings] = useState<SystemSettings | null>(null);
   const [selectedUPI, setSelectedUPI] = useState<string>('');
+  const [copiedUPI, setCopiedUPI] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -69,6 +71,12 @@ export default function MyConsultationsPage() {
     setSelectedFile(null);
   };
 
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedUPI(true);
+    setTimeout(() => setCopiedUPI(false), 2000);
+  };
+
   return (
     <div>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
@@ -86,12 +94,16 @@ export default function MyConsultationsPage() {
                 <CardContent className="p-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="space-y-1">
-                      <h3 className="font-medium">{booking.duration} min — <span className="capitalize">{booking.urgency}</span></h3>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(booking.slotDate).toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' })} at {booking.slotTime}
-                      </p>
-                      {booking.query && <p className="text-xs text-muted-foreground line-clamp-1">{booking.query}</p>}
-                      {booking.adminNote && <p className="text-xs text-brand-gold">Admin: {booking.adminNote}</p>}
+                      <h3 className="font-bold text-lg">Total Balance: {booking.duration} mins</h3>
+                      <div className="flex flex-wrap gap-2 py-1">
+                        {booking.items?.map((item, idx) => (
+                          <Badge key={idx} variant="secondary" className="bg-brand-gold/10 text-brand-gold border-brand-gold/20 text-[10px] uppercase">
+                            {item.label} ({item.duration}m)
+                          </Badge>
+                        ))}
+                      </div>
+                      {booking.query && <p className="text-xs text-muted-foreground line-clamp-1 italic">"{booking.query}"</p>}
+                      {booking.adminNote && <p className="text-xs text-brand-gold font-medium">Admin Note: {booking.adminNote}</p>}
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-lg font-bold text-brand-gold">{formatPrice(booking.totalPrice || 0)}</span>
@@ -130,13 +142,28 @@ export default function MyConsultationsPage() {
                                     <p className="font-mono text-sm bg-muted/50 p-2 rounded border border-border select-all">payments@arachnidsark</p>
                                   )}
                                   {selectedUPI && (
-                                    <div className="mt-2 p-2 bg-muted/30 rounded border border-border flex items-center justify-between">
+                                    <div 
+                                      onClick={() => handleCopy(selectedUPI)}
+                                      className={`mt-2 p-2 rounded border transition-all duration-300 flex items-center justify-between cursor-pointer group ${copiedUPI ? 'bg-green-500/10 border-green-500/50' : 'bg-muted/30 border-border hover:bg-muted/50'}`}
+                                    >
                                       <span className="font-mono text-sm select-all">{selectedUPI}</span>
-                                      <span className="text-[10px] text-muted-foreground uppercase tracking-widest">Copy</span>
+                                      <div className="flex items-center gap-1.5">
+                                        {copiedUPI ? (
+                                          <>
+                                            <Check className="h-3 w-3 text-green-500" />
+                                            <span className="text-[10px] text-green-500 uppercase tracking-widest font-black">Copied!</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Copy className="h-3 w-3 text-muted-foreground group-hover:text-brand-gold transition-colors" />
+                                            <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold group-hover:text-brand-gold transition-colors">Copy</span>
+                                          </>
+                                        )}
+                                      </div>
                                     </div>
                                   )}
                                 </div>
-                                
+
                                 <div className="space-y-1 mt-2 border-t border-border pt-3">
                                   <p className="text-xs text-muted-foreground">Bank Transfer Details</p>
                                   <div className="font-mono text-xs bg-muted/50 p-2 rounded border border-border space-y-1">
@@ -181,6 +208,53 @@ export default function MyConsultationsPage() {
                       )}
                     </div>
                   </div>
+
+                  {/* Scheduled Calls & Usage */}
+                  {booking.status !== 'awaiting_payment' && booking.items?.some(i => i.slots?.length || i.minutesUsed) && (
+                    <div className="mt-4 pt-4 border-t border-border grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-3">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                          <Calendar className="h-3 w-3 text-brand-gold" />
+                          Scheduled Calls
+                        </p>
+                        <div className="space-y-2">
+                          {booking.items.flatMap(i => i.slots || []).length > 0 ? (
+                            booking.items.flatMap(i => i.slots || []).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map(slot => (
+                              <div key={slot.id} className="flex items-center justify-between p-2 rounded-lg bg-accent/5 border border-border text-xs">
+                                <div>
+                                  <p className="font-bold">{new Date(slot.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                                  <p className="text-muted-foreground">{slot.time}</p>
+                                </div>
+                                <Badge variant="outline" className="text-[8px]">{slot.duration} mins</Badge>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-[10px] text-muted-foreground italic">Your calls will be scheduled by the admin soon.</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Talktime Usage</p>
+                        <div className="p-3 rounded-lg bg-brand-gold/5 border border-brand-gold/10 space-y-2">
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Total Minutes Used</span>
+                            <span className="font-bold text-brand-red">{booking.minutesUsed || 0}m</span>
+                          </div>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Remaining Balance</span>
+                            <span className="font-bold text-brand-gold">{booking.duration - (booking.minutesUsed || 0)}m</span>
+                          </div>
+                          <div className="w-full bg-muted h-1 rounded-full overflow-hidden mt-2">
+                            <div
+                              className="bg-brand-gold h-full transition-all duration-500"
+                              style={{ width: `${Math.min(100, ((booking.minutesUsed || 0) / booking.duration) * 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>

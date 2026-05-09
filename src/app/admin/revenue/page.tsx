@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { LocalStorage } from '@/mock-db/storage';
 import { formatPrice } from '@/constants/pricing';
-import type { Inquiry, CourseEnrollment, ConsultationBooking } from '@/types';
+import type { Order, CourseEnrollment, ConsultationBooking } from '@/types';
 import { Badge } from '@/components/ui/badge';
 
 interface RevenueItem {
@@ -35,21 +35,21 @@ export default function AdminRevenuePage() {
   });
 
   useEffect(() => {
-    const inquiries = LocalStorage.getAll<Inquiry>('inquiries');
+    const orders = LocalStorage.getAll<Order>('orders');
     const enrollments = LocalStorage.getAll<CourseEnrollment>('enrollments');
     const bookings = LocalStorage.getAll<ConsultationBooking>('bookings');
 
-    const completedInquiries: RevenueItem[] = inquiries
-      .filter(i => ['payment_uploaded', 'verified', 'completed'].includes(i.status))
-      .map(i => ({
-        id: i.id,
+    const completedOrders: RevenueItem[] = orders
+      .filter(o => ['payment_uploaded', 'verified', 'completed'].includes(o.status))
+      .map(o => ({
+        id: o.id,
         type: 'product',
-        name: i.productName,
-        userName: i.userName,
-        userEmail: i.userEmail,
-        amount: i.totalPrice,
-        date: i.createdAt,
-        status: i.status
+        name: o.items.length === 1 ? o.items[0].productName : `${o.items.length} Species Order`,
+        userName: o.userName,
+        userEmail: o.userEmail,
+        amount: o.totalPrice,
+        date: o.createdAt,
+        status: o.status
       }));
 
     const completedEnrollments: RevenueItem[] = enrollments
@@ -78,7 +78,7 @@ export default function AdminRevenuePage() {
         status: b.status
       }));
 
-    const allItems = [...completedInquiries, ...completedEnrollments, ...completedBookings].sort(
+    const allItems = [...completedOrders, ...completedEnrollments, ...completedBookings].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     );
 
@@ -87,7 +87,7 @@ export default function AdminRevenuePage() {
 
     setTotals({
       total: allItems.reduce((acc, curr) => acc + curr.amount, 0),
-      products: completedInquiries.reduce((acc, curr) => acc + curr.amount, 0),
+      products: completedOrders.reduce((acc, curr) => acc + curr.amount, 0),
       courses: completedEnrollments.reduce((acc, curr) => acc + curr.amount, 0),
       consultations: completedBookings.reduce((acc, curr) => acc + curr.amount, 0),
     });

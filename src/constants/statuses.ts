@@ -1,6 +1,6 @@
-import type { InquiryStatus } from '@/types';
+import type { OrderStatus } from '@/types';
 
-export const STATUS_CONFIG: Record<InquiryStatus, { label: string; color: string; bgColor: string }> = {
+export const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; bgColor: string }> = {
   pending: { label: 'Pending', color: 'text-yellow-400', bgColor: 'bg-yellow-400/10' },
   awaiting_payment: { label: 'Awaiting Payment', color: 'text-blue-400', bgColor: 'bg-blue-400/10' },
   payment_uploaded: { label: 'Payment Uploaded', color: 'text-purple-400', bgColor: 'bg-purple-400/10' },
@@ -11,7 +11,7 @@ export const STATUS_CONFIG: Record<InquiryStatus, { label: string; color: string
   cancelled: { label: 'Cancelled', color: 'text-gray-400', bgColor: 'bg-gray-400/10' },
 };
 
-export const ALL_STATUSES: InquiryStatus[] = [
+export const ALL_STATUSES: OrderStatus[] = [
   'pending', 'awaiting_payment', 'payment_uploaded', 'verified',
   'rejected', 'confirmed', 'completed', 'cancelled'
 ];

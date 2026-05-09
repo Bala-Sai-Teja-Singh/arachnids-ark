@@ -18,9 +18,53 @@ export type SafeUser = Omit<User, 'password'>;
 // ============ PRODUCT ============
 export type ProductType = 'terrestrial' | 'arboreal' | 'fossorial';
 export type ProductOrigin = 'new-world' | 'old-world';
+export type MainCategory = 'Tarantulas' | 'Centipedes' | 'Scorpions';
 
 export type CareLevel = 'beginner' | 'intermediate' | 'advanced' | 'expert';
 export type Temperament = 'docile' | 'semi-aggressive' | 'aggressive' | 'defensive';
+
+// Tarantula-specific
+export type TarantulaWorld = 'New World' | 'Old World';
+export type TarantulaType = 'Terrestrial' | 'Arboreal' | 'Fossorial';
+export type TarantulaSizeCategory = 'Sling' | 'Juvenile' | 'Sub-adult' | 'Adult';
+export type TarantulaGrowthRate = 'Slow' | 'Medium' | 'Fast';
+
+// Scorpion-specific
+export type ScorpionHabitatType = 'Desert' | 'Tropical Forest';
+export type ScorpionVenomPotency = 'Mild' | 'Moderate' | 'Medically Significant' | 'Lethal';
+export type ScorpionPincerType = 'Thin' | 'Medium' | 'Thick';
+export type ScorpionSizeCategory = 'Scorpling' | 'Juvenile' | 'Sub-adult' | 'Adult';
+
+// Centipede-specific
+export type CentipedeHabitatType = 'Tropical' | 'Arid';
+export type CentipedeVenomPotency = 'Mild' | 'Moderate' | 'Severe' | 'Potent';
+export type CentipedeSizeCategory = 'Pedeling' | 'Juvenile' | 'Sub-adult' | 'Adult';
+
+export interface TarantulaMetadata {
+  world: TarantulaWorld;
+  type: TarantulaType;
+  temperament: Temperament;
+  growthRate?: TarantulaGrowthRate;
+  sizeCategory?: TarantulaSizeCategory;
+  gender?: 'Unsexed' | 'Male' | 'Female' | 'Pair';
+}
+
+export interface ScorpionMetadata {
+  habitatType: ScorpionHabitatType;
+  venomPotency: ScorpionVenomPotency;
+  pincerType: ScorpionPincerType;
+  communal: boolean;
+  sizeCategory?: ScorpionSizeCategory;
+  gender?: 'Unsexed' | 'Male' | 'Female' | 'Pair';
+}
+
+export interface CentipedeMetadata {
+  habitatType: CentipedeHabitatType;
+  venomPotency: CentipedeVenomPotency;
+  legPairs?: string;
+  sizeCategory?: CentipedeSizeCategory;
+  gender?: 'Unsexed' | 'Male' | 'Female';
+}
 
 export interface ProductSize {
   size: string;
@@ -32,10 +76,8 @@ export interface Product {
   id: string;
   name: string;
   scientificName: string;
-  category: ProductType;
-  origin: ProductOrigin;
+  mainCategory: MainCategory;
   careLevel: CareLevel;
-  temperament: Temperament;
   humidity: string;
   temperature: string;
   feeding: string;
@@ -45,23 +87,36 @@ export interface Product {
   available: boolean;
   isVisible: boolean;
   sizes: ProductSize[];
+
+  // Entity-specific metadata (only one will be populated based on mainCategory)
+  tarantulaMeta?: TarantulaMetadata;
+  scorpionMeta?: ScorpionMetadata;
+  centipedeMeta?: CentipedeMetadata;
+
+  // Legacy fields kept for backwards compatibility with shop filters/badges
+  category?: ProductType;
+  origin?: ProductOrigin;
+  temperament?: Temperament;
+  sizeCategory?: string;
+  gender?: string;
+
   createdAt: string;
   updatedAt: string;
 }
 
 export interface ProductFilter {
   category?: ProductType;
+  mainCategory?: MainCategory;
   origin?: ProductOrigin;
   careLevel?: CareLevel;
-  temperament?: Temperament;
   minPrice?: number;
   maxPrice?: number;
   search?: string;
   inStock?: boolean;
 }
 
-// ============ INQUIRY ============
-export type InquiryStatus =
+// ============ ORDER ============
+export type OrderStatus =
   | 'pending'
   | 'awaiting_payment'
   | 'payment_uploaded'
@@ -70,6 +125,15 @@ export type InquiryStatus =
   | 'confirmed'
   | 'completed'
   | 'cancelled';
+
+export interface OrderItem {
+  productId: string;
+  productName: string;
+  productImage?: string;
+  quantity: number;
+  price: number;
+  size: string;
+}
 
 // ============ SYSTEM SETTINGS ============
 export interface UPIId {
@@ -94,16 +158,14 @@ export interface SystemSettings {
   };
 }
 
-export interface Inquiry {
+export interface Order {
   id: string;
   userId: string;
   userName: string;
   userEmail: string;
-  productId: string;
-  productName: string;
+  items: OrderItem[];
   message: string;
-  quantity: number;
-  status: InquiryStatus;
+  status: OrderStatus;
   paymentScreenshot?: string;
   adminNote?: string;
   deliveryName: string;
@@ -138,7 +200,7 @@ export interface CourseModule {
   locked: boolean;
 }
 
-export type EnrollmentStatus = InquiryStatus;
+export type EnrollmentStatus = OrderStatus;
 
 export interface CourseEnrollment {
   id: string;
@@ -184,7 +246,7 @@ export interface ConsultationSettings {
   slots: ConsultationSlot[];
 }
 
-export type BookingStatus = InquiryStatus;
+export type BookingStatus = OrderStatus;
 
 export interface ConsultationBooking {
   id: string;
@@ -203,12 +265,27 @@ export interface ConsultationBooking {
   status: BookingStatus;
   paymentScreenshot?: string;
   adminNote?: string;
+  minutesUsed?: number;
+  items?: {
+    duration: number;
+    quantity: number;
+    label: string;
+    basePrice: number;
+    urgency: string;
+    minutesUsed?: number;
+    slots?: {
+      id: string;
+      date: string;
+      time: string;
+      duration: number;
+    }[];
+  }[];
   createdAt: string;
   updatedAt: string;
 }
 
 // ============ NOTIFICATION ============
-export type NotificationType = 'info' | 'success' | 'warning' | 'error' | 'payment' | 'inquiry' | 'booking';
+export type NotificationType = 'info' | 'success' | 'warning' | 'error' | 'payment' | 'order' | 'booking';
 
 export interface Notification {
   id: string;

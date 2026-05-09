@@ -6,26 +6,27 @@ import { ClipboardList, GraduationCap, Calendar, ShoppingBag } from 'lucide-reac
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuthStore } from '@/store/auth-store';
 import { LocalStorage } from '@/mock-db/storage';
-import type { Inquiry, CourseEnrollment, ConsultationBooking } from '@/types';
+import type { Order, CourseEnrollment, ConsultationBooking } from '@/types';
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
-  const [stats, setStats] = useState({ inquiries: 0, courses: 0, consultations: 0, pending: 0 });
-
+  const [stats, setStats] = useState({ orders: 0, courses: 0, consultations: 0, pending: 0 });
   useEffect(() => {
     if (!user) return;
-    const inquiries = LocalStorage.getAll<Inquiry>('inquiries').filter(i => i.userId === user.id);
+    const orders = LocalStorage.getAll<Order>('orders').filter(i => i.userId === user.id);
     const enrollments = LocalStorage.getAll<CourseEnrollment>('enrollments').filter(e => e.userId === user.id);
     const bookings = LocalStorage.getAll<ConsultationBooking>('bookings').filter(b => b.userId === user.id);
-    const pending = [...inquiries, ...enrollments, ...bookings].filter(i => i.status === 'pending').length;
-    setStats({ inquiries: inquiries.length, courses: enrollments.length, consultations: bookings.length, pending });
+    const pending = [...orders, ...enrollments, ...bookings].filter(i => ['pending', 'awaiting_payment', 'payment_uploaded'].includes(i.status)).length;
+    setTimeout(() => {
+      setStats({ orders: orders.length, courses: enrollments.length, consultations: bookings.length, pending });
+    }, 0);
   }, [user]);
 
   const cards = [
-    { label: 'Order Requests', value: stats.inquiries, icon: ShoppingBag, color: 'from-brand-red/20 to-brand-red/5', iconColor: 'text-brand-red' },
-    { label: 'Course Enrollments', value: stats.courses, icon: GraduationCap, color: 'from-brand-gold/20 to-brand-gold/5', iconColor: 'text-brand-gold' },
+    { label: 'Orders', value: stats.orders, icon: ShoppingBag, color: 'from-brand-red/20 to-brand-red/5', iconColor: 'text-brand-red' },
+    { label: 'Courses', value: stats.courses, icon: GraduationCap, color: 'from-brand-gold/20 to-brand-gold/5', iconColor: 'text-brand-gold' },
     { label: 'Consultations', value: stats.consultations, icon: Calendar, color: 'from-blue-500/20 to-blue-500/5', iconColor: 'text-blue-400' },
-    { label: 'Pending Requests', value: stats.pending, icon: ClipboardList, color: 'from-yellow-500/20 to-yellow-500/5', iconColor: 'text-yellow-400' },
+    { label: 'Pending Action', value: stats.pending, icon: ClipboardList, color: 'from-yellow-500/20 to-yellow-500/5', iconColor: 'text-yellow-400' },
   ];
 
   return (

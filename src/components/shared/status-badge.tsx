@@ -2,10 +2,10 @@
 
 import { Badge } from '@/components/ui/badge';
 import { STATUS_CONFIG } from '@/constants/statuses';
-import type { InquiryStatus } from '@/types';
+import type { OrderStatus } from '@/types';
 
 interface StatusBadgeProps {
-  status: InquiryStatus;
+  status: OrderStatus;
   className?: string;
 }
 

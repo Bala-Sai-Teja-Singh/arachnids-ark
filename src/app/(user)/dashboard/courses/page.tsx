@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { GraduationCap, Upload } from 'lucide-react';
+import { GraduationCap, Upload, Check, Copy } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
@@ -25,6 +25,7 @@ export default function MyCoursesPage() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [systemSettings, setSystemSettings] = useState<SystemSettings | null>(null);
   const [selectedUPI, setSelectedUPI] = useState<string>('');
+  const [copiedUPI, setCopiedUPI] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -68,6 +69,12 @@ export default function MyCoursesPage() {
     toast.success('Payment screenshot uploaded successfully!');
     setUploadId(null);
     setSelectedFile(null);
+  };
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedUPI(true);
+    setTimeout(() => setCopiedUPI(false), 2000);
   };
 
   return (
@@ -128,9 +135,24 @@ export default function MyCoursesPage() {
                                     <p className="font-mono text-sm bg-muted/50 p-2 rounded border border-border select-all">payments@arachnidsark</p>
                                   )}
                                   {selectedUPI && (
-                                    <div className="mt-2 p-2 bg-muted/30 rounded border border-border flex items-center justify-between">
+                                    <div 
+                                      onClick={() => handleCopy(selectedUPI)}
+                                      className={`mt-2 p-2 rounded border transition-all duration-300 flex items-center justify-between cursor-pointer group ${copiedUPI ? 'bg-green-500/10 border-green-500/50' : 'bg-muted/30 border-border hover:bg-muted/50'}`}
+                                    >
                                       <span className="font-mono text-sm select-all">{selectedUPI}</span>
-                                      <span className="text-[10px] text-muted-foreground uppercase tracking-widest">Copy</span>
+                                      <div className="flex items-center gap-1.5">
+                                        {copiedUPI ? (
+                                          <>
+                                            <Check className="h-3 w-3 text-green-500" />
+                                            <span className="text-[10px] text-green-500 uppercase tracking-widest font-black">Copied!</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Copy className="h-3 w-3 text-muted-foreground group-hover:text-brand-gold transition-colors" />
+                                            <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold group-hover:text-brand-gold transition-colors">Copy</span>
+                                          </>
+                                        )}
+                                      </div>
                                     </div>
                                   )}
                                 </div>

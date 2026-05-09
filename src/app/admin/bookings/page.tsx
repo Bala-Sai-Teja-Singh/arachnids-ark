@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import { Eye, Calendar, Clock, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -15,6 +16,7 @@ import { formatPrice } from '@/constants/pricing';
 import { ALL_STATUSES } from '@/constants/statuses';
 import { toast } from 'sonner';
 import { StatusBadge } from '@/components/shared/status-badge';
+import { Badge } from '@/components/ui/badge';
 
 export default function AdminBookingsPage() {
   const [bookings, setBookings] = useState<ConsultationBooking[]>([]);
@@ -22,6 +24,10 @@ export default function AdminBookingsPage() {
   const [slotDate, setSlotDate] = useState('');
   const [slotTime, setSlotTime] = useState('');
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [itemMinutes, setItemMinutes] = useState<Record<number, string>>({});
+  const [isSlotModalOpen, setIsSlotModalOpen] = useState(false);
+  const [activeItemIdx, setActiveItemIdx] = useState<number | null>(null);
+  const [newSlotDuration, setNewSlotDuration] = useState<string>('');
   const { addNotification } = useNotificationStore();
 
   useEffect(() => {
@@ -44,39 +50,74 @@ export default function AdminBookingsPage() {
     toast.success('Status updated');
   };
 
-  const handleAssignSlot = () => {
-    if (!selectedBooking) return;
 
-    const updates = {
-      slotDate,
-      slotTime,
-      updatedAt: new Date().toISOString(),
-    };
-
-    LocalStorage.update<ConsultationBooking>('bookings', selectedBooking.id, updates);
-    setBookings(prev => prev.map(b => b.id === selectedBooking.id ? { ...b, ...updates } : b));
-
-    addNotification({
-      userId: selectedBooking.userId,
-      title: 'Consultation Slot Assigned',
-      message: `Your consultation has been scheduled for ${new Date(slotDate).toLocaleDateString()} at ${slotTime}.`,
-      type: 'success'
-    });
-
-    toast.success('Slot assigned successfully');
-    setSelectedBooking(null);
-  };
-
-  const openSlotModal = (booking: ConsultationBooking) => {
-    setSelectedBooking(booking);
-    setSlotDate(booking.slotDate || '');
-    setSlotTime(booking.slotTime || '');
-    setIsDetailOpen(false);
+  const openSlotModalForItem = (itemIdx: number) => {
+    setActiveItemIdx(itemIdx);
+    const item = selectedBooking?.items?.[itemIdx];
+    setNewSlotDuration(String(item?.duration || 30));
+    setSlotDate('');
+    setSlotTime('');
+    setIsSlotModalOpen(true);
   };
 
   const openDetailModal = (booking: ConsultationBooking) => {
     setSelectedBooking(booking);
+    const initialMinutes: Record<number, string> = {};
+    booking.items?.forEach((item, idx) => {
+      initialMinutes[idx] = String(item.minutesUsed || 0);
+    });
+    setItemMinutes(initialMinutes);
     setIsDetailOpen(true);
+  };
+
+  const handleUpdateItemUsage = (itemIdx: number) => {
+    if (!selectedBooking || !selectedBooking.items) return;
+
+    const newItems = [...selectedBooking.items];
+    const mins = Math.max(0, parseInt(itemMinutes[itemIdx]) || 0);
+    newItems[itemIdx] = { ...newItems[itemIdx], minutesUsed: mins };
+
+    const totalMinutesUsed = newItems.reduce((acc, item) => acc + (item.minutesUsed || 0), 0);
+
+    const updates = {
+      items: newItems,
+      minutesUsed: totalMinutesUsed
+    };
+
+    LocalStorage.update<ConsultationBooking>('bookings', selectedBooking.id, updates);
+    setBookings(prev => prev.map(b => b.id === selectedBooking.id ? { ...b, ...updates } : b));
+    setSelectedBooking(prev => prev ? { ...prev, ...updates } : null);
+    toast.success('Talktime updated for session item');
+  };
+
+  const handleAddSlot = () => {
+    if (!selectedBooking || activeItemIdx === null || !selectedBooking.items) return;
+
+    const newItems = [...selectedBooking.items];
+    const item = newItems[activeItemIdx];
+    const newSlot = {
+      id: uuidv4(),
+      date: slotDate,
+      time: slotTime,
+      duration: parseInt(newSlotDuration) || item.duration,
+    };
+
+    const slots = item.slots ? [...item.slots, newSlot] : [newSlot];
+    newItems[activeItemIdx] = { ...item, slots };
+
+    LocalStorage.update<ConsultationBooking>('bookings', selectedBooking.id, { items: newItems });
+    setBookings(prev => prev.map(b => b.id === selectedBooking.id ? { ...b, items: newItems } : b));
+    setSelectedBooking(prev => prev ? { ...prev, items: newItems } : null);
+
+    addNotification({
+      userId: selectedBooking.userId,
+      title: 'Call Scheduled',
+      message: `A new ${newSlot.duration}-min call has been scheduled for your ${item.label} session on ${new Date(slotDate).toLocaleDateString()}.`,
+      type: 'success'
+    });
+
+    toast.success('Call scheduled successfully');
+    setIsSlotModalOpen(false);
   };
 
   return (
@@ -122,19 +163,13 @@ export default function AdminBookingsPage() {
                       <div className="text-xs capitalize text-brand-gold">{booking.urgency}</div>
                     </TableCell>
                     <TableCell>
-                      {booking.slotDate ? (
+                      {booking.items?.some(i => i.slots?.length) ? (
                         <div className="flex flex-col">
-                          <span className="text-sm font-medium">{new Date(booking.slotDate).toLocaleDateString()}</span>
-                          <span className="text-xs text-muted-foreground">{booking.slotTime}</span>
+                          <span className="text-sm font-medium">Multiple Slots</span>
+                          <span className="text-[10px] text-muted-foreground uppercase">{booking.items.reduce((a, b) => a + (b.slots?.length || 0), 0)} scheduled</span>
                         </div>
                       ) : (
-                        <Button
-                          variant="link"
-                          className="p-0 h-auto text-xs text-brand-red font-bold"
-                          onClick={() => openSlotModal(booking)}
-                        >
-                          Assign Slot
-                        </Button>
+                        <span className="text-xs text-muted-foreground italic">No slots assigned</span>
                       )}
                     </TableCell>
                     <TableCell className="font-medium">{formatPrice(booking.totalPrice ?? 0)}</TableCell>
@@ -152,15 +187,6 @@ export default function AdminBookingsPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-brand-gold"
-                          onClick={() => openSlotModal(booking)}
-                          title="Assign/Change Slot"
-                        >
-                          <Clock className="h-4 w-4" />
-                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -194,7 +220,7 @@ export default function AdminBookingsPage() {
                 </div>
                 <div className="flex justify-between items-center text-xs">
                   <div className="text-muted-foreground">
-                    {booking.slotDate ? `${new Date(booking.slotDate).toLocaleDateString()} at ${booking.slotTime}` : 'No slot assigned'}
+                    {booking.items?.reduce((a, b) => a + (b.slots?.length || 0), 0) || 0} calls scheduled
                   </div>
                   <div className="font-bold text-brand-gold">{formatPrice(booking.totalPrice ?? 0)}</div>
                 </div>
@@ -213,14 +239,6 @@ export default function AdminBookingsPage() {
                     variant="outline"
                     size="icon"
                     className="h-9 w-9 text-muted-foreground border-border"
-                    onClick={() => openSlotModal(booking)}
-                  >
-                    <Clock className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-9 w-9 text-muted-foreground border-border"
                     onClick={() => openDetailModal(booking)}
                   >
                     <Eye className="h-4 w-4" />
@@ -232,57 +250,53 @@ export default function AdminBookingsPage() {
         </div>
       </div>
 
-      {/* Assign Slot Modal */}
-      <Dialog open={!!selectedBooking && !isDetailOpen} onOpenChange={(open) => !open && setSelectedBooking(null)}>
+      {/* Add Call Slot Modal */}
+      <Dialog open={isSlotModalOpen} onOpenChange={setIsSlotModalOpen}>
         <DialogContent className="glass border-border sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Schedule Consultation</DialogTitle>
+            <DialogTitle>Schedule Call</DialogTitle>
             <DialogDescription>
-              Assign a date and time for {selectedBooking?.userName}'s {selectedBooking?.duration} min consultation.
+              Add a specific call slot for the {selectedBooking?.items?.[activeItemIdx || 0]?.label} session.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Date</Label>
-              <Input
-                type="date"
-                value={slotDate}
-                onChange={e => setSlotDate(e.target.value)}
-                className="bg-background/50"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Time</Label>
-              <Input
-                type="time"
-                value={slotTime}
-                onChange={e => setSlotTime(e.target.value)}
-                className="bg-background/50"
-              />
-            </div>
-            {selectedBooking?.query && (
-              <div className="p-3 rounded-lg bg-muted/50 border border-border">
-                <Label className="text-[10px] uppercase text-muted-foreground">User Query</Label>
-                <p className="text-sm italic text-muted-foreground">"{selectedBooking.query}"</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Date</Label>
+                <Input type="date" value={slotDate} onChange={e => setSlotDate(e.target.value)} className="bg-background/50" />
               </div>
-            )}
+              <div className="space-y-2">
+                <Label>Time</Label>
+                <Input type="time" value={slotTime} onChange={e => setSlotTime(e.target.value)} className="bg-background/50" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Call Duration (minutes)</Label>
+              <Input
+                type="number"
+                value={newSlotDuration}
+                onChange={e => setNewSlotDuration(e.target.value)}
+                className="bg-background/50"
+                placeholder="e.g. 15"
+              />
+              <p className="text-[10px] text-muted-foreground">You can split a 30-min session into smaller calls (e.g. 15+15).</p>
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setSelectedBooking(null)}>Cancel</Button>
-            <Button
-              className="bg-brand-gold hover:bg-brand-gold/90 text-white"
-              onClick={handleAssignSlot}
-              disabled={!slotDate || !slotTime}
-            >
-              <Check className="mr-2 h-4 w-4" /> Confirm Slot
+            <Button variant="outline" onClick={() => setIsSlotModalOpen(false)}>Cancel</Button>
+            <Button className="bg-brand-gold hover:bg-brand-gold/90 text-white" onClick={handleAddSlot} disabled={!slotDate || !slotTime}>
+              <Check className="mr-2 h-4 w-4" /> Confirm Call
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Detail Modal */}
-      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="glass border-border sm:max-w-lg">
+      <Dialog open={isDetailOpen} onOpenChange={(open) => {
+        setIsDetailOpen(open);
+        if (!open) setSelectedBooking(null);
+      }}>
+        <DialogContent className="glass border-border sm:max-w-lg max-h-[90vh] overflow-y-auto custom-scrollbar">
           <DialogHeader>
             <DialogTitle>Booking Details</DialogTitle>
             <DialogDescription>
@@ -300,23 +314,74 @@ export default function AdminBookingsPage() {
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Date</p>
                   <p className="text-sm">{new Date(selectedBooking.createdAt).toLocaleDateString()}</p>
                 </div>
-              </div>
-
-              <div className="space-y-3">
+              </div>               <div className="space-y-4">
                 <h4 className="text-xs font-bold text-brand-gold uppercase tracking-widest flex items-center gap-2">
-                  Plan Details
+                  Session Breakdowns
                 </h4>
-                <div className="p-4 rounded-xl border border-border bg-background/30 grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Duration</p>
-                    <p className="text-sm font-medium">{selectedBooking.duration} minutes</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Urgency</p>
-                    <p className="text-sm font-medium capitalize">{selectedBooking.urgency}</p>
-                  </div>
+                <div className="space-y-3">
+                  {selectedBooking.items?.map((item, idx) => (
+                    <div key={idx} className="p-4 rounded-xl border border-border bg-background/30 space-y-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-bold text-sm">{item.label}</p>
+                          <p className="text-[10px] text-muted-foreground uppercase">{item.urgency} Urgency</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs font-bold text-brand-gold">{item.duration} mins total</p>
+                          <p className="text-[10px] text-muted-foreground font-medium">Used: {item.minutesUsed || 0} / {item.duration}m</p>
+                        </div>
+                      </div>
+
+                      {/* Scheduled Calls per breakdown */}
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Scheduled Calls</p>
+                        <div className="space-y-1.5">
+                          {item.slots?.length ? item.slots.map(slot => (
+                            <div key={slot.id} className="flex items-center justify-between p-2 rounded bg-brand-gold/5 border border-brand-gold/10 text-xs">
+                              <div className="flex items-center gap-2">
+                                <Calendar className="h-3 w-3 text-brand-gold" />
+                                <span>{new Date(slot.date).toLocaleDateString()} at {slot.time}</span>
+                              </div>
+                              <Badge variant="outline" className="text-[8px] h-4">{slot.duration} mins</Badge>
+                            </div>
+                          )) : (
+                            <p className="text-[10px] text-muted-foreground italic">No calls scheduled for this item.</p>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full h-7 text-[10px] uppercase font-bold border-brand-gold/20 text-brand-gold hover:bg-brand-gold hover:text-white"
+                            onClick={() => openSlotModalForItem(idx)}
+                          >
+                            + Schedule New Call
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3 items-end pt-2 border-t border-border/50">
+                        <div className="flex-1 space-y-1.5">
+                          <Label className="text-[10px] text-muted-foreground">Update Total Minutes Consumed</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={itemMinutes[idx] || '0'}
+                            onChange={e => setItemMinutes(prev => ({ ...prev, [idx]: e.target.value }))}
+                            className="h-8 bg-background text-sm"
+                          />
+                        </div>
+                        <Button
+                          onClick={() => handleUpdateItemUsage(idx)}
+                          size="sm"
+                          className="bg-brand-gold hover:bg-brand-gold/90 text-white h-8 px-3 text-xs"
+                        >
+                          Update
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
+
 
               {selectedBooking.query && (
                 <div className="space-y-2">

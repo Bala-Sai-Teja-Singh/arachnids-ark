@@ -36,19 +36,23 @@ export default function ConsultationPage() {
   const { user, isAuthenticated } = useAuthStore();
   const { addNotification } = useNotificationStore();
   const [settings, setSettings] = useState<ConsultationSettings | null>(null);
-  const [duration, setDuration] = useState<ConsultationDuration>(0);
-  const [urgency, setUrgency] = useState<ConsultationUrgency>('normal');
   const [query, setQuery] = useState('');
+  const [cart, setCart] = useState<{ duration: number; quantity: number; label: string; basePrice: number; urgency: ConsultationUrgency; multiplier: number }[]>([]);
+  const [localUrgencies, setLocalUrgencies] = useState<Record<number, ConsultationUrgency>>({});
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
+  
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [step]);
 
   useEffect(() => {
     const data = LocalStorage.getAll<ConsultationSettings>('consultation_settings');
     if (data.length > 0) {
       setSettings(data[0]);
-      if (data[0].pricing.length > 0) {
-        setDuration(data[0].pricing[0].duration);
-      }
+    if (data.length > 0) {
+      setSettings(data[0]);
+    }
     }
   }, []);
 
@@ -56,9 +60,8 @@ export default function ConsultationPage() {
     const pending = localStorage.getItem('pending_consultation');
     if (pending && isAuthenticated && user) {
       try {
-        const { duration: pDur, urgency: pUrg, query: pQuery } = JSON.parse(pending);
-        setDuration(pDur);
-        setUrgency(pUrg);
+        const { cart: pCart, query: pQuery } = JSON.parse(pending);
+        setCart(pCart);
         setQuery(pQuery);
         setStep(2);
         localStorage.removeItem('pending_consultation');
@@ -69,27 +72,31 @@ export default function ConsultationPage() {
     }
   }, [isAuthenticated, user]);
 
-  const selectedPricing = useMemo(() => {
-    if (!settings) return null;
-    return settings.pricing.find(p => p.duration === duration);
-  }, [settings, duration]);
+  const totalMins = useMemo(() => cart.reduce((acc, item) => acc + (item.duration * item.quantity), 0), [cart]);
+  const totalPrice = useMemo(() => cart.reduce((acc, item) => acc + (item.basePrice * item.multiplier * item.quantity), 0), [cart]);
+  
+  const updateCart = (dur: number, label: string, price: number, delta: number) => {
+    const urgency = localUrgencies[dur] || 'normal';
+    const multiplier = settings?.urgencyMultipliers.find(u => u.urgency === urgency)?.multiplier || 1;
 
-  const selectedMultiplier = useMemo(() => {
-    if (!settings) return null;
-    return settings.urgencyMultipliers.find(u => u.urgency === urgency);
-  }, [settings, urgency]);
-
-  const totalPrice = useMemo(() => {
-    if (!selectedPricing || !selectedMultiplier) return 0;
-    return calculateConsultationPrice(selectedPricing.basePrice, selectedMultiplier.multiplier);
-  }, [selectedPricing, selectedMultiplier]);
+    setCart(prev => {
+      const existing = prev.find(item => item.duration === dur && item.urgency === urgency);
+      if (existing) {
+        const newQty = Math.max(0, existing.quantity + delta);
+        if (newQty === 0) return prev.filter(item => !(item.duration === dur && item.urgency === urgency));
+        return prev.map(item => (item.duration === dur && item.urgency === urgency) ? { ...item, quantity: newQty } : item);
+      }
+      if (delta > 0) return [...prev, { duration: dur, label, basePrice: price, quantity: 1, urgency, multiplier }];
+      return prev;
+    });
+  };
 
   // Removed availableSlots memo as users no longer pick slots
 
   const handleSubmit = async () => {
     if (!isAuthenticated || !user) {
       localStorage.setItem('pending_consultation', JSON.stringify({
-        duration, urgency, query
+        cart, query
       }));
       toast.error('Please login to book a consultation');
       router.push('/login?redirect=/consultation');
@@ -100,14 +107,15 @@ export default function ConsultationPage() {
       userId: user.id,
       userName: user.name,
       userEmail: user.email,
-      duration,
-      urgency,
+      duration: totalMins,
+      urgency: cart[0]?.urgency || 'normal', // Primary urgency for backward compatibility
       slotId: '',
       slotDate: '',
       slotTime: '',
       query,
-      basePrice: selectedPricing?.basePrice,
-      multiplier: selectedMultiplier?.multiplier,
+      items: cart,
+      basePrice: cart.reduce((a, b) => a + (b.basePrice * b.quantity), 0),
+      multiplier: 1, // Multiplier is now per-item
       totalPrice,
       status: 'pending',
       createdAt: new Date().toISOString(),
@@ -119,7 +127,7 @@ export default function ConsultationPage() {
     addNotification({
       userId: user.id,
       title: 'Consultation Booked',
-      message: `Your ${duration}-min ${urgency} consultation has been booked. Our team will assign a slot soon.`,
+      message: `Your ${totalMins}-min consultation has been booked with individual urgency levels.`,
       type: 'success',
       link: '/dashboard/consultations',
     });
@@ -128,7 +136,7 @@ export default function ConsultationPage() {
     addNotification({
       userId: 'admin',
       title: 'New Consultation Booking',
-      message: `${user.name} booked a ${duration}-min ${urgency} consultation.`,
+      message: `${user.name} booked a ${totalMins}-min multi-urgency consultation.`,
       type: 'info',
       link: '/admin/bookings',
     });
@@ -155,6 +163,39 @@ export default function ConsultationPage() {
         </p>
       </motion.div>
 
+      {/* Talktime Explanation */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+        <Card className="border-brand-gold/30 bg-brand-gold/5 mb-8 overflow-hidden">
+          <CardContent className="p-0">
+            <div className="flex flex-col sm:flex-row">
+              <div className="bg-brand-gold/10 p-6 flex items-center justify-center sm:w-24 shrink-0">
+                <Clock className="h-8 w-8 text-brand-gold" />
+              </div>
+              <div className="p-6 space-y-3">
+                <h3 className="font-bold text-lg text-brand-gold font-heading uppercase tracking-tight">Flexible "Talktime" Sessions</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Experience a more personalized relationship with Harmanpreet through our <strong>Prepaid Session Model</strong>. Instead of rigid one-off appointments, your purchased time acts as a flexible balance.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                  <div className="space-y-2">
+                    <p className="font-bold text-foreground flex items-center gap-2">
+                      <Zap className="h-3 w-3 text-brand-gold" /> Use it Your Way
+                    </p>
+                    <p className="text-muted-foreground">Buy a block of time (e.g., 2 sessions = 120 mins) and use it for multiple quick check-ins or long deep-dives as needed.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="font-bold text-foreground flex items-center gap-2">
+                      <CheckCircle className="h-3 w-3 text-brand-gold" /> Simple Connection
+                    </p>
+                    <p className="text-muted-foreground">After payment, you&apos;ll receive instructions via email to connect directly and mutually decide on the best dates and times.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
       {/* Progress Steps */}
       <div className="flex items-center gap-2 mb-8">
         {[1, 2].map(s => (
@@ -176,61 +217,123 @@ export default function ConsultationPage() {
         {/* Step 1: Duration & Urgency */}
         {step === 1 && (
           <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
-            {/* Duration */}
+            {/* Duration & Cart */}
             <Card className="border-border">
-              <CardHeader><CardTitle className="text-lg">Select Duration <span className="text-red-500">*</span></CardTitle></CardHeader>
-              <CardContent>
-                <RadioGroup value={String(duration)} onValueChange={(v) => v && setDuration(Number(v) as ConsultationDuration)} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {settings.pricing.map(p => (
-                    <div key={p.duration}>
-                      <RadioGroupItem value={String(p.duration)} id={`dur-${p.duration}`} className="peer sr-only" />
-                      <Label htmlFor={`dur-${p.duration}`} className="flex flex-col items-center gap-2 rounded-xl border-2 border-border p-4 cursor-pointer hover:border-brand-gold/30 peer-data-[state=checked]:border-brand-gold peer-data-[state=checked]:bg-brand-gold/5 transition-all">
-                        <Clock className="h-6 w-6 text-brand-gold" />
-                        <span className="font-bold">{p.label}</span>
-                        <span className="text-lg font-bold text-brand-gold">{formatPrice(p.basePrice)}</span>
-                      </Label>
-                    </div>
-                  ))}
-                </RadioGroup>
-              </CardContent>
-            </Card>
-
-            {/* Urgency */}
-            <Card className="border-border">
-              <CardHeader><CardTitle className="text-lg">Select Urgency <span className="text-red-500">*</span></CardTitle></CardHeader>
-              <CardContent>
-                <RadioGroup value={urgency} onValueChange={(v) => v && setUrgency(v as ConsultationUrgency)} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {settings.urgencyMultipliers.map(u => {
-                    const Icon = urgencyIcons[u.urgency];
+              <CardHeader><CardTitle className="text-lg">Select Sessions <span className="text-red-500">*</span></CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {settings.pricing.map(p => {
+                    const currentUrgency = localUrgencies[p.duration] || 'normal';
+                    const activeItems = cart.filter(i => i.duration === p.duration);
+                    const totalQty = activeItems.reduce((a, b) => a + b.quantity, 0);
+                    
                     return (
-                      <div key={u.urgency}>
-                        <RadioGroupItem value={u.urgency} id={`urg-${u.urgency}`} className="peer sr-only" />
-                        <Label htmlFor={`urg-${u.urgency}`} className={`flex flex-col items-center gap-2 rounded-xl border-2 border-border p-4 cursor-pointer hover:border-brand-gold/30 peer-data-[state=checked]:border-brand-gold peer-data-[state=checked]:bg-brand-gold/5 transition-all`}>
-                          <Icon className="h-6 w-6" />
-                          <span className="font-bold capitalize">{u.label}</span>
-                          <span className="text-sm text-muted-foreground">{u.multiplier}x price</span>
-                        </Label>
+                      <div key={p.duration} className={`flex flex-col gap-4 rounded-xl border-2 p-4 transition-all relative overflow-hidden group ${totalQty > 0 ? 'border-brand-gold bg-brand-gold/10' : 'border-border hover:border-brand-gold/50'}`}>
+                        <div className="flex flex-col items-center gap-2">
+                          <Clock className={`h-6 w-6 transition-colors ${totalQty > 0 ? 'text-brand-gold' : 'text-muted-foreground'}`} />
+                          <div className="text-center">
+                            <span className={`font-bold block transition-colors ${totalQty > 0 ? 'text-foreground' : 'text-muted-foreground'}`}>{p.label}</span>
+                            <span className="text-lg font-bold text-brand-gold">{formatPrice(p.basePrice)}</span>
+                          </div>
+                        </div>
+
+                        <Separator className="bg-border/50" />
+
+                        <div className="space-y-2">
+                          <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">Set Urgency</Label>
+                          <div className="flex gap-1">
+                            {settings.urgencyMultipliers.map(u => {
+                              const UIcon = urgencyIcons[u.urgency];
+                              const isSelected = currentUrgency === u.urgency;
+                              return (
+                                <button
+                                  key={u.urgency}
+                                  onClick={() => setLocalUrgencies(prev => ({ ...prev, [p.duration]: u.urgency }))}
+                                  className={`flex-1 flex flex-col items-center py-2 rounded-lg border transition-all ${isSelected ? 'bg-brand-gold text-white border-brand-gold' : 'bg-background/50 border-border text-muted-foreground hover:border-brand-gold/50'}`}
+                                >
+                                  <UIcon className="h-3 w-3 mb-1" />
+                                  <span className="text-[8px] font-bold uppercase">{u.label}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-3 mt-auto bg-background/50 rounded-lg border border-border p-1 w-full justify-between">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => updateCart(p.duration, p.label, p.basePrice, -1)}
+                            disabled={!cart.find(i => i.duration === p.duration && i.urgency === currentUrgency)}
+                            className="h-8 w-8 rounded-md"
+                          >
+                            -
+                          </Button>
+                          <div className="text-center">
+                            <span className="font-bold text-sm block">{cart.find(i => i.duration === p.duration && i.urgency === currentUrgency)?.quantity || 0}</span>
+                            <span className="text-[8px] text-muted-foreground uppercase">{currentUrgency}</span>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => updateCart(p.duration, p.label, p.basePrice, 1)}
+                            className="h-8 w-8 rounded-md hover:bg-brand-gold hover:text-white"
+                          >
+                            +
+                          </Button>
+                        </div>
                       </div>
                     );
                   })}
-                </RadioGroup>
+                </div>
+
+                {cart.length > 0 && (
+                  <div className="mt-6 p-4 rounded-xl border border-brand-gold/30 bg-brand-gold/5">
+                    <h4 className="text-xs font-bold text-brand-gold uppercase tracking-widest mb-3">Selected Sessions Summary</h4>
+                    <div className="space-y-3">
+                      {cart.map((item, idx) => (
+                        <div key={`${item.duration}-${item.urgency}`} className="flex justify-between items-center text-sm">
+                          <div className="space-y-0.5">
+                            <span className="text-foreground font-medium">{item.label} × {item.quantity}</span>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className={`text-[10px] h-4 px-1 ${urgencyColors[item.urgency]}`}>
+                                {item.urgency}
+                              </Badge>
+                              <span className="text-[10px] text-muted-foreground">{item.multiplier}x multiplier</span>
+                            </div>
+                          </div>
+                          <span className="font-bold text-brand-gold">{formatPrice(item.basePrice * item.multiplier * item.quantity)}</span>
+                        </div>
+                      ))}
+                      <Separator className="bg-brand-gold/20 my-2" />
+                      <div className="flex justify-between font-bold text-base">
+                        <span>Total Amount</span>
+                        <span className="text-brand-gold">{formatPrice(totalPrice)}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
-            {/* Live Price */}
-            <motion.div key={totalPrice} initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="p-6 rounded-xl bg-gradient-to-r from-brand-red/10 to-brand-gold/10 border border-border">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Estimated Total</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {duration} min × {selectedMultiplier?.multiplier}x ({selectedMultiplier?.label})
-                  </p>
-                </div>
-                <motion.span key={totalPrice} initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="text-3xl font-bold text-brand-gold">
-                  {formatPrice(totalPrice)}
-                </motion.span>
-              </div>
-            </motion.div>
+
+             {/* Live Price Summary */}
+             <motion.div key={totalPrice} initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="p-6 rounded-xl bg-gradient-to-r from-brand-red/10 to-brand-gold/10 border border-border">
+               <div className="flex items-center justify-between">
+                 <div>
+                    <p className="text-sm text-muted-foreground">Total Talktime</p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {totalMins} <span className="text-sm font-normal text-muted-foreground">Minutes</span>
+                    </p>
+                 </div>
+                 <div className="text-right">
+                    <p className="text-sm text-muted-foreground">Grand Total</p>
+                    <motion.span key={totalPrice} initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="text-3xl font-bold text-brand-gold">
+                      {formatPrice(totalPrice)}
+                    </motion.span>
+                 </div>
+               </div>
+             </motion.div>
 
             <div className="space-y-2">
               <Label>Describe your query <span className="text-red-500">*</span></Label>
@@ -243,9 +346,14 @@ export default function ConsultationPage() {
               />
             </div>
 
-            <Button onClick={() => setStep(2)} className="w-full bg-brand-red hover:bg-brand-red-light text-white" size="lg">
-              Next: Review Booking <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
+            <Button 
+               onClick={() => setStep(2)} 
+               disabled={cart.length === 0}
+               className="w-full bg-brand-red hover:bg-brand-red-light text-white" 
+               size="lg"
+             >
+               Next: Review Booking <ArrowRight className="ml-2 h-4 w-4" />
+             </Button>
           </motion.div>
         )}
 
@@ -255,14 +363,29 @@ export default function ConsultationPage() {
             <Card className="border-border">
               <CardHeader><CardTitle className="text-lg">Booking Summary</CardTitle></CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-3 rounded-lg bg-muted/50">
-                    <p className="text-xs text-muted-foreground">Duration</p>
-                    <p className="font-medium">{duration} minutes</p>
+                    <p className="text-xs text-muted-foreground">Total Duration</p>
+                    <p className="font-medium">{totalMins} minutes</p>
                   </div>
                   <div className="p-3 rounded-lg bg-muted/50">
-                    <p className="text-xs text-muted-foreground">Urgency</p>
-                    <p className="font-medium capitalize">{urgency}</p>
+                    <p className="text-xs text-muted-foreground">Total Sessions</p>
+                    <p className="font-medium">{cart.reduce((a, b) => a + b.quantity, 0)} sessions</p>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <p className="text-xs font-bold text-brand-gold uppercase tracking-widest">Plan Details</p>
+                  <div className="space-y-2">
+                    {cart.map((item, idx) => (
+                      <div key={idx} className="flex justify-between items-center text-sm p-2 rounded bg-background/50 border border-border">
+                        <div className="flex flex-col">
+                          <span className="font-medium">{item.label} × {item.quantity}</span>
+                          <span className="text-[10px] text-muted-foreground">Urgency: {item.urgency}</span>
+                        </div>
+                        <span className="font-bold">{formatPrice(item.basePrice * item.multiplier * item.quantity)}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
                 <div className="p-4 rounded-lg border border-brand-gold/20 bg-brand-gold/5">

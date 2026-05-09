@@ -24,7 +24,7 @@ export const ADMIN_NAV_ITEMS = [
   { label: 'Products', href: '/admin/products', icon: Package },
   { label: 'Reviews', href: '/admin/reviews', icon: MessageSquare },
   { label: 'Courses', href: '/admin/courses', icon: GraduationCap },
-  { label: 'Order Requests', href: '/admin/inquiries', icon: ClipboardList },
+  { label: 'Orders', href: '/admin/orders', icon: ClipboardList },
   { label: 'Enrollments', href: '/admin/enrollments', icon: BookOpen },
   { label: 'Bookings', href: '/admin/bookings', icon: Calendar },
   { label: 'Revenue', href: '/admin/revenue', icon: DollarSign },
@@ -36,7 +36,7 @@ export const ADMIN_NAV_ITEMS = [
 
 export const DASHBOARD_NAV_ITEMS = [
   { label: 'Overview', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'My Order Requests', href: '/dashboard/inquiries', icon: ClipboardList },
+  { label: 'My Orders', href: '/dashboard/orders', icon: ClipboardList },
   { label: 'My Courses', href: '/dashboard/courses', icon: GraduationCap },
   { label: 'My Consultations', href: '/dashboard/consultations', icon: Calendar },
 

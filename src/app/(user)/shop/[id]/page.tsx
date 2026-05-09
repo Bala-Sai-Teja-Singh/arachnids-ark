@@ -1,13 +1,13 @@
 'use client';
+/* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Bug, Thermometer, Droplets, UtensilsCrossed, AlertTriangle, Heart, Share2, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Bug, Thermometer, Droplets, UtensilsCrossed, AlertTriangle, Heart, Share2, MessageSquare, Zap, Minus, Plus, ShoppingCart, Star, Send, User as UserIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,13 +15,13 @@ import { Separator } from '@/components/ui/separator';
 import { LocalStorage } from '@/mock-db/storage';
 import { useAuthStore } from '@/store/auth-store';
 import { useNotificationStore } from '@/store/notification-store';
-import type { Product, Inquiry } from '@/types';
+import type { Product, Order } from '@/types';
 import { formatPrice } from '@/constants/pricing';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 import Link from 'next/link';
 import { useReviewStore } from '@/store/review-store';
-import { Star, Send, User as UserIcon } from 'lucide-react';
+import { useCartStore } from '@/store/cart-store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const careLevelColors: Record<string, string> = {
@@ -62,24 +62,28 @@ export default function ProductDetailPage() {
 
   useEffect(() => {
     if (user) {
-      setDeliveryName(user.name);
-      setDeliveryPhone(user.phone || '');
+      setTimeout(() => {
+        setDeliveryName(user.name);
+        setDeliveryPhone(user.phone || '');
+      }, 0);
     }
   }, [user]);
 
   useEffect(() => {
     const p = LocalStorage.getById<Product>('products', params.id as string);
-    setProduct(p);
-    setLoading(false);
-    loadReviews(params.id as string);
+    setTimeout(() => {
+      setProduct(p);
+      setLoading(false);
+      loadReviews(params.id as string);
 
-    if (user && p) {
-      const inquiries = LocalStorage.getAll<Inquiry>('inquiries');
-      const purchased = inquiries.some(
-        (inq) => inq.userId === user.id && inq.productId === p.id && inq.status === 'completed'
-      );
-      setHasPurchased(purchased);
-    }
+      if (user && p) {
+        const orders = LocalStorage.getAll<any>('orders');
+        const purchased = orders.some(
+          (ord: any) => ord.userId === user.id && ord.items.some((item: any) => item.productId === p.id) && ord.status === 'completed'
+        );
+        setHasPurchased(purchased);
+      }
+    }, 0);
   }, [params.id, loadReviews, user]);
 
   useEffect(() => {
@@ -103,75 +107,16 @@ export default function ProductDetailPage() {
 
   const currentPrice = product?.sizes?.[selectedSize]?.price || 0;
 
-  const handleInquiry = () => {
-    if (!isAuthenticated || !user || !product) {
-      // Save pending inquiry state
-      localStorage.setItem('pending_inquiry', JSON.stringify({
-        productId: product?.id,
-        message,
-        quantity,
-        selectedSize
-      }));
-      toast.error('Please login to place an order request');
-      router.push(`/login?redirect=/shop/${params.id}`);
-      return;
-    }
+  const addItem = useCartStore((state) => state.addItem);
 
-    const newErrors: Record<string, string> = {};
-    if (!deliveryName.trim()) newErrors.name = 'Full name is required';
-    if (!deliveryPhone.trim()) {
-      newErrors.phone = 'Mobile number is required';
-    } else if (!/^\d{10}$/.test(deliveryPhone.replace(/\s/g, ''))) {
-      newErrors.phone = 'Mobile number must be exactly 10 digits';
-    }
-    if (!deliveryAddress.trim()) newErrors.address = 'Delivery address is required';
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-    setErrors({});
-
-    const inquiry: Inquiry = {
-      id: uuidv4(),
-      userId: user.id,
-      userName: user.name,
-      userEmail: user.email,
-      productId: product.id,
-      productName: product.name,
-      quantity,
-      status: 'pending',
-      deliveryName,
-      deliveryPhone,
-      deliveryAddress,
-      totalPrice: currentPrice * quantity,
-      message: `${message}${product.sizes ? `\nSize: ${product.sizes[selectedSize].size}` : ''}`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    LocalStorage.create('inquiries', inquiry);
-    addNotification({
-      userId: user.id,
-      title: 'Order Request Submitted',
-      message: `Your order request for ${product.name} has been submitted successfully.`,
-      type: 'success',
-      link: '/dashboard/inquiries',
+  const handleAddToCart = () => {
+    if (!product) return;
+    const size = product.sizes[selectedSize];
+    addItem(product, size, quantity);
+    toast.success(`${product.name} added to cart`, {
+      description: `Size: ${size.size} | Qty: ${quantity}`,
+      icon: <ShoppingCart className="h-4 w-4" />,
     });
-
-    // Notify Admin
-    addNotification({
-      userId: 'admin',
-      title: 'New Order Request Received',
-      message: `${user.name} placed an order request for ${product.name}.`,
-      type: 'info',
-      link: '/admin/inquiries',
-    });
-    toast.success('Order request submitted successfully!');
-    setInquiryOpen(false);
-    setMessage('');
-    setQuantity(1);
-    setDeliveryAddress('');
   };
 
   if (loading) {
@@ -251,9 +196,18 @@ export default function ProductDetailPage() {
         {/* Details */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="space-y-6">
           <div>
-            <div className="flex gap-2 mb-3">
-              <Badge variant="outline" className="border-white/30 bg-black/50 text-white text-xs capitalize backdrop-blur-sm">{product.category}</Badge>
-              <Badge variant="outline" className="border-brand-gold/40 bg-brand-gold/10 text-brand-gold text-xs capitalize backdrop-blur-sm">{product.origin.replace('-', ' ')}</Badge>
+            <div className="flex flex-wrap gap-2 mb-3">
+              <Badge variant="outline" className="border-white/30 bg-black/50 text-white text-[10px] uppercase tracking-wider backdrop-blur-sm">{product.mainCategory}</Badge>
+              <Badge variant="outline" className="border-white/30 bg-black/50 text-white text-[10px] capitalize backdrop-blur-sm">{product.category}</Badge>
+              {product.mainCategory === 'Tarantulas' && product.tarantulaMeta && (
+                <Badge variant="outline" className="border-brand-gold/40 bg-brand-gold/10 text-brand-gold text-[10px] capitalize backdrop-blur-sm">{product.tarantulaMeta.world}</Badge>
+              )}
+              {product.mainCategory === 'Scorpions' && product.scorpionMeta && (
+                <Badge variant="outline" className="border-red-400/40 bg-red-400/10 text-red-400 text-[10px] capitalize backdrop-blur-sm">{product.scorpionMeta.venomPotency} Venom</Badge>
+              )}
+              {product.mainCategory === 'Centipedes' && product.centipedeMeta && (
+                <Badge variant="outline" className="border-red-400/40 bg-red-400/10 text-red-400 text-[10px] capitalize backdrop-blur-sm">{product.centipedeMeta.venomPotency} Venom</Badge>
+              )}
             </div>
             <h1 className="text-3xl font-bold mb-1">{product.name}</h1>
             <p className="text-lg text-muted-foreground italic">{product.scientificName}</p>
@@ -291,51 +245,121 @@ export default function ProductDetailPage() {
           <Separator className="bg-accent/50" />
 
           {/* Specs Grid */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <Card className="border-border bg-card/50">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
-                  <Thermometer className="h-5 w-5 text-orange-400" />
+              <CardContent className="p-3 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0">
+                  <Thermometer className="h-4 w-4 text-orange-400" />
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Temperature</p>
-                  <p className="text-sm font-medium">{product.temperature}</p>
+                <div className="min-w-0">
+                  <p className="text-[10px] text-muted-foreground">Temp</p>
+                  <p className="text-xs font-medium truncate">{product.temperature}</p>
                 </div>
               </CardContent>
             </Card>
             <Card className="border-border bg-card/50">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                  <Droplets className="h-5 w-5 text-blue-400" />
+              <CardContent className="p-3 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
+                  <Droplets className="h-4 w-4 text-blue-400" />
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Humidity</p>
-                  <p className="text-sm font-medium">{product.humidity}</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-border bg-card/50">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-                  <UtensilsCrossed className="h-5 w-5 text-green-400" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Feeding</p>
-                  <p className="text-sm font-medium">{product.feeding}</p>
+                <div className="min-w-0">
+                  <p className="text-[10px] text-muted-foreground">Humidity</p>
+                  <p className="text-xs font-medium truncate">{product.humidity}</p>
                 </div>
               </CardContent>
             </Card>
             <Card className="border-border bg-card/50">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center">
-                  <AlertTriangle className="h-5 w-5 text-red-400" />
+              <CardContent className="p-3 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center shrink-0">
+                  <UtensilsCrossed className="h-4 w-4 text-green-400" />
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Temperament</p>
-                  <p className={`text-sm font-medium ${temperamentColors[product.temperament]}`}>{product.temperament}</p>
+                <div className="min-w-0">
+                  <p className="text-[10px] text-muted-foreground">Feeding</p>
+                  <p className="text-xs font-medium truncate">{product.feeding}</p>
                 </div>
               </CardContent>
             </Card>
+
+            {product.mainCategory === 'Tarantulas' && product.tarantulaMeta && (
+              <>
+                <Card className="border-border bg-card/50">
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0">
+                      <AlertTriangle className="h-4 w-4 text-red-400" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-muted-foreground">Temperament</p>
+                      <p className={`text-xs font-medium truncate ${temperamentColors[product.tarantulaMeta.temperament] || 'text-white'}`}>{product.tarantulaMeta.temperament}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="border-border bg-card/50">
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-brand-gold/10 flex items-center justify-center shrink-0">
+                      <Zap className="h-4 w-4 text-brand-gold" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-muted-foreground">Growth Rate</p>
+                      <p className="text-xs font-medium truncate">{product.tarantulaMeta.growthRate}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+
+            {product.mainCategory === 'Scorpions' && product.scorpionMeta && (
+              <>
+                <Card className="border-border bg-card/50">
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0">
+                      <AlertTriangle className="h-4 w-4 text-red-400" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-muted-foreground">Venom</p>
+                      <p className="text-xs font-medium text-red-400 truncate">{product.scorpionMeta.venomPotency}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="border-border bg-card/50">
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0">
+                      <Bug className="h-4 w-4 text-purple-400" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-muted-foreground">Pincers</p>
+                      <p className="text-xs font-medium truncate">{product.scorpionMeta.pincerType}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+
+            {product.mainCategory === 'Centipedes' && product.centipedeMeta && (
+              <>
+                <Card className="border-border bg-card/50">
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0">
+                      <AlertTriangle className="h-4 w-4 text-red-400" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-muted-foreground">Venom</p>
+                      <p className="text-xs font-medium text-red-400 truncate">{product.centipedeMeta.venomPotency}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="border-border bg-card/50">
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center shrink-0">
+                      <Bug className="h-4 w-4 text-green-400" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-muted-foreground">Leg Pairs</p>
+                      <p className="text-xs font-medium truncate">{product.centipedeMeta.legPairs}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
           </div>
 
           <div>
@@ -343,107 +367,44 @@ export default function ProductDetailPage() {
             <p className="text-sm text-muted-foreground leading-relaxed">{product.description}</p>
           </div>
 
-          <div className="flex gap-3 pt-4">
-            <Dialog open={inquiryOpen} onOpenChange={setInquiryOpen}>
-              <DialogTrigger render={<Button size="lg" className="flex-1 bg-brand-red hover:bg-brand-red-light text-white" disabled={(product.sizes?.[selectedSize]?.stock || 0) === 0 || product.available === false} />}>
-                <MessageSquare className="mr-2 h-4 w-4" /> 
-                {product.available === false ? 'Unavailable' : 'Order Request'}
-              </DialogTrigger>
-              <DialogContent className="glass border-border">
-                <DialogHeader>
-                  <DialogTitle>Order Request - {product.name}</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-background/50">
-                    <span className="text-sm">Price per unit</span>
-                    <span className="font-bold text-brand-gold">{formatPrice(currentPrice)}</span>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Quantity</Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={product.sizes?.[selectedSize]?.stock || 0}
-                      value={quantity}
-                      onChange={(e) => {
-                        const maxStock = product.sizes?.[selectedSize]?.stock || 0;
-                        setQuantity(Math.max(1, Math.min(maxStock, parseInt(e.target.value) || 1)));
-                      }}
-                      className="bg-background/50"
-                    />
-                  </div>
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-brand-gold/5 border border-brand-gold/20">
-                    <span className="text-sm font-medium">Total</span>
-                    <span className="text-lg font-bold text-brand-gold">{formatPrice(currentPrice * quantity)}</span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Full Name <span className="text-red-500">*</span></Label>
-                      <Input
-                        value={deliveryName}
-                        onChange={(e) => {
-                          setDeliveryName(e.target.value);
-                          if (errors.name) setErrors(prev => ({ ...prev, name: '' }));
-                        }}
-                        placeholder="Recipient Name"
-                        className={`bg-background/50 ${errors.name ? 'border-red-500' : ''}`}
-                      />
-                      {errors.name && <p className="text-[10px] text-red-500 font-medium">{errors.name}</p>}
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Mobile Number <span className="text-red-500">*</span></Label>
-                      <Input
-                        value={deliveryPhone}
-                        onChange={(e) => {
-                          setDeliveryPhone(e.target.value);
-                          if (errors.phone) setErrors(prev => ({ ...prev, phone: '' }));
-                        }}
-                        placeholder="10-digit number"
-                        className={`bg-background/50 ${errors.phone ? 'border-red-500' : ''}`}
-                      />
-                      {errors.phone && <p className="text-[10px] text-red-500 font-medium">{errors.phone}</p>}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Delivery Address <span className="text-red-500">*</span></Label>
-                    <Textarea
-                      placeholder="Street, City, State, ZIP Code"
-                      value={deliveryAddress}
-                      onChange={(e) => {
-                        setDeliveryAddress(e.target.value);
-                        if (errors.address) setErrors(prev => ({ ...prev, address: '' }));
-                      }}
-                      className={`bg-background/50 ${errors.address ? 'border-red-500' : ''}`}
-                      rows={2}
-                    />
-                    {errors.address && <p className="text-[10px] text-red-500 font-medium">{errors.address}</p>}
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Message (optional)</Label>
-                    <Textarea
-                      placeholder="Any specific requirements or questions..."
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      className="bg-background/50"
-                      rows={2}
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setInquiryOpen(false)}>Cancel</Button>
-                  <Button
-                    onClick={handleInquiry}
-                    className="bg-brand-red hover:bg-brand-red-light text-white"
-                    disabled={!deliveryName || !deliveryPhone || !deliveryAddress}
-                  >
-                    Submit Inquiry
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-            <Button size="lg" variant="outline" className="border-border">
-              <Heart className="h-4 w-4" />
-            </Button>
+          <div className="flex flex-col gap-4 pt-4">
+            <div className="flex items-center gap-4 bg-card/50 border border-border rounded-xl p-2 w-fit">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-10 w-10 rounded-lg hover:bg-brand-red/10 hover:text-brand-red"
+                onClick={() => setQuantity(Math.max(1, quantity - 1))}
+              >
+                <Minus className="h-4 w-4" />
+              </Button>
+              <span className="text-lg font-bold w-12 text-center">{quantity}</span>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-10 w-10 rounded-lg hover:bg-brand-gold/10 hover:text-brand-gold"
+                onClick={() => {
+                  const maxStock = product.sizes?.[selectedSize]?.stock || 0;
+                  setQuantity(Math.min(maxStock, quantity + 1));
+                }}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="flex gap-3">
+              <Button 
+                size="lg" 
+                className="flex-1 bg-brand-red hover:bg-brand-red/90 text-white font-bold h-14 shadow-lg shadow-brand-red/20" 
+                disabled={(product.sizes?.[selectedSize]?.stock || 0) === 0 || product.available === false}
+                onClick={handleAddToCart}
+              >
+                <ShoppingCart className="mr-2 h-5 w-5" /> 
+                {product.available === false ? 'Unavailable' : (product.sizes?.[selectedSize]?.stock || 0) === 0 ? 'Out of Stock' : 'Add to Cart'}
+              </Button>
+              <Button size="lg" variant="outline" className="border-border h-14 w-14 p-0">
+                <Heart className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
         </motion.div>
       </div>
@@ -579,7 +540,7 @@ export default function ProductDetailPage() {
                       </span>
                     </div>
                     <p className="text-sm text-muted-foreground leading-relaxed italic">
-                      "{review.comment}"
+                      &quot;{review.comment}&quot;
                     </p>
                   </CardContent>
                 </Card>

@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { ArrowRight, Bug, Shield, Zap, Star, ChevronDown, GraduationCap, Calendar, BookOpen, ShoppingBag } from 'lucide-react';
+import { ArrowRight, Bug, Zap, Star, ChevronDown, GraduationCap, Calendar, BookOpen, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -47,8 +47,8 @@ function HeroSection() {
       <div className="absolute top-1/4 right-1/4 w-64 h-64 bg-brand-red/10 rounded-full blur-[100px] animate-float" />
       <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-brand-gold/5 rounded-full blur-[120px] animate-float" style={{ animationDelay: '-3s' }} />
 
-      <div className="container mx-auto px-4 relative z-10">
-        <div className="max-w-3xl">
+      <div className="container mx-auto px-4 relative z-10 flex flex-col lg:flex-row items-center justify-between gap-12">
+        <div className="max-w-3xl flex-1 z-20">
           <motion.div initial="hidden" animate="visible" variants={stagger}>
             <motion.div variants={fadeIn} custom={0}>
               <Badge variant="outline" className="border-brand-gold/30 text-brand-gold mb-6 px-4 py-1.5">
@@ -96,6 +96,40 @@ function HeroSection() {
               ))}
             </motion.div>
           </motion.div>
+        </div>
+
+        {/* Right Side Video */}
+        <div className="hidden lg:block relative w-full flex-1 h-[500px]">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 1.2, delay: 0.2, ease: "easeOut" }}
+            className="absolute inset-0 rounded-2xl overflow-hidden border border-white/10 shadow-2xl z-20"
+          >
+            <video 
+              autoPlay 
+              loop 
+              muted 
+              playsInline
+              className="w-full h-full object-cover"
+            >
+              <source src="/images/heroVideo.mp4" type="video/mp4" />
+            </video>
+            <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-r from-background/40 via-transparent to-transparent pointer-events-none" />
+          </motion.div>
+          
+          {/* Decorative floating elements */}
+          <motion.div 
+            animate={{ y: [0, -20, 0], scale: [1, 1.1, 1] }} 
+            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute -top-[5%] -right-[5%] w-32 h-32 bg-brand-red/20 rounded-full blur-3xl z-0 pointer-events-none"
+          />
+          <motion.div 
+            animate={{ y: [0, 30, 0], scale: [1, 1.2, 1] }} 
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+            className="absolute -bottom-[10%] -left-[5%] w-48 h-48 bg-brand-gold/10 rounded-full blur-3xl z-0 pointer-events-none"
+          />
         </div>
       </div>
 
@@ -473,8 +507,8 @@ function Testimonials() {
 // ========== FAQ ==========
 function FAQSection() {
   const faqs = [
-    { q: 'How do I purchase a tarantula?', a: 'Browse our shop, select your desired species, and click "Order Request." Our team will review your request and guide you through the purchase process including payment verification.' },
-    { q: 'What payment methods do you accept?', a: 'We accept UPI, bank transfers, and other digital payment methods. After placing an order request, we\'ll share payment details and you can upload your payment screenshot for verification.' },
+    { q: 'How do I purchase a tarantula?', a: 'Browse our shop, select your desired species, and click &quot;Order Request.&quot; Our team will review your request and guide you through the purchase process including payment verification.' },
+    { q: 'What payment methods do you accept?', a: 'We accept UPI, bank transfers, and other digital payment methods. After placing an order request, we&apos;ll share payment details and you can upload your payment screenshot for verification.' },
     { q: 'Do you ship tarantulas across India?', a: 'Yes, we ship to most major cities across India using specialized packaging that ensures your tarantula arrives safely. Shipping is temperature-controlled and handled by experienced personnel.' },
     { q: 'What if my tarantula arrives in poor health?', a: 'We offer a live arrival guarantee. If your tarantula arrives in poor condition, contact us within 2 hours with photo/video evidence and we will arrange a replacement or refund.' },
     { q: 'Are the courses self-paced?', a: 'Yes, all courses are self-paced. Once your enrollment is approved and payment is verified, you\'ll have lifetime access to the course materials.' },

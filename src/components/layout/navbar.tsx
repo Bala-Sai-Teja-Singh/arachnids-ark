@@ -18,6 +18,7 @@ import { USER_NAV_ITEMS, DASHBOARD_NAV_ITEMS, MOBILE_NAV_ITEMS } from '@/constan
 import { useAuthStore } from '@/store/auth-store';
 import { useNotificationStore } from '@/store/notification-store';
 import { NotificationCenter } from '../shared/notification-center';
+import { CartDrawer } from '../shared/cart-drawer';
 import { useTheme } from 'next-themes';
 
 export function Navbar() {
@@ -49,7 +50,7 @@ export function Navbar() {
       <div className="container mx-auto flex h-16 items-center justify-between pr-4 !pl-0 sm:!px-4">
         {/* Logo */}
         <Link href="/" className="flex items-center group">
-          <div className="w-60 flex items-center justify-start overflow-hidden">
+          <div className="w-32 sm:w-60 flex items-center justify-start overflow-hidden">
             <img src="/logo.png" alt="ArachnidsArk" className="w-full h-auto object-contain object-left" />
           </div>
         </Link>
@@ -102,6 +103,7 @@ export function Navbar() {
         {/* Right side */}
         <div className="flex items-center gap-2">
           <ThemeToggle />
+          <CartDrawer />
 
           {isAuthenticated && user ? (
             <>
@@ -124,7 +126,7 @@ export function Navbar() {
               {/* User Menu - Desktop Only */}
               <div className="hidden md:block">
                 <DropdownMenu>
-                  <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="relative rounded-full border border-border overflow-hidden translate-y-[2px]" />}>
+                  <DropdownMenuTrigger nativeButton={true} render={<Button variant="ghost" size="icon" className="relative rounded-full border border-border overflow-hidden translate-y-[2px]" />}>
                     <Avatar className="transition-transform active:scale-95 after:hidden">
                       {user.avatar && <AvatarImage src={user.avatar} alt={user.name} />}
                       <AvatarFallback className="bg-brand-red text-white font-bold text-xs">
@@ -176,7 +178,7 @@ export function Navbar() {
 
           {/* Mobile Menu Trigger */}
           <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger render={<Button variant="outline" size="icon" className="md:hidden border-border" />}>
+            <SheetTrigger nativeButton={true} render={<Button variant="outline" size="icon" className="md:hidden border-border" />}>
               <Menu className="h-5 w-5" />
             </SheetTrigger>
             <SheetContent side="right" className="glass border-l border-border w-72 flex flex-col p-0 overflow-hidden">
