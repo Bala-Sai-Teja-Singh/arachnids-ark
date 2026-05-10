@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Eye, Calendar, Clock, Check } from 'lucide-react';
+import { Eye, Calendar, Clock, Check, Video, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -13,7 +13,7 @@ import { LocalStorage } from '@/mock-db/storage';
 import { useNotificationStore } from '@/store/notification-store';
 import type { ConsultationBooking, BookingStatus } from '@/types';
 import { formatPrice } from '@/constants/pricing';
-import { ALL_STATUSES } from '@/constants/statuses';
+import { ALL_BOOKING_STATUSES, BOOKING_STATUS_CONFIG } from '@/constants/statuses';
 import { toast } from 'sonner';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Badge } from '@/components/ui/badge';
@@ -24,10 +24,18 @@ export default function AdminBookingsPage() {
   const [slotDate, setSlotDate] = useState('');
   const [slotTime, setSlotTime] = useState('');
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [itemMinutes, setItemMinutes] = useState<Record<number, string>>({});
   const [isSlotModalOpen, setIsSlotModalOpen] = useState(false);
   const [activeItemIdx, setActiveItemIdx] = useState<number | null>(null);
+  const [itemMinutes, setItemMinutes] = useState<Record<string, string>>({});
+  const [itemMeetings, setItemMeetings] = useState<Record<string, string>>({});
+  const [itemRecordings, setItemRecordings] = useState<Record<string, string>>({});
+  const [itemDates, setItemDates] = useState<Record<string, string>>({});
+  const [itemTimes, setItemTimes] = useState<Record<string, string>>({});
+  const [itemStatuses, setItemStatuses] = useState<Record<number, string>>({});
   const [newSlotDuration, setNewSlotDuration] = useState<string>('');
+  const [slotMeetingLink, setSlotMeetingLink] = useState('');
+  const [slotRecordingLink, setSlotRecordingLink] = useState('');
+  const [deleteConfirmInfo, setDeleteConfirmInfo] = useState<{ itemIdx: number, slotId: string } | null>(null);
   const { addNotification } = useNotificationStore();
 
   useEffect(() => {
@@ -37,7 +45,32 @@ export default function AdminBookingsPage() {
   const updateStatus = (id: string, status: BookingStatus, userId: string) => {
     LocalStorage.update<ConsultationBooking>('bookings', id, { status });
     // Refresh background content
-    setBookings(LocalStorage.getAll<ConsultationBooking>('bookings').sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+    const updatedBookings = LocalStorage.getAll<ConsultationBooking>('bookings').sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    setBookings(updatedBookings);
+
+    if (status === 'scheduled') {
+      const booking = updatedBookings.find(b => b.id === id);
+      if (booking) {
+        // Get first assigned slot if available
+        const firstSlot = booking.items?.find(i => i.slots?.length)?.slots?.[0];
+
+        fetch('/api/emails/consultation-scheduled', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: booking.userEmail,
+            userName: booking.userName,
+            bookingId: booking.id,
+            slotDate: firstSlot?.date || 'TBD (Check Dashboard)',
+            slotTime: firstSlot?.time || 'TBD (Check Dashboard)',
+            meetingLink: booking.meetingLink || '',
+            duration: booking.duration
+          })
+        }).catch(console.error);
+
+        toast.success('Scheduling email sent to user');
+      }
+    }
 
     addNotification({
       userId,
@@ -57,37 +90,202 @@ export default function AdminBookingsPage() {
     setNewSlotDuration(String(item?.duration || 30));
     setSlotDate('');
     setSlotTime('');
+    setSlotMeetingLink('');
     setIsSlotModalOpen(true);
   };
 
   const openDetailModal = (booking: ConsultationBooking) => {
     setSelectedBooking(booking);
-    const initialMinutes: Record<number, string> = {};
+    const initialMinutes: Record<string, string> = {};
+    const initialMeetings: Record<string, string> = {};
+    const initialRecordings: Record<string, string> = {};
+    const initialDates: Record<string, string> = {};
+    const initialTimes: Record<string, string> = {};
+    const initialStatuses: Record<number, string> = {};
+    
     booking.items?.forEach((item, idx) => {
-      initialMinutes[idx] = String(item.minutesUsed || 0);
+      initialStatuses[idx] = item.status || 'payment_verified';
+      item.slots?.forEach((slot) => {
+        initialMinutes[slot.id] = String(slot.minutesUsed || 0);
+        initialMeetings[slot.id] = slot.meetingLink || '';
+        initialRecordings[slot.id] = slot.recordingUrl || '';
+        initialDates[slot.id] = slot.date || '';
+        initialTimes[slot.id] = slot.time || '';
+      });
     });
+
     setItemMinutes(initialMinutes);
+    setItemMeetings(initialMeetings);
+    setItemRecordings(initialRecordings);
+    setItemDates(initialDates);
+    setItemTimes(initialTimes);
+    setItemStatuses(initialStatuses);
     setIsDetailOpen(true);
   };
 
-  const handleUpdateItemUsage = (itemIdx: number) => {
+  const sendUpdatedEmail = (booking: ConsultationBooking, slot: any) => {
+    fetch('/api/emails/consultation-updated', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to: booking.userEmail,
+        userName: booking.userName,
+        bookingId: booking.id,
+        slotDate: slot.date,
+        slotTime: slot.time,
+        meetingLink: slot.meetingLink,
+        duration: slot.duration
+      })
+    })
+      .then(() => toast.success('Update email sent to customer'))
+      .catch(err => {
+        console.error('Email error:', err);
+        toast.error('Failed to send update email');
+      });
+  };
+
+  const sendScheduledEmail = (booking: ConsultationBooking, slot: any) => {
+    fetch('/api/emails/consultation-scheduled', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to: booking.userEmail,
+        userName: booking.userName,
+        bookingId: booking.id,
+        slotDate: slot.date,
+        slotTime: slot.time,
+        meetingLink: slot.meetingLink,
+        duration: slot.duration
+      })
+    })
+      .then(() => toast.success('Schedule email sent to customer'))
+      .catch(err => {
+        console.error('Email error:', err);
+        toast.error('Failed to send schedule email');
+      });
+  };
+
+  const sendCancelledEmail = (booking: ConsultationBooking, slot: any) => {
+    fetch('/api/emails/consultation-cancelled', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to: booking.userEmail,
+        userName: booking.userName,
+        bookingId: booking.id,
+        slotDate: slot.date,
+        slotTime: slot.time,
+        reason: 'Administrative update'
+      })
+    })
+      .then(() => toast.success('Cancellation email sent to customer'))
+      .catch(err => {
+        console.error('Email error:', err);
+        toast.error('Failed to send cancellation email');
+      });
+  };
+
+  const calculateItemStatus = (item: any): BookingStatus => {
+    const minutesUsed = item.slots?.reduce((sum: number, s: any) => sum + (parseInt(itemMinutes[s.id]) || s.minutesUsed || 0), 0) || 0;
+    if (minutesUsed >= item.duration) return 'completed';
+    if (item.slots && item.slots.length > 0) return 'scheduled';
+    return 'payment_verified';
+  };
+
+  const handleUpdateItemStatus = (itemIdx: number, status: BookingStatus) => {
     if (!selectedBooking || !selectedBooking.items) return;
 
     const newItems = [...selectedBooking.items];
-    const mins = Math.max(0, parseInt(itemMinutes[itemIdx]) || 0);
-    newItems[itemIdx] = { ...newItems[itemIdx], minutesUsed: mins };
+    newItems[itemIdx] = { ...newItems[itemIdx], status };
+    
+    LocalStorage.update<ConsultationBooking>('bookings', selectedBooking.id, { items: newItems });
+    setBookings(prev => prev.map(b => b.id === selectedBooking.id ? { ...b, items: newItems } : b));
+    setSelectedBooking(prev => prev ? { ...prev, items: newItems } : null);
+    toast.success('Session status updated');
+  };
 
-    const totalMinutesUsed = newItems.reduce((acc, item) => acc + (item.minutesUsed || 0), 0);
+  const handleUpdateSlotDetails = (itemIdx: number, slotId: string) => {
+    if (!selectedBooking || !selectedBooking.items) return;
 
-    const updates = {
-      items: newItems,
-      minutesUsed: totalMinutesUsed
+    const newItems = [...selectedBooking.items];
+    const item = { ...newItems[itemIdx] };
+    if (!item.slots) return;
+
+    const slotIdx = item.slots.findIndex(s => s.id === slotId);
+    if (slotIdx === -1) return;
+
+    const oldMinutesUsed = item.slots[slotIdx].minutesUsed || 0;
+    const newMinutesUsed = Math.max(0, parseInt(itemMinutes[slotId]) || 0);
+
+    const updatedSlot = {
+      ...item.slots[slotIdx],
+      minutesUsed: newMinutesUsed,
+      meetingLink: itemMeetings[slotId],
+      recordingUrl: itemRecordings[slotId],
+      date: itemDates[slotId],
+      time: itemTimes[slotId]
     };
+
+    item.slots[slotIdx] = updatedSlot;
+
+    // Update item-level totals and status
+    item.minutesUsed = item.slots.reduce((sum, s) => sum + (s.minutesUsed || 0), 0);
+    item.status = calculateItemStatus(item);
+    newItems[itemIdx] = item;
+
+    // Update booking-level total and overall status
+    const totalMinutesUsed = newItems.reduce((acc, i) => acc + (i.minutesUsed || 0), 0);
+    const allCompleted = newItems.every(i => i.status === 'completed');
+    
+    const updates: Partial<ConsultationBooking> = {
+      items: newItems,
+      minutesUsed: totalMinutesUsed,
+    };
+    
+    if (allCompleted) updates.status = 'completed';
+    else if (newItems.some(i => i.status === 'scheduled')) updates.status = 'scheduled';
 
     LocalStorage.update<ConsultationBooking>('bookings', selectedBooking.id, updates);
     setBookings(prev => prev.map(b => b.id === selectedBooking.id ? { ...b, ...updates } : b));
     setSelectedBooking(prev => prev ? { ...prev, ...updates } : null);
-    toast.success('Talktime updated for session item');
+    
+    // Notify user of update
+    sendUpdatedEmail(selectedBooking, updatedSlot);
+    
+    toast.success('Call details updated and customer notified');
+  };
+
+  const handleDeleteSlot = (itemIdx: number, slotId: string) => {
+    setDeleteConfirmInfo({ itemIdx, slotId });
+  };
+
+  const executeDeleteSlot = () => {
+    if (!selectedBooking || !selectedBooking.items || !deleteConfirmInfo) return;
+
+    const { itemIdx, slotId } = deleteConfirmInfo;
+    const newItems = [...selectedBooking.items];
+    const item = { ...newItems[itemIdx] };
+    const slotToDelete = item.slots?.find(s => s.id === slotId);
+    
+    item.slots = item.slots?.filter(s => s.id !== slotId);
+    item.minutesUsed = item.slots?.reduce((sum, s) => sum + (s.minutesUsed || 0), 0) || 0;
+    item.status = calculateItemStatus(item);
+    newItems[itemIdx] = item;
+
+    const allCompleted = newItems.every(i => i.status === 'completed');
+    const updates: Partial<ConsultationBooking> = { items: newItems };
+    if (allCompleted) updates.status = 'completed';
+
+    LocalStorage.update<ConsultationBooking>('bookings', selectedBooking.id, updates);
+    setBookings(prev => prev.map(b => b.id === selectedBooking.id ? { ...b, ...updates } : b));
+    setSelectedBooking(prev => prev ? { ...prev, ...updates } : null);
+    
+    if (slotToDelete) {
+      sendCancelledEmail(selectedBooking, slotToDelete);
+    }
+    
+    toast.success('Call deleted and customer notified');
+    setDeleteConfirmInfo(null);
   };
 
   const handleAddSlot = () => {
@@ -95,19 +293,34 @@ export default function AdminBookingsPage() {
 
     const newItems = [...selectedBooking.items];
     const item = newItems[activeItemIdx];
+    if (!slotMeetingLink) {
+      toast.error('Meeting link is required');
+      return;
+    }
+
     const newSlot = {
       id: uuidv4(),
       date: slotDate,
       time: slotTime,
       duration: parseInt(newSlotDuration) || item.duration,
+      status: 'scheduled' as BookingStatus,
+      meetingLink: slotMeetingLink,
+      recordingUrl: slotRecordingLink,
     };
 
     const slots = item.slots ? [...item.slots, newSlot] : [newSlot];
-    newItems[activeItemIdx] = { ...item, slots };
+    const updatedItem = { ...item, slots };
+    updatedItem.status = calculateItemStatus(updatedItem);
+    newItems[activeItemIdx] = updatedItem;
 
-    LocalStorage.update<ConsultationBooking>('bookings', selectedBooking.id, { items: newItems });
-    setBookings(prev => prev.map(b => b.id === selectedBooking.id ? { ...b, items: newItems } : b));
-    setSelectedBooking(prev => prev ? { ...prev, items: newItems } : null);
+    const updates: Partial<ConsultationBooking> = { 
+      items: newItems,
+      status: 'scheduled' as BookingStatus // At least one call scheduled
+    };
+
+    LocalStorage.update<ConsultationBooking>('bookings', selectedBooking.id, updates);
+    setBookings(prev => prev.map(b => b.id === selectedBooking.id ? { ...b, ...updates } : b));
+    setSelectedBooking(prev => prev ? { ...prev, ...updates } : null);
 
     addNotification({
       userId: selectedBooking.userId,
@@ -117,8 +330,15 @@ export default function AdminBookingsPage() {
     });
 
     toast.success('Call scheduled successfully');
+    
+    // Send email notification
+    sendScheduledEmail(selectedBooking, newSlot);
+    
     setIsSlotModalOpen(false);
+    setSlotMeetingLink('');
+    setSlotRecordingLink('');
   };
+
 
   return (
     <div className="space-y-6">
@@ -138,8 +358,7 @@ export default function AdminBookingsPage() {
                 <TableHead>Customer</TableHead>
                 <TableHead>Requested Plan</TableHead>
                 <TableHead>Assigned Slot</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -159,8 +378,24 @@ export default function AdminBookingsPage() {
                       <div className="text-xs text-muted-foreground">{booking.userEmail}</div>
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm font-medium">{booking.duration} min</div>
-                      <div className="text-xs capitalize text-brand-gold">{booking.urgency}</div>
+                      <div className="space-y-1">
+                        {booking.items?.map((item, idx) => (
+                          <div key={idx} className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-[9px] h-4 font-bold border-brand-gold/20 text-brand-gold bg-brand-gold/5">
+                              {item.duration}m
+                            </Badge>
+                            <span className="text-[10px] font-medium text-muted-foreground uppercase truncate max-w-[100px]">
+                              {item.urgency}
+                            </span>
+                          </div>
+                        ))}
+                        {(!booking.items || booking.items.length === 0) && (
+                          <>
+                            <div className="text-sm font-medium">{booking.duration} min</div>
+                            <div className="text-xs capitalize text-brand-gold">{booking.urgency}</div>
+                          </>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       {booking.items?.some(i => i.slots?.length) ? (
@@ -172,30 +407,21 @@ export default function AdminBookingsPage() {
                         <span className="text-xs text-muted-foreground italic">No slots assigned</span>
                       )}
                     </TableCell>
-                    <TableCell className="font-medium">{formatPrice(booking.totalPrice ?? 0)}</TableCell>
-                    <TableCell>
-                      <Select value={booking.status} onValueChange={(val) => val && updateStatus(booking.id, val as BookingStatus, booking.userId)}>
-                        <SelectTrigger className="h-8 text-xs w-[140px] border-border bg-background/50">
-                          <SelectValue placeholder="Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {ALL_STATUSES.map(s => (
-                            <SelectItem key={s} value={s} className="text-xs capitalize">{s.replace('_', ' ')}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    <TableCell className="font-medium">
+                      <div className="flex flex-col gap-1 items-end">
+                        <span className="text-sm">{formatPrice(booking.totalPrice ?? 0)}</span>
+                        <StatusBadge status={booking.status} type="booking" className="scale-75 origin-right" />
+                      </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-brand-gold"
-                          onClick={() => openDetailModal(booking)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-brand-gold"
+                        onClick={() => openDetailModal(booking)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))
@@ -210,39 +436,27 @@ export default function AdminBookingsPage() {
             <div className="p-8 text-center text-muted-foreground">No bookings found.</div>
           ) : (
             bookings.map((booking) => (
-              <div key={booking.id} className="p-4 space-y-3">
+              <div key={booking.id} className="p-4 space-y-3 active:bg-muted/30 transition-colors" onClick={() => openDetailModal(booking)}>
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="font-bold">{booking.userName}</h3>
-                    <p className="text-xs text-muted-foreground">{booking.duration} min • {booking.urgency}</p>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {booking.items?.map((item, idx) => (
+                        <Badge key={idx} variant="outline" className="text-[8px] h-3 px-1 border-brand-gold/20 text-brand-gold">
+                          {item.duration}m {item.urgency.charAt(0)}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
-                  <StatusBadge status={booking.status} />
+                  <div className="text-right space-y-1">
+                    <p className="font-bold text-brand-gold text-sm">{formatPrice(booking.totalPrice ?? 0)}</p>
+                    <StatusBadge status={booking.status} type="booking" className="scale-75 origin-right" />
+                  </div>
                 </div>
                 <div className="flex justify-between items-center text-xs">
                   <div className="text-muted-foreground">
                     {booking.items?.reduce((a, b) => a + (b.slots?.length || 0), 0) || 0} calls scheduled
                   </div>
-                  <div className="font-bold text-brand-gold">{formatPrice(booking.totalPrice ?? 0)}</div>
-                </div>
-                <div className="flex gap-2 pt-2">
-                  <Select value={booking.status} onValueChange={(val) => val && updateStatus(booking.id, val as BookingStatus, booking.userId)}>
-                    <SelectTrigger className="h-9 text-xs flex-1 border-border">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ALL_STATUSES.map(s => (
-                        <SelectItem key={s} value={s} className="text-xs capitalize">{s.replace('_', ' ')}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-9 w-9 text-muted-foreground border-border"
-                    onClick={() => openDetailModal(booking)}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
                 </div>
               </div>
             ))
@@ -281,10 +495,33 @@ export default function AdminBookingsPage() {
               />
               <p className="text-[10px] text-muted-foreground">You can split a 30-min session into smaller calls (e.g. 15+15).</p>
             </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-bold">Meeting Link <span className="text-red-500">*</span></Label>
+              <Input
+                placeholder="https://meet.google.com/..."
+                value={slotMeetingLink}
+                onChange={e => setSlotMeetingLink(e.target.value)}
+                className="bg-background/50"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-bold">Recording Link (Optional)</Label>
+              <Input
+                placeholder="https://drive.google.com/..."
+                value={slotRecordingLink}
+                onChange={e => setSlotRecordingLink(e.target.value)}
+                className="bg-background/50"
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsSlotModalOpen(false)}>Cancel</Button>
-            <Button className="bg-brand-gold hover:bg-brand-gold/90 text-white" onClick={handleAddSlot} disabled={!slotDate || !slotTime}>
+            <Button 
+              className="bg-brand-gold hover:bg-brand-gold/90 text-white" 
+              onClick={handleAddSlot} 
+              disabled={!slotDate || !slotTime || !slotMeetingLink}
+            >
               <Check className="mr-2 h-4 w-4" /> Confirm Call
             </Button>
           </DialogFooter>
@@ -326,9 +563,22 @@ export default function AdminBookingsPage() {
                           <p className="font-bold text-sm">{item.label}</p>
                           <p className="text-[10px] text-muted-foreground uppercase">{item.urgency} Urgency</p>
                         </div>
-                        <div className="text-right">
+                        <div className="text-right space-y-1">
                           <p className="text-xs font-bold text-brand-gold">{item.duration} mins total</p>
-                          <p className="text-[10px] text-muted-foreground font-medium">Used: {item.minutesUsed || 0} / {item.duration}m</p>
+                          <Select 
+                            value={item.status || 'payment_verified'} 
+                            onValueChange={(val) => handleUpdateItemStatus(idx, val as BookingStatus)}
+                          >
+                            <SelectTrigger className="h-6 text-[9px] w-[110px] bg-background/50 border-brand-gold/20">
+                              <SelectValue placeholder="Status" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-background border-border">
+                              {ALL_BOOKING_STATUSES.map(s => (
+                                <SelectItem key={s} value={s} className="text-[10px] capitalize">{BOOKING_STATUS_CONFIG[s].label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <p className="text-[10px] text-muted-foreground font-medium">Used: {item.minutesUsed || 0}m | Remaining: {item.duration - (item.minutesUsed || 0)}m</p>
                         </div>
                       </div>
 
@@ -336,13 +586,99 @@ export default function AdminBookingsPage() {
                       <div className="space-y-2">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Scheduled Calls</p>
                         <div className="space-y-1.5">
-                          {item.slots?.length ? item.slots.map(slot => (
-                            <div key={slot.id} className="flex items-center justify-between p-2 rounded bg-brand-gold/5 border border-brand-gold/10 text-xs">
-                              <div className="flex items-center gap-2">
-                                <Calendar className="h-3 w-3 text-brand-gold" />
-                                <span>{new Date(slot.date).toLocaleDateString()} at {slot.time}</span>
+                              {item.slots?.length ? item.slots.map(slot => (
+                                <div key={slot.id} className="space-y-4 p-4 rounded bg-brand-gold/5 border border-brand-gold/10">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="flex flex-wrap gap-2 flex-1">
+                                      <div className="space-y-1">
+                                        <Label className="text-[9px] uppercase font-bold text-muted-foreground">Date</Label>
+                                        <Input
+                                          type="date"
+                                          value={itemDates[slot.id] || ''}
+                                          onChange={e => setItemDates(prev => ({ ...prev, [slot.id]: e.target.value }))}
+                                          className="h-7 text-[10px] w-36 bg-background"
+                                        />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <Label className="text-[9px] uppercase font-bold text-muted-foreground">Time</Label>
+                                        <Input
+                                          type="time"
+                                          value={itemTimes[slot.id] || ''}
+                                          onChange={e => setItemTimes(prev => ({ ...prev, [slot.id]: e.target.value }))}
+                                          className="h-7 text-[10px] w-28 bg-background"
+                                        />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <Label className="text-[9px] uppercase font-bold text-muted-foreground">Duration</Label>
+                                        <Badge variant="outline" className="h-7 px-2 text-[10px] bg-background border-border">
+                                          {slot.duration}m
+                                        </Badge>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="grid grid-cols-1 gap-3 pt-2 border-t border-brand-gold/10">
+                                    <div className="flex items-center justify-between gap-4">
+                                      <div className="flex-1 space-y-1">
+                                        <Label className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">Meeting Link</Label>
+                                        <div className="flex items-center gap-2">
+                                          <Video className="h-3 w-3 text-brand-gold" />
+                                          <a 
+                                            href={slot.meetingLink} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="text-[10px] truncate max-w-[150px] font-mono text-brand-gold hover:text-brand-gold-light hover:underline transition-colors"
+                                            title="Click to join call"
+                                          >
+                                            {slot.meetingLink}
+                                          </a>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <div className="space-y-1">
+                                          <Label className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">Minutes</Label>
+                                          <Input
+                                            type="number"
+                                            min="0"
+                                            value={itemMinutes[slot.id] || '0'}
+                                            onChange={e => setItemMinutes(prev => ({ ...prev, [slot.id]: e.target.value }))}
+                                            className="h-7 w-16 bg-background text-[11px]"
+                                          />
+                                        </div>
+                                        <Button 
+                                          variant="ghost" 
+                                          size="icon" 
+                                          className="mt-4 h-7 w-7 text-muted-foreground hover:text-red-500 hover:bg-red-500/10"
+                                          onClick={() => handleDeleteSlot(idx, slot.id)}
+                                          title="Delete Call"
+                                        >
+                                          <X className="h-3.5 w-3.5" />
+                                        </Button>
+                                      </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                  <Label className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">Recording Link</Label>
+                                  <div className="flex gap-1.5">
+                                    <div className="relative flex-1">
+                                      <Eye className="absolute left-2 top-2 h-2.5 w-2.5 text-muted-foreground" />
+                                      <Input
+                                        placeholder="https://drive.google.com/..."
+                                        value={itemRecordings[slot.id] || ''}
+                                        onChange={e => setItemRecordings(prev => ({ ...prev, [slot.id]: e.target.value }))}
+                                        className="h-7 pl-6 bg-background text-[9px]"
+                                      />
+                                    </div>
+                                    <Button
+                                      onClick={() => handleUpdateSlotDetails(idx, slot.id)}
+                                      size="sm"
+                                      className="h-7 bg-brand-gold hover:bg-brand-gold/90 text-white font-bold px-3 text-[9px] uppercase"
+                                    >
+                                      Update Details
+                                    </Button>
+                                </div>
                               </div>
-                              <Badge variant="outline" className="text-[8px] h-4">{slot.duration} mins</Badge>
                             </div>
                           )) : (
                             <p className="text-[10px] text-muted-foreground italic">No calls scheduled for this item.</p>
@@ -356,26 +692,6 @@ export default function AdminBookingsPage() {
                             + Schedule New Call
                           </Button>
                         </div>
-                      </div>
-
-                      <div className="flex gap-3 items-end pt-2 border-t border-border/50">
-                        <div className="flex-1 space-y-1.5">
-                          <Label className="text-[10px] text-muted-foreground">Update Total Minutes Consumed</Label>
-                          <Input
-                            type="number"
-                            min="0"
-                            value={itemMinutes[idx] || '0'}
-                            onChange={e => setItemMinutes(prev => ({ ...prev, [idx]: e.target.value }))}
-                            className="h-8 bg-background text-sm"
-                          />
-                        </div>
-                        <Button
-                          onClick={() => handleUpdateItemUsage(idx)}
-                          size="sm"
-                          className="bg-brand-gold hover:bg-brand-gold/90 text-white h-8 px-3 text-xs"
-                        >
-                          Update
-                        </Button>
                       </div>
                     </div>
                   ))}
@@ -400,10 +716,29 @@ export default function AdminBookingsPage() {
                   {formatPrice(selectedBooking.totalPrice ?? 0)}
                 </div>
               </div>
+
             </div>
           )}
-          <DialogFooter>
-            <Button onClick={() => setIsDetailOpen(false)}>Close</Button>
+          <DialogFooter />
+        </DialogContent>
+      </Dialog>
+      {/* Cancellation Confirmation Modal */}
+      <Dialog open={!!deleteConfirmInfo} onOpenChange={(open) => !open && setDeleteConfirmInfo(null)}>
+        <DialogContent className="glass border-border sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Cancel Scheduled Call</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel this call? This will notify the customer via email.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              The session balance will be updated, and a cancellation notification will be sent immediately.
+            </p>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setDeleteConfirmInfo(null)}>Keep Call</Button>
+            <Button variant="destructive" onClick={executeDeleteSlot}>Confirm Cancellation</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

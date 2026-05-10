@@ -82,7 +82,7 @@ export default function LikedProductsPage() {
       if (product.sizes.length === 1) {
         // If only one size, add directly
         const size = product.sizes[0];
-        addItem(product, size, 1);
+        addItem(product, 'product', { size, quantity: 1 });
         toast.success(`${product.name} added to cart!`, {
           description: `Size: ${size.size}`,
           icon: <ShoppingCart className="h-4 w-4" />,
@@ -98,7 +98,7 @@ export default function LikedProductsPage() {
   const handleQuickAdd = () => {
     if (!quickSelectProduct) return;
     const size = quickSelectProduct.sizes[selectedQuickSize];
-    addItem(quickSelectProduct, size, 1);
+    addItem(quickSelectProduct, 'product', { size, quantity: 1 });
     toast.success(`${quickSelectProduct.name} added to cart`, {
       description: `Size: ${size.size} | Qty: 1`,
       icon: <ShoppingCart className="h-4 w-4" />,

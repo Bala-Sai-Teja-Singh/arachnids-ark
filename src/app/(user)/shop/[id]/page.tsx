@@ -75,17 +75,18 @@ export default function ProductDetailPage() {
     setTimeout(() => {
       setProduct(p);
       setLoading(false);
-      loadReviews(params.id as string);
+      loadReviews(params.id as string, 'product');
 
       if (user && p) {
-        const orders = LocalStorage.getAll<any>('orders');
+        const orders = LocalStorage.getAll<Order>('orders');
         const purchased = orders.some(
-          (ord: any) => ord.userId === user.id && ord.items.some((item: any) => item.productId === p.id) && ord.status === 'completed'
+          (ord) => ord.userId === user.id && ord.items.some((item) => item.id === p.id && item.type === 'product') && ['payment_verified', 'order_shipped', 'order_completed'].includes(ord.status)
         );
         setHasPurchased(purchased);
       }
 
-      // Load liked status from local storage
+      // Load liked status from store
+      // (This will be updated later when I use favoriteStore in the UI)
       const savedLikes = localStorage.getItem('arachnidsark_liked_products');
       if (savedLikes) {
         const likedIds = JSON.parse(savedLikes);
@@ -161,7 +162,7 @@ export default function ProductDetailPage() {
   const handleAddToCart = () => {
     if (!product) return;
     const size = product.sizes[selectedSize];
-    addItem(product, size, quantity);
+    addItem(product, 'product', { size, quantity });
     toast.success(`${product.name} added to cart`, {
       description: `Size: ${size.size} | Qty: ${quantity}`,
       icon: <ShoppingCart className="h-4 w-4" />,
@@ -542,7 +543,8 @@ export default function ProductDetailPage() {
                         if (!user || !product) return;
                         setSubmittingReview(true);
                         await addReview({
-                          productId: product.id,
+                          targetId: product.id,
+                          targetType: 'product',
                           userId: user.id,
                           userName: user.name,
                           userAvatar: user.avatar,

@@ -18,6 +18,11 @@ import { formatPrice, calculateConsultationPrice } from '@/constants/pricing';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 import { useRouter } from 'next/navigation';
+import { useCartStore } from '@/store/cart-store';
+import { useFavoriteStore } from '@/store/favorite-store';
+import { useReviewStore } from '@/store/review-store';
+import { MessageSquare, Star, Send, Heart, ShoppingBag } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const urgencyIcons = {
   normal: Clock,
@@ -41,6 +46,24 @@ export default function ConsultationPage() {
   const [localUrgencies, setLocalUrgencies] = useState<Record<number, ConsultationUrgency>>({});
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
+  const addItem = useCartStore(state => state.addItem);
+  const { toggleLike, isLiked } = useFavoriteStore();
+  const { reviews, loadReviews, addReview, isLoading: reviewsLoading } = useReviewStore();
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [hasPurchased, setHasPurchased] = useState(false);
+  
+  useEffect(() => {
+    loadReviews('consultation-general', 'consultation');
+    if (user) {
+      const orders = LocalStorage.getAll<any>('orders');
+      const purchased = orders.some(
+        (ord: any) => ord.userId === user.id && ord.items.some((item: any) => item.type === 'consultation') && ['payment_verified', 'order_shipped', 'order_completed'].includes(ord.status)
+      );
+      setHasPurchased(purchased);
+    }
+  }, [user, loadReviews]);
   
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -50,9 +73,6 @@ export default function ConsultationPage() {
     const data = LocalStorage.getAll<ConsultationSettings>('consultation_settings');
     if (data.length > 0) {
       setSettings(data[0]);
-    if (data.length > 0) {
-      setSettings(data[0]);
-    }
     }
   }, []);
 
@@ -94,56 +114,17 @@ export default function ConsultationPage() {
   // Removed availableSlots memo as users no longer pick slots
 
   const handleSubmit = async () => {
-    if (!isAuthenticated || !user) {
-      localStorage.setItem('pending_consultation', JSON.stringify({
-        cart, query
-      }));
-      toast.error('Please login to book a consultation');
-      router.push('/login?redirect=/consultation');
-      return;
-    }
-    const booking: ConsultationBooking = {
-      id: uuidv4(),
-      userId: user.id,
-      userName: user.name,
-      userEmail: user.email,
-      duration: totalMins,
-      urgency: cart[0]?.urgency || 'normal', // Primary urgency for backward compatibility
-      slotId: '',
-      slotDate: '',
-      slotTime: '',
-      query,
-      items: cart,
-      basePrice: cart.reduce((a, b) => a + (b.basePrice * b.quantity), 0),
-      multiplier: 1, // Multiplier is now per-item
-      totalPrice,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    if (cart.length === 0) return;
 
-    LocalStorage.create('bookings', booking);
-
-    addNotification({
-      userId: user.id,
-      title: 'Consultation Booked',
-      message: `Your ${totalMins}-min consultation has been booked with individual urgency levels.`,
-      type: 'success',
-      link: '/dashboard/consultations',
+    cart.forEach(item => {
+      addItem(null, 'consultation', {
+        ...item,
+        query: query || 'No query provided'
+      });
     });
 
-    // Notify Admin
-    addNotification({
-      userId: 'admin',
-      title: 'New Consultation Booking',
-      message: `${user.name} booked a ${totalMins}-min multi-urgency consultation.`,
-      type: 'info',
-      link: '/admin/bookings',
-    });
-
-    toast.success('Consultation booked successfully!');
-    setSubmitting(false);
-    router.push('/dashboard/consultations');
+    toast.success('Consultation items added to cart!');
+    router.push('/checkout');
   };
 
   if (!settings) return <div className="container mx-auto px-4 py-8"><div className="h-96 animate-pulse bg-muted rounded-xl" /></div>;
@@ -155,12 +136,31 @@ export default function ConsultationPage() {
           <Calendar className="h-3 w-3 mr-2" />
           Book Consultation
         </Badge>
-        <h1 className="text-3xl font-bold mb-2">
-          Expert <span className="text-gradient">Consultation</span>
-        </h1>
-        <p className="text-muted-foreground">
-          Get personalized guidance from experienced arachnid specialists
-        </p>
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">
+              Expert <span className="text-gradient">Consultation</span>
+            </h1>
+            <p className="text-muted-foreground">
+              Get personalized guidance from experienced arachnid specialists
+            </p>
+          </div>
+          <div className="flex flex-col items-end gap-2">
+            <button
+              onClick={() => toggleLike('consultation-general', 'consultation')}
+              className={`p-3 rounded-full backdrop-blur-md border border-white/20 shadow-xl transition-all duration-300 ${
+                isLiked('consultation-general', 'consultation') 
+                  ? 'bg-red-500 text-white border-red-400' 
+                  : 'bg-black/60 text-white hover:bg-black/80'
+              }`}
+            >
+              <Heart className={`h-5 w-5 ${isLiked('consultation-general', 'consultation') ? 'fill-current' : ''}`} />
+            </button>
+            <Badge variant="outline" className="bg-black/50 border-white/20 text-white font-bold">
+              Liked by others
+            </Badge>
+          </div>
+        </div>
       </motion.div>
 
       {/* Talktime Explanation */}
@@ -197,20 +197,31 @@ export default function ConsultationPage() {
       </motion.div>
 
       {/* Progress Steps */}
-      <div className="flex items-center gap-2 mb-8">
-        {[1, 2].map(s => (
-          <div key={s} className="flex items-center gap-2">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${step >= s ? 'bg-brand-red text-white' : 'bg-muted text-muted-foreground'
+      <div className="flex flex-wrap items-center gap-y-4 gap-x-8 mb-12">
+        {[
+          { id: 1, label: 'Details & Query' },
+          { id: 2, label: 'Confirmation' }
+        ].map((s, i, arr) => (
+          <div key={s.id} className="flex items-center gap-3">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-500 ${
+                step >= s.id ? 'bg-brand-red text-white shadow-lg shadow-brand-red/20' : 'bg-muted text-muted-foreground'
               }`}>
-              {step > s ? <CheckCircle className="h-4 w-4" /> : s}
+                {step > s.id ? <CheckCircle className="h-5 w-5" /> : s.id}
+              </div>
+              <span className={`text-sm font-bold transition-colors duration-500 ${
+                step >= s.id ? 'text-foreground' : 'text-muted-foreground'
+              }`}>
+                {s.label}
+              </span>
             </div>
-            {s < 2 && <div className={`w-12 sm:w-24 h-0.5 ${step > s ? 'bg-brand-red' : 'bg-muted'}`} />}
+            {i < arr.length - 1 && (
+              <div className={`w-12 sm:w-24 h-0.5 rounded-full transition-all duration-1000 ${
+                step > s.id ? 'bg-brand-red' : 'bg-muted'
+              }`} />
+            )}
           </div>
         ))}
-        <div className="flex gap-4 ml-4 text-xs text-muted-foreground">
-          <span>Details & Query</span>
-          <span>Confirmation</span>
-        </div>
       </div>
 
       <AnimatePresence mode="wait">
@@ -422,6 +433,118 @@ export default function ConsultationPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Reviews Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="mt-16 space-y-8"
+      >
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold flex items-center gap-2 font-heading uppercase tracking-wider">
+            <MessageSquare className="h-6 w-6 text-brand-red" />
+            Specialist Reviews
+          </h2>
+          <div className="flex items-center gap-1 bg-brand-gold/10 px-3 py-1 rounded-full border border-brand-gold/20">
+            <Star className="h-4 w-4 text-brand-gold fill-brand-gold" />
+            <span className="text-sm font-bold text-brand-gold">
+              {reviews.filter(r => r.status === 'approved').length > 0
+                ? (reviews.filter(r => r.status === 'approved').reduce((acc, r) => acc + r.rating, 0) / reviews.filter(r => r.status === 'approved').length).toFixed(1)
+                : 'No reviews'
+              }
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <Card className="lg:col-span-1 border-border bg-card/40 backdrop-blur-sm h-fit">
+            <CardContent className="p-6 space-y-4">
+              <h3 className="font-bold text-sm uppercase tracking-widest text-brand-gold">Share your experience</h3>
+              {isAuthenticated ? (
+                hasPurchased ? (
+                  <div className="space-y-4">
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button key={star} onClick={() => setReviewRating(star)} className="hover:scale-110 transition-transform">
+                          <Star className={`h-6 w-6 ${reviewRating >= star ? 'text-brand-gold fill-brand-gold' : 'text-muted-foreground'}`} />
+                        </button>
+                      ))}
+                    </div>
+                    <Textarea
+                      placeholder="How was your session with Harmanpreet?"
+                      value={reviewComment}
+                      onChange={(e) => setReviewComment(e.target.value)}
+                      className="bg-background/50 border-border"
+                    />
+                    <Button
+                      className="w-full bg-brand-red hover:bg-brand-red/90 text-white font-bold"
+                      disabled={!reviewComment.trim() || submittingReview}
+                      onClick={async () => {
+                        setSubmittingReview(true);
+                        await addReview({
+                          targetId: 'consultation-general',
+                          targetType: 'consultation',
+                          userId: user!.id,
+                          userName: user!.name,
+                          userAvatar: user!.avatar,
+                          rating: reviewRating,
+                          comment: reviewComment,
+                        });
+                        toast.success('Review submitted for moderation!');
+                        setReviewComment('');
+                        setReviewRating(5);
+                        setSubmittingReview(false);
+                      }}
+                    >
+                      {submittingReview ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="mr-2 h-4 w-4" /> Post Review</>}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="text-center py-4 px-2 bg-brand-gold/5 rounded-xl border border-brand-gold/20">
+                    <p className="text-xs text-muted-foreground leading-relaxed italic">Only verified clients who have completed a session can leave a review.</p>
+                  </div>
+                )
+              ) : (
+                <Button variant="outline" className="w-full border-border hover:bg-brand-gold/10" onClick={() => router.push('/login')}>Login to Review</Button>
+              )}
+            </CardContent>
+          </Card>
+
+          <div className="lg:col-span-2 space-y-4">
+            {reviews.filter(r => r.status === 'approved').length === 0 ? (
+              <div className="text-center py-12 border border-dashed border-border rounded-2xl bg-accent/5">
+                <p className="text-muted-foreground italic">No reviews yet. Be the first to share your feedback!</p>
+              </div>
+            ) : (
+              reviews.filter(r => r.status === 'approved').map((review) => (
+                <Card key={review.id} className="border-border bg-card/20 backdrop-blur-sm group hover:border-brand-gold/30 transition-all duration-300">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <Avatar className="h-10 w-10 border border-brand-red/30">
+                        <AvatarImage src={review.userAvatar} />
+                        <AvatarFallback className="bg-brand-red text-white">{review.userName.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-sm font-bold uppercase tracking-tight">{review.userName}</p>
+                        <div className="flex gap-0.5">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star key={star} className={`h-3 w-3 ${review.rating >= star ? 'text-brand-gold fill-brand-gold' : 'text-muted-foreground'}`} />
+                          ))}
+                        </div>
+                      </div>
+                      <span className="ml-auto text-[10px] text-muted-foreground italic">{new Date(review.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground leading-relaxed italic border-l-2 border-brand-gold/30 pl-4 bg-brand-gold/5 py-2 rounded-r-lg">
+                      &quot;{review.comment}&quot;
+                    </p>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </div>
+      </motion.div>
     </div>
   );
 }

@@ -9,7 +9,7 @@ import { LocalStorage } from '@/mock-db/storage';
 import { useNotificationStore } from '@/store/notification-store';
 import type { CourseEnrollment, EnrollmentStatus, Course } from '@/types';
 import { formatPrice } from '@/constants/pricing';
-import { ALL_STATUSES } from '@/constants/statuses';
+import { ALL_ENROLLMENT_STATUSES, ENROLLMENT_STATUS_CONFIG } from '@/constants/statuses';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { User, Mail, Calendar, CreditCard, BookOpen, Clock, Smartphone, MapPin } from 'lucide-react';
@@ -28,14 +28,29 @@ export default function AdminEnrollmentsPage() {
     // Refresh background content
     setEnrollments(LocalStorage.getAll<CourseEnrollment>('enrollments').sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
 
-    // If status is completed/verified, also unlock modules in course for user (handled abstractly here)
-    if (status === 'verified' || status === 'completed') {
-      addNotification({
-        userId,
-        title: 'Course Unlocked!',
-        message: `Your enrollment has been verified. You now have full access to the course.`,
-        type: 'success'
-      });
+    // If status is enrolled, also unlock modules in course for user (handled abstractly here)
+    if (status === 'enrolled') {
+      const enr = enrollments.find(e => e.id === id);
+      if (enr) {
+        // Trigger course unlocked email
+        fetch('/api/emails/course-unlocked', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: enr.userEmail,
+            userName: enr.userName,
+            courseTitle: enr.courseTitle,
+            enrollmentId: enr.id
+          })
+        }).catch(console.error);
+
+        addNotification({
+          userId,
+          title: 'Course Unlocked!',
+          message: `Your enrollment has been verified. You now have full access to the course.`,
+          type: 'success'
+        });
+      }
     } else {
       addNotification({
         userId,
@@ -91,9 +106,9 @@ export default function AdminEnrollmentsPage() {
                         <SelectTrigger className="h-8 text-xs w-[140px] border-border">
                           <SelectValue placeholder="Status" />
                         </SelectTrigger>
-                        <SelectContent>
-                          {ALL_STATUSES.map(s => (
-                            <SelectItem key={s} value={s} className="text-xs capitalize">{s.replace('_', ' ')}</SelectItem>
+                        <SelectContent className="bg-background border-border">
+                          {ALL_ENROLLMENT_STATUSES.map(s => (
+                            <SelectItem key={s} value={s} className="text-xs capitalize">{ENROLLMENT_STATUS_CONFIG[s].label}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -127,12 +142,14 @@ export default function AdminEnrollmentsPage() {
                     <h3 className="font-bold text-sm">{enr.userName}</h3>
                     <p className="text-[10px] text-muted-foreground">{enr.userEmail}</p>
                   </div>
-                  <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${enr.status === 'verified' || enr.status === 'completed' ? 'bg-green-500/10 text-green-400' :
-                      enr.status === 'pending' || enr.status === 'awaiting_payment' ? 'bg-amber-500/10 text-amber-400' :
-                        'bg-red-500/10 text-red-400'
-                    }`}>
-                    {enr.status.replace('_', ' ')}
-                  </div>
+                  {(() => {
+                    const config = ENROLLMENT_STATUS_CONFIG[enr.status as EnrollmentStatus] || ENROLLMENT_STATUS_CONFIG.enrolled;
+                    return (
+                      <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${config.bgColor} ${config.color}`}>
+                        {config.label}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
@@ -153,9 +170,9 @@ export default function AdminEnrollmentsPage() {
                     <SelectTrigger className="h-9 text-xs flex-1 border-border bg-background/50">
                       <SelectValue placeholder="Status" />
                     </SelectTrigger>
-                    <SelectContent>
-                      {ALL_STATUSES.map(s => (
-                        <SelectItem key={s} value={s} className="text-xs capitalize">{s.replace('_', ' ')}</SelectItem>
+                    <SelectContent className="bg-background border-border">
+                      {ALL_ENROLLMENT_STATUSES.map(s => (
+                        <SelectItem key={s} value={s} className="text-xs capitalize">{ENROLLMENT_STATUS_CONFIG[s].label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -258,9 +275,9 @@ export default function AdminEnrollmentsPage() {
                     <SelectTrigger className="flex-1 border-border bg-background/50">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
-                      {ALL_STATUSES.map(s => (
-                        <SelectItem key={s} value={s} className="capitalize">{s.replace('_', ' ')}</SelectItem>
+                    <SelectContent className="bg-background border-border">
+                      {ALL_ENROLLMENT_STATUSES.map(s => (
+                        <SelectItem key={s} value={s} className="capitalize">{ENROLLMENT_STATUS_CONFIG[s].label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

@@ -439,7 +439,7 @@ function FeaturedCourses() {
                     <p className="text-sm text-muted-foreground line-clamp-2">{course.contentPreview}</p>
                     <div className="flex items-center justify-between pt-2">
                       <span className="text-lg font-bold text-brand-gold">{formatPrice(course.price)}</span>
-                      <span className="text-xs text-muted-foreground">{course.modules.length} modules</span>
+                      <span className="text-xs text-brand-gold font-medium">Full Video Course</span>
                     </div>
                   </CardContent>
                 </Card>

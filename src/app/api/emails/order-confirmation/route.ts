@@ -9,7 +9,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing order or payment details' }, { status: 400 });
     }
 
-    const { items, totalPrice, id: orderId, userName, userEmail } = order;
+    const { items, totalPrice, shippingCharge, id: orderId, userName, userEmail } = order;
+    const subtotal = totalPrice - (shippingCharge || 0);
     
     // Determine recipient based on Sandbox mode
     const recipientEmail = IS_SANDBOX_MODE ? TEST_EMAIL : userEmail;
@@ -19,7 +20,12 @@ export async function POST(req: Request) {
 
     const itemsHtml = items.map((item: any) => `
       <tr>
-        <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.productName} (${item.size})</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee;">
+          ${item.name || item.productName} 
+          <span style="font-size: 10px; color: #718096; display: block;">
+            ${item.type === 'product' ? (item.metadata?.size || item.size || 'N/A') : (item.metadata?.label || item.type)}
+          </span>
+        </td>
         <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
         <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">₹${item.price * item.quantity}</td>
       </tr>
@@ -50,6 +56,14 @@ export async function POST(req: Request) {
             ${itemsHtml}
           </tbody>
           <tfoot>
+            <tr>
+              <td colspan="2" style="padding: 10px; text-align: right; color: #718096;">Subtotal:</td>
+              <td style="padding: 10px; text-align: right;">₹${subtotal}</td>
+            </tr>
+            <tr>
+              <td colspan="2" style="padding: 10px; text-align: right; color: #718096;">Shipping:</td>
+              <td style="padding: 10px; text-align: right;">₹${shippingCharge || 0}</td>
+            </tr>
             <tr>
               <td colspan="2" style="padding: 10px; font-weight: bold; text-align: right;">Total Amount:</td>
               <td style="padding: 10px; font-weight: bold; text-align: right; color: #b7791f;">₹${totalPrice}</td>

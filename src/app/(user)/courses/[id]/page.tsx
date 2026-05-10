@@ -3,95 +3,55 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ArrowLeft, GraduationCap, Clock, BookOpen, Lock, Unlock, CheckCircle } from 'lucide-react';
+import { ArrowLeft, GraduationCap, Clock, BookOpen, Lock, Unlock, CheckCircle, Heart, Star, Send, MessageSquare, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LocalStorage } from '@/mock-db/storage';
 import { useAuthStore } from '@/store/auth-store';
 import { useNotificationStore } from '@/store/notification-store';
-import type { Course, CourseEnrollment } from '@/types';
-import { formatPrice } from '@/constants/pricing';
-import { toast } from 'sonner';
+import { useReviewStore } from '@/store/review-store';
+import { useCartStore } from '@/store/cart-store';
+import { useFavoriteStore } from '@/store/favorite-store';
 import { v4 as uuidv4 } from 'uuid';
 import Link from 'next/link';
+import { Separator } from '@/components/ui/separator';
+import type { Course, CourseEnrollment, Order } from '@/types';
+import { toast } from 'sonner';
+import { formatPrice } from '@/constants/pricing';
+import { VideoPlayer } from '@/components/shared/video-player';
 
 export default function CourseDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { user, isAuthenticated } = useAuthStore();
   const { addNotification } = useNotificationStore();
+  const { toggleLike, isLiked } = useFavoriteStore();
+  const { addItem } = useCartStore();
+  const { reviews, loadReviews, addReview } = useReviewStore();
+
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
-  const [enrollOpen, setEnrollOpen] = useState(false);
-
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [hasPurchased, setHasPurchased] = useState(false);
   useEffect(() => {
     const c = LocalStorage.getById<Course>('courses', params.id as string);
     setCourse(c);
     setLoading(false);
-  }, [params.id]);
+    loadReviews(params.id as string, 'course');
 
-  useEffect(() => {
-    const pendingId = localStorage.getItem('pending_enrollment');
-    if (pendingId && isAuthenticated && user && course && pendingId === course.id) {
-      setEnrollOpen(true);
-      localStorage.removeItem('pending_enrollment');
-      toast.success('Ready to complete your enrollment!');
+    if (user && c) {
+      const orders = LocalStorage.getAll<Order>('orders');
+      const purchased = orders.some(
+        (ord) => ord.userId === user.id && ord.items.some((item) => item.id === c.id && item.type === 'course') && ['payment_verified', 'order_shipped', 'order_completed'].includes(ord.status)
+      );
+      setHasPurchased(purchased);
     }
-  }, [isAuthenticated, user, course]);
-
-  const handleEnroll = () => {
-    if (!isAuthenticated || !user || !course) {
-      localStorage.setItem('pending_enrollment', course?.id || '');
-      toast.error('Please login to enroll');
-      router.push(`/login?redirect=/courses/${params.id}`);
-      return;
-    }
-
-    // Check if already enrolled
-    const enrollments = LocalStorage.getAll<CourseEnrollment>('enrollments');
-    const existing = enrollments.find(e => e.userId === user.id && e.courseId === course.id);
-    if (existing) {
-      toast.error('You are already enrolled in this course');
-      setEnrollOpen(false);
-      return;
-    }
-
-    const enrollment: CourseEnrollment = {
-      id: uuidv4(),
-      userId: user.id,
-      userName: user.name,
-      userEmail: user.email,
-      courseId: course.id,
-      courseTitle: course.title,
-      status: 'pending',
-      totalPrice: course.price,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    LocalStorage.create('enrollments', enrollment);
-    addNotification({
-      userId: user.id,
-      title: 'Enrollment Requested',
-      message: `Your enrollment request for "${course.title}" has been submitted.`,
-      type: 'success',
-      link: '/dashboard/courses',
-    });
-
-    // Notify Admin
-    addNotification({
-      userId: 'admin',
-      title: 'New Course Enrollment',
-      message: `${user.name} requested enrollment for "${course.title}".`,
-      type: 'info',
-      link: '/admin/enrollments',
-    });
-    toast.success('Enrollment request submitted!');
-    setEnrollOpen(false);
-  };
+  }, [params.id, user, loadReviews]);
 
   if (loading) return <div className="container mx-auto px-4 py-8"><div className="h-96 animate-pulse bg-muted rounded-xl" /></div>;
 
@@ -122,6 +82,23 @@ export default function CourseDetailPage() {
               <Badge className="absolute top-4 left-4 bg-brand-gold/20 text-brand-gold border-brand-gold/30">
                 {course.difficulty}
               </Badge>
+              <div className="absolute top-4 right-4 flex gap-2">
+                <button
+                  onClick={() => toggleLike(course.id, 'course')}
+                  className={`p-2 rounded-full backdrop-blur-md border border-white/20 shadow-xl transition-all duration-300 ${isLiked(course.id, 'course')
+                    ? 'bg-red-500 text-white border-red-400'
+                    : 'bg-black/60 text-white hover:bg-black/80'
+                    }`}
+                >
+                  <Heart className={`h-4 w-4 ${isLiked(course.id, 'course') ? 'fill-current' : ''}`} />
+                </button>
+              </div>
+              <div className="absolute bottom-4 right-4 z-10 bg-black/60 backdrop-blur-md border border-white/20 rounded-full px-3 py-1 shadow-xl">
+                <span className="text-xs font-bold text-white flex items-center gap-2">
+                  <Heart className="h-3 w-3 fill-red-500 text-red-500" />
+                  {course.likes || 0} Likes
+                </span>
+              </div>
             </div>
 
             <h1 className="text-3xl font-bold mb-2">{course.title}</h1>
@@ -129,41 +106,35 @@ export default function CourseDetailPage() {
               <div className="flex items-center gap-1 text-sm text-muted-foreground">
                 <Clock className="h-4 w-4" /> {course.duration}
               </div>
-              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                <BookOpen className="h-4 w-4" /> {course.modules.length} modules
-              </div>
             </div>
             <p className="text-muted-foreground leading-relaxed">{course.description}</p>
           </motion.div>
 
-          {/* Modules */}
+          {/* Course Content */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-            <h2 className="text-xl font-bold mb-4">Course Modules</h2>
-            <div className="space-y-3">
-              {course.modules.map((mod, i) => (
-                <Card key={mod.id} className={`border-border ${mod.locked ? 'opacity-70' : ''}`}>
-                  <CardContent className="p-4 flex items-start gap-4">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
-                      mod.locked ? 'bg-muted' : 'bg-brand-gold/10'
-                    }`}>
-                      {mod.locked ? (
-                        <Lock className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <Unlock className="h-4 w-4 text-brand-gold" />
-                      )}
+            <h2 className="text-xl font-bold mb-4">Course Video</h2>
+            {hasPurchased && course.videoUrl ? (
+              <div className="rounded-xl overflow-hidden border border-border bg-black shadow-2xl">
+                <VideoPlayer src={course.videoUrl} title={course.title} />
+              </div>
+            ) : (
+              <Card className="border-border bg-accent/5 overflow-hidden group">
+                <CardContent className="p-0 relative aspect-video flex flex-col items-center justify-center text-center px-6">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent z-10" />
+                  <img src={course.thumbnail} alt={course.title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+
+                  <div className="relative z-20 space-y-4">
+                    <div className="h-16 w-16 rounded-full bg-brand-red/90 flex items-center justify-center shadow-lg shadow-brand-red/20 group-hover:scale-110 transition-transform mx-auto">
+                      <Lock className="h-8 w-8 text-white" />
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">Module {i + 1}</span>
-                        {!mod.locked && <Badge variant="outline" className="text-[10px] border-green-400/30 text-green-400">Preview</Badge>}
-                      </div>
-                      <h3 className="font-medium text-sm mt-1">{mod.title}</h3>
-                      <p className="text-xs text-muted-foreground mt-1">{mod.description}</p>
+                    <div className="space-y-1">
+                      <h3 className="font-bold text-lg text-white">Content Locked</h3>
+                      <p className="text-sm text-white/70 max-w-xs mx-auto">Purchase this course to unlock the full instructional video.</p>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </motion.div>
         </div>
 
@@ -180,7 +151,7 @@ export default function CourseDetailPage() {
 
               <ul className="space-y-3">
                 {[
-                  `${course.modules.length} comprehensive modules`,
+                  'Full comprehensive video tutorial',
                   'Lifetime access to content',
                   'Certificate of completion',
                   'Community access',
@@ -193,46 +164,136 @@ export default function CourseDetailPage() {
                 ))}
               </ul>
 
-              <Dialog open={enrollOpen} onOpenChange={setEnrollOpen}>
-                <DialogTrigger render={<Button size="lg" className="w-full bg-brand-red hover:bg-brand-red-light text-white" />}>
-                  Enroll Now
-                </DialogTrigger>
-                <DialogContent className="glass border-border">
-                  <DialogHeader>
-                    <DialogTitle>Enroll in {course.title}</DialogTitle>
-                  </DialogHeader>
-                  <div className="py-4 space-y-4">
-                    <div className="p-4 rounded-lg bg-background/50 space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Course</span>
-                        <span>{course.title}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Duration</span>
-                        <span>{course.duration}</span>
-                      </div>
-                      <Separator className="bg-accent/50" />
-                      <div className="flex justify-between font-bold">
-                        <span>Total</span>
-                        <span className="text-brand-gold">{formatPrice(course.price)}</span>
-                      </div>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      After enrollment, our team will share payment details. Once payment is verified, you&apos;ll get full access to the course.
-                    </p>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setEnrollOpen(false)}>Cancel</Button>
-                    <Button onClick={handleEnroll} className="bg-brand-red hover:bg-brand-red-light text-white">
-                      Submit Enrollment
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+              {hasPurchased ? (
+                <Button size="lg" disabled className="w-full bg-green-500/20 text-green-400 border border-green-500/30">
+                  <CheckCircle className="mr-2 h-5 w-5" /> Already Enrolled
+                </Button>
+              ) : (
+                <Button
+                  size="lg"
+                  className="w-full bg-brand-red hover:bg-brand-red-light text-white font-bold h-14"
+                  onClick={() => {
+                    const success = addItem(course, 'course');
+                    if (success) {
+                      toast.success('Course added to cart!');
+                      router.push('/checkout');
+                    } else {
+                      toast.info('This course is already in your cart');
+                    }
+                  }}
+                >
+                  <ShoppingCart className="mr-2 h-5 w-5" /> Enroll Now
+                </Button>
+              )}
             </CardContent>
           </Card>
         </motion.div>
       </div>
+
+      {/* Reviews Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="mt-16 space-y-8 max-w-4xl"
+      >
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold flex items-center gap-2">
+            <MessageSquare className="h-6 w-6 text-brand-red" />
+            Course Reviews
+          </h2>
+          <div className="flex items-center gap-1 bg-brand-gold/10 px-3 py-1 rounded-full border border-brand-gold/20">
+            <Star className="h-4 w-4 text-brand-gold fill-brand-gold" />
+            <span className="text-sm font-bold text-brand-gold">
+              {reviews.filter(r => r.status === 'approved').length > 0
+                ? (reviews.filter(r => r.status === 'approved').reduce((acc, r) => acc + r.rating, 0) / reviews.filter(r => r.status === 'approved').length).toFixed(1)
+                : 'No reviews'
+              }
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <Card className="lg:col-span-1 border-border bg-card/50 h-fit">
+            <CardContent className="p-6 space-y-4">
+              <h3 className="font-semibold">Share your feedback</h3>
+              {isAuthenticated ? (
+                hasPurchased ? (
+                  <div className="space-y-4">
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button key={star} onClick={() => setReviewRating(star)}>
+                          <Star className={`h-6 w-6 ${reviewRating >= star ? 'text-brand-gold fill-brand-gold' : 'text-muted-foreground'}`} />
+                        </button>
+                      ))}
+                    </div>
+                    <Textarea
+                      placeholder="What did you learn from this course?"
+                      value={reviewComment}
+                      onChange={(e) => setReviewComment(e.target.value)}
+                      className="bg-background/50"
+                    />
+                    <Button
+                      className="w-full bg-brand-red text-white"
+                      disabled={!reviewComment.trim() || submittingReview}
+                      onClick={async () => {
+                        setSubmittingReview(true);
+                        await addReview({
+                          targetId: course.id,
+                          targetType: 'course',
+                          userId: user!.id,
+                          userName: user!.name,
+                          userAvatar: user!.avatar,
+                          rating: reviewRating,
+                          comment: reviewComment,
+                        });
+                        toast.success('Review submitted for moderation!');
+                        setReviewComment('');
+                        setReviewRating(5);
+                        setSubmittingReview(false);
+                      }}
+                    >
+                      {submittingReview ? 'Submitting...' : 'Post Review'}
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Enroll in this course to leave a review.</p>
+                )
+              ) : (
+                <Button variant="outline" className="w-full" onClick={() => router.push('/login')}>Login to Review</Button>
+              )}
+            </CardContent>
+          </Card>
+
+          <div className="lg:col-span-2 space-y-4">
+            {reviews.filter(r => r.status === 'approved').length === 0 ? (
+              <p className="text-muted-foreground italic">No approved reviews yet.</p>
+            ) : (
+              reviews.filter(r => r.status === 'approved').map((review) => (
+                <Card key={review.id} className="border-border bg-card/30">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={review.userAvatar} />
+                        <AvatarFallback>{review.userName.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-sm font-bold">{review.userName}</p>
+                        <div className="flex gap-0.5">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star key={star} className={`h-3 w-3 ${review.rating >= star ? 'text-brand-gold fill-brand-gold' : 'text-muted-foreground'}`} />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground italic">"{review.comment}"</p>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </div>
+      </motion.div>
     </div>
   );
 }

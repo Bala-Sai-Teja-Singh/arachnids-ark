@@ -61,12 +61,20 @@ const careLevelColors: Record<string, string> = {
   expert: 'bg-red-500 text-white hover:bg-red-400',
 };
 
-function FilterPanel({ mainCategory, category, setCategory, origin, setOrigin, careLevel, setCareLevel, sortBy, setSortBy }: {
+const VENOM_POTENCIES = [
+  { value: '', label: 'All Potencies' },
+  { value: 'Mild', label: 'Mild' },
+  { value: 'Potent', label: 'Potent' },
+  { value: 'Medical', label: 'Medical Impact' },
+];
+
+function FilterPanel({ mainCategory, category, setCategory, origin, setOrigin, careLevel, setCareLevel, sortBy, setSortBy, venomPotency, setVenomPotency }: {
   mainCategory: MainCategory;
   category: string; setCategory: (v: string) => void;
   origin: string; setOrigin: (v: string) => void;
   careLevel: string; setCareLevel: (v: string) => void;
   sortBy: string; setSortBy: (v: string) => void;
+  venomPotency: string; setVenomPotency: (v: string) => void;
 }) {
   const filteredHabitats = HABITATS.filter(h => {
     if (!h.value) return true;
@@ -144,6 +152,7 @@ export default function ShopPage() {
   const [origin, setOrigin] = useState('');
   const [careLevel, setCareLevel] = useState('');
   const [sortBy, setSortBy] = useState('');
+  const [venomPotency, setVenomPotency] = useState('');
   const [quickSelectProduct, setQuickSelectProduct] = useState<Product | null>(null);
   const [selectedQuickSize, setSelectedQuickSize] = useState<number>(0);
   const addItem = useCartStore((state) => state.addItem);
@@ -208,15 +217,38 @@ export default function ShopPage() {
     }
   };
 
+  // Reset sub-filters when main category changes
+  useEffect(() => {
+    setHabitat('');
+    setOrigin('');
+    setCareLevel('');
+    setVenomPotency('');
+  }, [mainCategory]);
+
   const filtered = useMemo(() => {
     let result = products.filter(p => p.isVisible !== false && p.mainCategory === mainCategory);
+    
     if (search) {
       const q = search.toLowerCase();
       result = result.filter(p => p.name.toLowerCase().includes(q) || p.scientificName.toLowerCase().includes(q));
     }
-    if (habitat) result = result.filter(p => p.category === habitat);
+    
+    if (habitat) {
+      result = result.filter(p => 
+        p.category === habitat || 
+        p.scorpionMeta?.habitatType.toLowerCase() === habitat.toLowerCase() || 
+        p.centipedeMeta?.habitatType.toLowerCase() === habitat.toLowerCase()
+      );
+    }
+    
     if (origin) result = result.filter(p => p.origin === origin);
     if (careLevel) result = result.filter(p => p.careLevel === careLevel);
+    if (venomPotency) {
+      result = result.filter(p => 
+        p.scorpionMeta?.venomPotency === venomPotency || 
+        p.centipedeMeta?.venomPotency === venomPotency
+      );
+    }
 
     const getMinPrice = (p: Product) => {
       if (!p.sizes || p.sizes.length === 0) return 0;
@@ -231,9 +263,9 @@ export default function ShopPage() {
       default: result.sort((a, b) => a.name.localeCompare(b.name));
     }
     return result;
-  }, [products, search, mainCategory, habitat, origin, careLevel, sortBy]);
+  }, [products, search, mainCategory, habitat, origin, careLevel, sortBy, venomPotency]);
 
-  const activeFilters = [habitat !== '', origin !== '', careLevel !== ''].filter(Boolean).length;
+  const activeFilters = [habitat !== '', origin !== '', careLevel !== '', venomPotency !== ''].filter(Boolean).length;
 
   const handleAddToCart = (e: React.MouseEvent, product: Product) => {
     e.preventDefault();
@@ -246,7 +278,7 @@ export default function ShopPage() {
     }
 
     const size = product.sizes[0];
-    addItem(product, size, 1);
+    addItem(product, 'product', { size, quantity: 1 });
     toast.success(`${product.name} added to cart`, {
       description: `Size: ${size.size} | Qty: 1`,
       icon: <ShoppingCart className="h-4 w-4" />,
@@ -256,7 +288,7 @@ export default function ShopPage() {
   const handleQuickAdd = () => {
     if (!quickSelectProduct) return;
     const size = quickSelectProduct.sizes[selectedQuickSize];
-    addItem(quickSelectProduct, size, 1);
+    addItem(quickSelectProduct, 'product', { size, quantity: 1 });
     toast.success(`${quickSelectProduct.name} added to cart`, {
       description: `Size: ${size.size} | Qty: 1`,
       icon: <ShoppingCart className="h-4 w-4" />,
@@ -349,6 +381,17 @@ export default function ShopPage() {
               })}
             </SelectContent>
           </Select>
+
+          {(mainCategory === 'Scorpions' || mainCategory === 'Centipedes') && (
+            <Select value={venomPotency} onValueChange={(val) => setVenomPotency(val ?? '')}>
+              <SelectTrigger className="w-[160px] bg-card/40 border-border">
+                <SelectValue placeholder="Potency" />
+              </SelectTrigger>
+              <SelectContent className="bg-background border-border">
+                {VENOM_POTENCIES.map(v => <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
           <Select value={sortBy} onValueChange={(val) => setSortBy(val ?? '')}>
             <SelectTrigger className="w-[220px] bg-card/40 border-border">
               <SelectValue placeholder="Sort By: Name" />
@@ -383,6 +426,7 @@ export default function ShopPage() {
                 origin={origin} setOrigin={setOrigin}
                 careLevel={careLevel} setCareLevel={setCareLevel}
                 sortBy={sortBy} setSortBy={setSortBy}
+                venomPotency={venomPotency} setVenomPotency={setVenomPotency}
               />
             </div>
           </SheetContent>

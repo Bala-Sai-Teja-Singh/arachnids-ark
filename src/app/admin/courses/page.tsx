@@ -68,7 +68,7 @@ export default function AdminCoursesPage() {
         description: formData.description || 'Professional training course.',
         difficulty: formData.difficulty || 'beginner',
         thumbnail: formData.thumbnail || '/images/curlyHair.webp',
-        modules: [{ id: 'm1', title: 'Introduction', description: 'Module intro', locked: false }]
+        videoUrl: formData.videoUrl || 'https://www.youtube.com/embed/dQw4w9WgXcQ'
       } as Course;
       LocalStorage.create('courses', newCourse);
       toast.success('Course added');
@@ -106,7 +106,6 @@ export default function AdminCoursesPage() {
               <TableRow className="border-border">
                 <TableHead>Title</TableHead>
                 <TableHead>Difficulty</TableHead>
-                <TableHead>Modules</TableHead>
                 <TableHead>Duration</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -137,7 +136,6 @@ export default function AdminCoursesPage() {
                       </div>
                     </TableCell>
                     <TableCell><Badge variant="outline">{course.difficulty}</Badge></TableCell>
-                    <TableCell>{course.modules.length}</TableCell>
                     <TableCell>{course.duration}</TableCell>
                     <TableCell>{formatPrice(course.price)}</TableCell>
                     <TableCell className="text-right">
@@ -181,10 +179,6 @@ export default function AdminCoursesPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 text-xs">
-                  <div className="space-y-1">
-                    <p className="text-muted-foreground">Modules</p>
-                    <p className="font-medium">{course.modules.length} lessons</p>
-                  </div>
                   <div className="space-y-1">
                     <p className="text-muted-foreground">Duration</p>
                     <p className="font-medium">{course.duration}</p>
@@ -260,10 +254,19 @@ export default function AdminCoursesPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Video Preview URL</Label>
+              <Label>Video URL (for Students)</Label>
+              <Input
+                value={formData.videoUrl || ''}
+                placeholder="https://..."
+                onChange={e => setFormData({ ...formData, videoUrl: e.target.value })}
+                className="bg-background/50"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Preview Description (Public)</Label>
               <Input
                 value={formData.contentPreview || ''}
-                placeholder="https://..."
+                placeholder="Short summary..."
                 onChange={e => setFormData({ ...formData, contentPreview: e.target.value })}
                 className="bg-background/50"
               />

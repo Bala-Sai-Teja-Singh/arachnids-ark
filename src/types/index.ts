@@ -120,20 +120,35 @@ export interface ProductFilter {
 export type OrderStatus =
   | 'pending'
   | 'awaiting_payment'
-  | 'payment_uploaded'
-  | 'verified'
-  | 'rejected'
-  | 'confirmed'
+  | 'payment_verified'
+  | 'order_shipped'
+  | 'order_completed'
+  | 'order_cancelled';
+
+export type EnrollmentStatus =
+  | 'enrolled'
+  | 'cancelled';
+
+export type BookingStatus =
+  | 'payment_verified'
+  | 'scheduled'
   | 'completed'
   | 'cancelled';
 
 export interface OrderItem {
-  productId: string;
-  productName: string;
-  productImage?: string;
+  id: string; // Generic ID (productId, courseId, etc.)
+  name: string;
+  image?: string;
   quantity: number;
   price: number;
-  size: string;
+  type: 'product' | 'course' | 'consultation';
+  metadata?: {
+    size?: string;
+    urgency?: string;
+    query?: string;
+    duration?: number;
+    label?: string;
+  };
 }
 
 // ============ SYSTEM SETTINGS ============
@@ -185,8 +200,11 @@ export interface Order {
   deliveryAddress: string;
   totalPrice: number;
   shippingCharge: number;
+  likes: number; // Added for unified liking
   trackingId?: string;
   courierPartner?: string;
+  cancellationReason?: string;
+  emailsSent?: string[]; // Track which status emails have been sent
   createdAt: string;
   updatedAt: string;
 }
@@ -199,22 +217,17 @@ export interface Course {
   price: number;
   thumbnail: string;
   contentPreview: string;
-  modules: CourseModule[];
+  videoUrl?: string; // Optional because it might only be visible after purchase
   difficulty: CareLevel;
   duration: string;
   featured: boolean;
+  likes: number;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface CourseModule {
-  id: string;
-  title: string;
-  description: string;
-  locked: boolean;
-}
 
-export type EnrollmentStatus = OrderStatus;
+
 
 export interface CourseEnrollment {
   id: string;
@@ -227,6 +240,7 @@ export interface CourseEnrollment {
   paymentScreenshot?: string;
   adminNote?: string;
   totalPrice: number;
+  orderId?: string; // Track which order created this enrollment
   createdAt: string;
   updatedAt: string;
 }
@@ -260,7 +274,7 @@ export interface ConsultationSettings {
   slots: ConsultationSlot[];
 }
 
-export type BookingStatus = OrderStatus;
+// EnrollmentStatus and BookingStatus are defined above
 
 export interface ConsultationBooking {
   id: string;
@@ -285,17 +299,28 @@ export interface ConsultationBooking {
     quantity: number;
     label: string;
     basePrice: number;
-    urgency: string;
+    urgency: ConsultationUrgency;
+    status: BookingStatus;
     minutesUsed?: number;
+    meetingLink?: string;
+    recordingUrl?: string;
     slots?: {
       id: string;
       date: string;
       time: string;
       duration: number;
+      status: BookingStatus;
+      meetingLink?: string;
+      recordingUrl?: string;
+      minutesUsed?: number;
     }[];
   }[];
   createdAt: string;
   updatedAt: string;
+  orderId?: string;
+  recordingUrl?: string;
+  meetingLink?: string;
+  likes?: number;
 }
 
 // ============ NOTIFICATION ============
@@ -317,7 +342,8 @@ export type ReviewStatus = 'pending' | 'approved' | 'rejected';
 
 export interface Review {
   id: string;
-  productId: string;
+  targetId: string;
+  targetType: 'product' | 'course' | 'consultation';
   userId: string;
   userName: string;
   userAvatar?: string;

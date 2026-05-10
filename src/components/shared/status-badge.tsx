@@ -1,16 +1,26 @@
 'use client';
 
 import { Badge } from '@/components/ui/badge';
-import { STATUS_CONFIG } from '@/constants/statuses';
-import type { OrderStatus } from '@/types';
+import { STATUS_CONFIG, ENROLLMENT_STATUS_CONFIG, BOOKING_STATUS_CONFIG } from '@/constants/statuses';
 
 interface StatusBadgeProps {
-  status: OrderStatus;
+  status: any;
+  type?: 'order' | 'enrollment' | 'booking';
   className?: string;
 }
 
-export function StatusBadge({ status, className }: StatusBadgeProps) {
-  const config = STATUS_CONFIG[status];
+export function StatusBadge({ status, type = 'order', className }: StatusBadgeProps) {
+  let config = (STATUS_CONFIG as any)[status];
+  
+  if (type === 'enrollment') config = (ENROLLMENT_STATUS_CONFIG as any)[status];
+  if (type === 'booking') config = (BOOKING_STATUS_CONFIG as any)[status];
+  
+  if (!config) {
+    if (type === 'enrollment') config = ENROLLMENT_STATUS_CONFIG.enrolled;
+    else if (type === 'booking') config = BOOKING_STATUS_CONFIG.payment_verified;
+    else config = STATUS_CONFIG.payment_verified;
+  }
+
   return (
     <Badge
       variant="outline"

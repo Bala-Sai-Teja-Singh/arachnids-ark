@@ -71,41 +71,7 @@ export default function MyOrdersPage() {
     setExpandedOrders(newExpanded);
   };
 
-  const handleUploadScreenshot = (id: string) => {
-    if (!selectedFile) {
-      setUploadError('Please select a payment screenshot to upload');
-      return;
-    }
-    setUploadError(null);
-    LocalStorage.update<Order>('orders', id, {
-      paymentScreenshot: 'payment_screenshot_uploaded.jpg',
-      status: 'payment_uploaded',
-    });
-    setOrders(prev => prev.map(o =>
-      o.id === id ? { ...o, paymentScreenshot: 'payment_screenshot_uploaded.jpg', status: 'payment_uploaded' } : o
-    ));
 
-    // Notify Admin
-    import('@/store/notification-store').then(m => {
-      m.useNotificationStore.getState().addNotification({
-        userId: 'admin',
-        title: 'Order Payment Received',
-        message: `${user?.name} uploaded a payment screenshot for an order.`,
-        type: 'payment',
-        link: `/admin/orders?id=${id}`,
-      });
-    });
-
-    toast.success('Payment screenshot uploaded successfully!');
-    setUploadId(null);
-    setSelectedFile(null);
-  };
-
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedUPI(true);
-    setTimeout(() => setCopiedUPI(false), 2000);
-  };
 
   return (
     <div>
@@ -121,43 +87,43 @@ export default function MyOrdersPage() {
           {orders.map((order, i) => {
             const isExpanded = expandedOrders.has(order.id);
             return (
-              <motion.div 
-                key={order.id} 
+              <motion.div
+                key={order.id}
                 id={`order-${order.id}`}
-                initial={{ opacity: 0, y: 10 }} 
-                animate={{ opacity: 1, y: 0 }} 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
               >
                 <Card className="border-border bg-card/40 backdrop-blur-sm overflow-hidden">
                   <CardContent className="p-0">
                     {/* Order Header */}
                     <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                          <div className="flex items-center gap-4">
-                            <div className="h-10 w-10 rounded-lg bg-brand-red/10 flex items-center justify-center">
-                              <Package className="h-5 w-5 text-brand-red" />
-                            </div>
-                            <div>
-                              <p className="text-xs font-bold uppercase tracking-wider">Order #{order.id.split('-')[0]}</p>
-                              <p className="text-[10px] text-muted-foreground">{new Date(order.createdAt).toLocaleDateString()} at {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                            </div>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                        <div className="flex items-center gap-4">
+                          <div className="h-10 w-10 rounded-lg bg-brand-red/10 flex items-center justify-center">
+                            <Package className="h-5 w-5 text-brand-red" />
                           </div>
-                          {order.status !== 'completed' && order.status !== 'cancelled' && (
-                            <div className="flex items-center gap-1.5 text-[9px] font-bold text-brand-red uppercase tracking-wider bg-brand-red/10 px-3 py-1 rounded-full w-fit">
-                              Check Email for Updates
-                            </div>
-                          )}
+                          <div>
+                            <p className="text-xs font-bold uppercase tracking-wider">Order #{order.id.split('-')[0]}</p>
+                            <p className="text-[10px] text-muted-foreground">{new Date(order.createdAt).toLocaleDateString()} at {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                          </div>
                         </div>
-                      
+                        {order.status !== 'order_completed' && order.status !== 'order_cancelled' && (
+                          <div className="flex items-center gap-1.5 text-[9px] font-bold text-brand-red uppercase tracking-wider bg-brand-red/10 px-3 py-1 rounded-full w-fit">
+                            Check Email for Updates
+                          </div>
+                        )}
+                      </div>
+
                       <div className="flex items-center gap-3">
                         <div className="text-right mr-2">
                           <p className="text-xs text-muted-foreground uppercase tracking-widest leading-none mb-1">Total Amount</p>
                           <p className="text-lg font-bold text-brand-gold leading-none">{formatPrice(order.totalPrice)}</p>
                         </div>
                         <StatusBadge status={order.status} />
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => toggleExpand(order.id)}
                           className="text-muted-foreground"
                         >
@@ -176,12 +142,18 @@ export default function MyOrdersPage() {
                             <div className="space-y-3">
                               {order.items.map((item, idx) => (
                                 <div key={idx} className="flex gap-3 items-center">
-                                  <div className="h-10 w-10 rounded border border-border bg-muted overflow-hidden flex-shrink-0">
-                                    {item.productImage && <img src={item.productImage} alt={item.productName} className="h-full w-full object-cover" />}
+                                  <div className="h-10 w-10 rounded border border-border bg-muted overflow-hidden flex-shrink-0 flex items-center justify-center">
+                                    {item.image ? (
+                                      <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
+                                    ) : (
+                                      <Package className="h-4 w-4 text-muted-foreground" />
+                                    )}
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-bold uppercase truncate">{item.productName}</p>
-                                    <p className="text-[10px] text-muted-foreground">{item.size} × {item.quantity}</p>
+                                    <p className="text-xs font-bold uppercase truncate">{item.name}</p>
+                                    <p className="text-[10px] text-muted-foreground">
+                                      {item.type === 'product' ? (item.metadata?.size || 'N/A') : item.type} × {item.quantity}
+                                    </p>
                                   </div>
                                   <p className="text-xs font-bold text-brand-gold">{formatPrice(item.price * item.quantity)}</p>
                                 </div>
@@ -224,7 +196,7 @@ export default function MyOrdersPage() {
 
                         {/* Action Buttons */}
                         <div className="flex justify-end pt-2">
-                          {order.status !== 'completed' && order.status !== 'cancelled' && (
+                          {order.status !== 'order_completed' && order.status !== 'order_cancelled' && (
                             <div className="p-3 px-5 rounded-2xl bg-brand-gold/10 border border-brand-gold/20 flex flex-col items-end gap-1">
                               <p className="text-[10px] text-brand-gold font-bold uppercase tracking-widest">
                                 {order.status === 'awaiting_payment' ? 'Payment Required' : 'Order in Progress'}
@@ -246,9 +218,9 @@ export default function MyOrdersPage() {
       )}
 
       {/* Order Status Guide */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }} 
-        animate={{ opacity: 1, y: 0 }} 
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
         className="mt-12 p-6 rounded-2xl bg-accent/5 border border-border"
       >
@@ -266,19 +238,19 @@ export default function MyOrdersPage() {
             <p className="text-[11px] text-muted-foreground leading-relaxed">Check your email for payment details. Reply to that email with your payment screenshot.</p>
           </div>
           <div className="space-y-1">
-            <p className="text-[10px] font-black text-purple-400 uppercase tracking-tighter">Payment Verification</p>
-            <p className="text-[11px] text-muted-foreground leading-relaxed">Admin is verifying your payment screenshot received via email.</p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-[10px] font-black text-emerald-400 uppercase tracking-tighter">Confirmed / Confirmed</p>
+            <p className="text-[10px] font-black text-green-400 uppercase tracking-tighter">Payment Verified</p>
             <p className="text-[11px] text-muted-foreground leading-relaxed">Payment verified! Your order is being packed and prepared for safe transit.</p>
           </div>
           <div className="space-y-1">
-            <p className="text-[10px] font-black text-brand-gold uppercase tracking-tighter">Completed / Shipped</p>
+            <p className="text-[10px] font-black text-purple-400 uppercase tracking-tighter">Order Shipped</p>
             <p className="text-[11px] text-muted-foreground leading-relaxed">Your order has been shipped. You can find the Tracking ID and Courier details in the order info.</p>
           </div>
           <div className="space-y-1">
-            <p className="text-[10px] font-black text-red-400 uppercase tracking-tighter">Cancelled / Rejected</p>
+            <p className="text-[10px] font-black text-emerald-400 uppercase tracking-tighter">Order Completed</p>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">The order has been successfully delivered and finalized.</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">Order Cancelled</p>
             <p className="text-[11px] text-muted-foreground leading-relaxed">The order was not processed. This can happen due to stock issues or payment verification failure.</p>
           </div>
         </div>

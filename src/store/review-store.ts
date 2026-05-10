@@ -8,7 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 interface ReviewState {
   reviews: Review[];
   isLoading: boolean;
-  loadReviews: (productId?: string) => void;
+  loadReviews: (targetId?: string, targetType?: 'product' | 'course' | 'consultation') => void;
   addReview: (review: Omit<Review, 'id' | 'createdAt' | 'status'>) => Promise<void>;
   updateReviewStatus: (id: string, status: ReviewStatus) => void;
   deleteReview: (id: string) => void;
@@ -18,12 +18,17 @@ export const useReviewStore = create<ReviewState>()((set, get) => ({
   reviews: [],
   isLoading: false,
 
-  loadReviews: (productId?: string) => {
+  loadReviews: (targetId, targetType) => {
     set({ isLoading: true });
     const all = LocalStorage.getAll<Review>('reviews');
-    const filtered = productId 
-      ? all.filter(r => r.productId === productId)
-      : all;
+    
+    let filtered = all;
+    if (targetId && targetType) {
+      filtered = all.filter(r => r.targetId === targetId && r.targetType === targetType);
+    } else if (targetId) {
+      // Fallback for old calls if any
+      filtered = all.filter(r => r.targetId === targetId);
+    }
     
     set({ 
       reviews: filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()), 
@@ -50,11 +55,15 @@ export const useReviewStore = create<ReviewState>()((set, get) => ({
 
   updateReviewStatus: (id, status) => {
     LocalStorage.update<Review>('reviews', id, { status });
-    get().loadReviews();
+    // Since we don't have target info here, we reload all for simplicity in the store 
+    // or the caller should handle it.
+    const all = LocalStorage.getAll<Review>('reviews');
+    set({ reviews: all.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) });
   },
 
   deleteReview: (id) => {
     LocalStorage.delete('reviews', id);
-    get().loadReviews();
+    const all = LocalStorage.getAll<Review>('reviews');
+    set({ reviews: all.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) });
   }
 }));

@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import { useNotificationStore } from '@/store/notification-store';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Order, Product, ProductSize, SystemSettings, ShippingRule } from '@/types';
+import { Badge } from '@/components/ui/badge';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -54,18 +55,20 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (!shippingSettings) return;
 
-    // Count tarantulas in the cart
-    const tarantulaCount = items.reduce((acc, item) => {
-      const product = LocalStorage.getById<Product>('products', item.productId);
-      if (product?.mainCategory === 'Tarantulas') {
-        return acc + item.quantity;
+    // Count products (Tarantulas, etc) in the cart for shipping
+    const productCount = items.reduce((acc, item) => {
+      if (item.type === 'product') {
+        const product = LocalStorage.getById<Product>('products', item.id);
+        if (product?.mainCategory === 'Tarantulas') {
+          return acc + item.quantity;
+        }
       }
       return acc;
     }, 0);
 
     // Find applicable shipping rule
     const rule = shippingSettings.rules?.find(
-      r => tarantulaCount >= r.minQuantity && tarantulaCount <= r.maxQuantity
+      r => productCount >= r.minQuantity && productCount <= r.maxQuantity
     );
 
     setShippingCharge(rule ? rule.charge : 0);
@@ -75,17 +78,15 @@ export default function CheckoutPage() {
     // Load full product details for size switching
     const details: Record<string, Product> = {};
     items.forEach(item => {
-      if (!productDetails[item.productId]) {
-        const p = LocalStorage.getById<Product>('products', item.productId);
-        if (p) details[item.productId] = p;
+      if (item.type === 'product' && !productDetails[item.id]) {
+        const p = LocalStorage.getById<Product>('products', item.id);
+        if (p) details[item.id] = p;
       }
     });
     if (Object.keys(details).length > 0) {
-      setTimeout(() => {
-        setProductDetails(prev => ({ ...prev, ...details }));
-      }, 0);
+      setProductDetails(prev => ({ ...prev, ...details }));
     }
-  }, [items]);
+  }, [items, productDetails]);
 
   useEffect(() => {
     if (user) {
@@ -141,12 +142,13 @@ export default function CheckoutPage() {
       userName: user.name,
       userEmail: user.email,
       items: items.map(item => ({
-        productId: item.productId,
-        productName: item.name,
-        productImage: item.image,
+        id: item.id,
+        name: item.name,
+        image: item.image,
         quantity: item.quantity,
         price: item.price,
-        size: item.size,
+        type: item.type,
+        metadata: item.metadata
       })),
       status: 'pending',
       deliveryName,
@@ -155,6 +157,7 @@ export default function CheckoutPage() {
       shippingCharge,
       totalPrice: totalPrice() + shippingCharge,
       message,
+      likes: 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -179,7 +182,7 @@ export default function CheckoutPage() {
             paymentDetails,
             adminEmail: 'harrysweettt@gmail.com'
           })
-        }).catch(err => console.error('Failed to trigger email:', err));
+        }).catch((err: Error) => console.error('Failed to trigger email:', err));
       }
 
       // User Notification
@@ -333,17 +336,17 @@ export default function CheckoutPage() {
                 <CardHeader className="bg-accent/10 border-b border-border">
                   <CardTitle className="text-lg flex items-center gap-2">
                     <CreditCard className="h-5 w-5 text-brand-gold" />
-                    Next Steps
+                    How to Pay
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
-                  <div className="flex items-start gap-4 p-4 rounded-xl border border-brand-red/20 bg-brand-red/5">
-                    <CheckCircle2 className="h-5 w-5 text-brand-red mt-0.5" />
+                  <div className="flex items-start gap-4 p-4 rounded-xl border border-brand-gold/20 bg-brand-gold/5">
+                    <CreditCard className="h-5 w-5 text-brand-gold mt-0.5" />
                     <div>
-                      <p className="font-bold text-sm">Payment via Email</p>
+                      <p className="font-bold text-sm">Email-Based Payment</p>
                       <p className="text-xs text-muted-foreground leading-relaxed">
-                        We have received your order request! An automated email with our <strong>UPI and Bank Transfer</strong> details has been sent to your registered email address.
-                        Please reply to that email with your payment screenshot to confirm your order.
+                        After placing your order request, you will receive an automated email with our <strong>UPI and Bank Transfer</strong> details.
+                        To confirm your purchase, simply reply to that email with a screenshot of your payment.
                       </p>
                     </div>
                   </div>
@@ -361,36 +364,60 @@ export default function CheckoutPage() {
               </CardHeader>
               <CardContent className="p-6 space-y-4">
                 <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                  {items.map((item) => (
-                    <div key={`${item.productId}-${item.size}`} className="flex gap-3">
-                      <div className="h-12 w-12 rounded bg-muted overflow-hidden border border-border flex-shrink-0">
-                        {item.image && <img src={item.image} alt={item.name} className="h-full w-full object-cover" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold uppercase truncate">{item.name}</p>
-                        <p className="text-[10px] text-muted-foreground italic truncate">{item.scientificName}</p>
-                        <div className="flex justify-between items-center mt-1">
-                          <Select
-                            value={item.size}
-                            onValueChange={(val) => handleSizeChange(item.productId, item.size, val || '')}
-                          >
-                            <SelectTrigger className="h-6 w-auto min-w-[70px] text-[10px] px-2 py-0 bg-accent/50 border-none font-bold uppercase">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="glass border-border">
-                              {productDetails[item.productId]?.sizes.map((s, idx) => (
-                                <SelectItem key={idx} value={s.size} className="text-[10px] uppercase font-bold">
-                                  {s.size} - {formatPrice(s.price)}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <span className="text-[10px] text-muted-foreground ml-2 uppercase font-bold">× {item.quantity}</span>
-                          <span className="text-xs font-bold text-brand-gold ml-auto">{formatPrice(item.price * item.quantity)}</span>
+                  {items.map((item, idx) => {
+                    const itemKey = `${item.id}-${item.type}-${item.metadata?.size || item.metadata?.duration || idx}`;
+                    return (
+                      <div key={itemKey} className="flex gap-3">
+                        <div className="h-12 w-12 rounded bg-muted overflow-hidden border border-border flex-shrink-0 flex items-center justify-center">
+                          {item.image ? (
+                            <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
+                          ) : (
+                            <ShoppingBag className="h-6 w-6 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold uppercase truncate">{item.name}</p>
+                          {item.scientificName && (
+                            <p className="text-[10px] text-muted-foreground italic truncate">{item.scientificName}</p>
+                          )}
+                          <div className="flex justify-between items-center mt-1">
+                            {item.type === 'product' && item.metadata?.size ? (
+                              <Select
+                                value={item.metadata.size}
+                                onValueChange={(val) => handleSizeChange(item.id, item.metadata?.size || '', val || '')}
+                              >
+                                <SelectTrigger className="h-6 w-auto min-w-[70px] text-[10px] px-2 py-0 bg-accent/50 border-none font-bold uppercase">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="glass border-border">
+                                  {productDetails[item.id]?.sizes.map((s, sIdx) => (
+                                    <SelectItem key={sIdx} value={s.size} className="text-[10px] uppercase font-bold">
+                                      {s.size} - {formatPrice(s.price)}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : item.type === 'consultation' ? (
+                              <div className="flex flex-col gap-1">
+                                <Badge variant="outline" className="text-[8px] bg-brand-gold/10 border-brand-gold/20 text-brand-gold h-4 uppercase w-fit">
+                                  {item.metadata?.label || 'Consultation'}
+                                </Badge>
+                                <p className="text-[9px] text-muted-foreground font-medium uppercase tracking-tighter">
+                                  {item.metadata?.duration}m • {item.metadata?.urgency}
+                                </p>
+                              </div>
+                            ) : (
+                              <Badge variant="outline" className="text-[8px] bg-brand-red/10 border-brand-red/20 text-brand-red h-4 uppercase">
+                                Course
+                              </Badge>
+                            )}
+                            <span className="text-[10px] text-muted-foreground ml-2 uppercase font-bold">× {item.quantity}</span>
+                            <span className="text-xs font-bold text-brand-gold ml-auto">{formatPrice(item.price * item.quantity)}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 <Separator className="bg-border" />

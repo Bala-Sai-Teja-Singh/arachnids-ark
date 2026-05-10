@@ -40,11 +40,11 @@ export default function AdminRevenuePage() {
     const bookings = LocalStorage.getAll<ConsultationBooking>('bookings');
 
     const completedOrders: RevenueItem[] = orders
-      .filter(o => ['payment_uploaded', 'verified', 'completed'].includes(o.status))
+      .filter(o => ['payment_verified', 'order_shipped', 'order_completed'].includes(o.status))
       .map(o => ({
         id: o.id,
         type: 'product',
-        name: o.items.length === 1 ? o.items[0].productName : `${o.items.length} Species Order`,
+        name: o.items.length === 1 ? o.items[0].name : `${o.items.length} Species Order`,
         userName: o.userName,
         userEmail: o.userEmail,
         amount: o.totalPrice,
@@ -53,7 +53,7 @@ export default function AdminRevenuePage() {
       }));
 
     const completedEnrollments: RevenueItem[] = enrollments
-      .filter(e => ['payment_uploaded', 'verified', 'completed'].includes(e.status))
+      .filter(e => e.status === 'enrolled')
       .map(e => ({
         id: e.id,
         type: 'course',
@@ -66,7 +66,7 @@ export default function AdminRevenuePage() {
       }));
 
     const completedBookings: RevenueItem[] = bookings
-      .filter(b => ['payment_uploaded', 'verified', 'completed'].includes(b.status))
+      .filter(b => ['payment_verified', 'scheduled', 'completed'].includes(b.status))
       .map(b => ({
         id: b.id,
         type: 'consultation',

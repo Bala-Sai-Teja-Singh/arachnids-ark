@@ -195,30 +195,34 @@ const PRODUCTS: Product[] = [
 
 const COURSES: Course[] = [
   {
-    id: 'course-001', title: 'Tarantula Keeping 101', description: 'The complete beginner\'s guide to keeping your first tarantula. Learn about enclosure setup, feeding, temperature and humidity requirements, and common health issues.',
-    price: 999, thumbnail: '/images/curlyHair.webp',
+    id: 'course-001', 
+    title: 'Tarantula Keeping 101', 
+    description: 'The complete beginner\'s guide to keeping your first tarantula. Learn about enclosure setup, feeding, temperature and humidity requirements, and common health issues.',
+    price: 999, 
+    thumbnail: '/images/curlyHair.webp',
     contentPreview: 'This comprehensive course covers everything from choosing your first species to creating the perfect habitat.',
-    difficulty: 'beginner', duration: '4 hours', featured: true,
-    modules: [
-      { id: 'mod-001', title: 'Choosing Your First Tarantula', description: 'Species selection, what to look for, reputable sources', locked: false },
-      { id: 'mod-002', title: 'Enclosure Setup', description: 'Substrates, hides, water dishes, ventilation', locked: true },
-      { id: 'mod-003', title: 'Feeding & Nutrition', description: 'Prey items, feeding schedules, supplements', locked: true },
-      { id: 'mod-004', title: 'Health & Molting', description: 'Signs of illness, molting process, when to seek help', locked: true },
-    ],
-    createdAt: '2025-01-01T00:00:00Z', updatedAt: '2025-01-01T00:00:00Z'
+    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ', // Placeholder
+    difficulty: 'beginner', 
+    duration: '4 hours', 
+    featured: true,
+    likes: 124,
+    createdAt: '2025-01-01T00:00:00Z', 
+    updatedAt: '2025-01-01T00:00:00Z'
   },
   {
-    id: 'course-002', title: 'Advanced Husbandry', description: 'Deep dive into advanced tarantula husbandry techniques including breeding, creating bioactive enclosures, and managing large collections.',
-    price: 1999, thumbnail: '/images/brazilianBlack-1.webp',
+    id: 'course-002', 
+    title: 'Advanced Husbandry', 
+    description: 'Deep dive into advanced tarantula husbandry techniques including breeding, creating bioactive enclosures, and managing large collections.',
+    price: 1999, 
+    thumbnail: '/images/brazilianBlack-1.webp',
     contentPreview: 'Take your tarantula keeping to the next level with professional-grade husbandry techniques.',
-    difficulty: 'advanced', duration: '8 hours', featured: true,
-    modules: [
-      { id: 'mod-005', title: 'Bioactive Enclosures', description: 'Creating self-sustaining ecosystems', locked: false },
-      { id: 'mod-006', title: 'Breeding Basics', description: 'Pairing, mating, egg sacs', locked: true },
-      { id: 'mod-007', title: 'Collection Management', description: 'Record keeping, organization, health checks', locked: true },
-      { id: 'mod-008', title: 'Advanced Feeding', description: 'Diverse prey items, gutloading, nutrition', locked: true },
-    ],
-    createdAt: '2025-01-02T00:00:00Z', updatedAt: '2025-01-02T00:00:00Z'
+    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ', // Placeholder
+    difficulty: 'advanced', 
+    duration: '8 hours', 
+    featured: true,
+    likes: 89,
+    createdAt: '2025-01-02T00:00:00Z', 
+    updatedAt: '2025-01-02T00:00:00Z'
   },
 ];
 

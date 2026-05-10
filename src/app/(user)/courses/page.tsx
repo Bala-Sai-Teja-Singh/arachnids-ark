@@ -3,13 +3,16 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { GraduationCap, Clock, BookOpen } from 'lucide-react';
+import { GraduationCap, Clock, BookOpen, Heart, ShoppingCart } from 'lucide-react';
+import { useCartStore } from '@/store/cart-store';
+import { useFavoriteStore } from '@/store/favorite-store';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { SkeletonCard } from '@/components/shared/skeleton-card';
 import { LocalStorage } from '@/mock-db/storage';
 import type { Course } from '@/types';
 import { formatPrice } from '@/constants/pricing';
+import { toast } from 'sonner';
 
 const diffColors: Record<string, string> = {
   beginner: 'text-green-400 bg-green-400/10',
@@ -21,6 +24,8 @@ const diffColors: Record<string, string> = {
 export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
+  const addItem = useCartStore((state) => state.addItem);
+  const { toggleLike, isLiked } = useFavoriteStore();
 
   useEffect(() => {
     setTimeout(() => {
@@ -68,17 +73,50 @@ export default function CoursesPage() {
                       <Clock className="h-3 w-3 text-muted-foreground" />
                       <span className="text-xs text-muted-foreground">{course.duration}</span>
                     </div>
+
+                    {/* Like Button */}
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        toggleLike(course.id, 'course');
+                      }}
+                      className={`absolute bottom-3 right-3 p-2 rounded-full backdrop-blur-md border border-white/20 shadow-xl transition-all duration-300 ${isLiked(course.id, 'course')
+                          ? 'bg-red-500 text-white border-red-400'
+                          : 'bg-black/60 text-white hover:bg-black/80'
+                        }`}
+                    >
+                      <Heart className={`h-3 w-3 ${isLiked(course.id, 'course') ? 'fill-current' : ''}`} />
+                    </button>
+
+                    {/* Like Count */}
+                    <div className="absolute bottom-3 right-12 bg-black/60 backdrop-blur-md border border-white/20 rounded-full px-2 py-0.5 shadow-xl">
+                      <span className="text-[10px] font-bold text-white flex items-center gap-1">
+                        <Heart className="h-2.5 w-2.5 fill-red-500 text-red-500" />
+                        {course.likes || 0}
+                      </span>
+                    </div>
                   </div>
                   <CardContent className="p-5 space-y-3">
                     <h3 className="font-semibold text-lg group-hover:text-brand-gold transition-colors">{course.title}</h3>
                     <p className="text-sm text-muted-foreground line-clamp-2">{course.contentPreview}</p>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <BookOpen className="h-3 w-3" />
-                      {course.modules.length} modules
-                    </div>
                     <div className="flex items-center justify-between pt-3 border-t border-border">
                       <span className="text-xl font-bold text-brand-gold">{formatPrice(course.price)}</span>
-                      <span className="text-xs text-brand-red font-medium">Enroll Now →</span>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const success = addItem(course, 'course');
+                          if (success) {
+                            toast.success('Course added to cart!');
+                          } else {
+                            toast.info('This course is already in your cart');
+                          }
+                        }}
+                        className="text-xs text-brand-red font-medium flex items-center gap-1 hover:underline"
+                      >
+                        <ShoppingCart className="h-3 w-3" /> Add to Cart
+                      </button>
                     </div>
                   </CardContent>
                 </Card>

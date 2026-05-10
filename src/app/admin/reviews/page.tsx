@@ -164,7 +164,7 @@ export default function AdminReviewsPage() {
                           {review.comment}
                         </p>
                         <p className="text-[10px] text-muted-foreground">
-                          Product ID: <code className="bg-accent/30 px-1 rounded">{review.productId}</code>
+                          {review.targetType.charAt(0).toUpperCase() + review.targetType.slice(1)} ID: <code className="bg-accent/30 px-1 rounded">{review.targetId}</code>
                         </p>
                       </div>
 

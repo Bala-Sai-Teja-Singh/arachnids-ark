@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, Upload, Check, Copy } from 'lucide-react';
+import { Calendar, Upload, Check, Copy, PlayCircle, Eye } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { VideoPlayer } from '@/components/shared/video-player';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -44,33 +45,6 @@ export default function MyConsultationsPage() {
     }
   }, [user]);
 
-  const handleUpload = (id: string) => {
-    if (!selectedFile) {
-      setUploadError('Please select a payment screenshot to upload');
-      return;
-    }
-    setUploadError(null);
-    LocalStorage.update<ConsultationBooking>('bookings', id, {
-      paymentScreenshot: 'payment_uploaded.jpg',
-      status: 'payment_uploaded',
-    });
-    setBookings(prev => prev.map(b =>
-      b.id === id ? { ...b, paymentScreenshot: 'payment_uploaded.jpg', status: 'payment_uploaded' as const } : b
-    ));
-
-    // Notify Admin
-    useNotificationStore.getState().addNotification({
-      userId: 'admin',
-      title: 'Payment Received',
-      message: `${user?.name} uploaded a payment screenshot for a consultation.`,
-      type: 'payment',
-    });
-
-    toast.success('Payment screenshot uploaded successfully!');
-    setUploadId(null);
-    setSelectedFile(null);
-  };
-
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedUPI(true);
@@ -107,154 +81,81 @@ export default function MyConsultationsPage() {
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-lg font-bold text-brand-gold">{formatPrice(booking.totalPrice || 0)}</span>
-                      <StatusBadge status={booking.status} />
-                      {booking.status === 'awaiting_payment' && (
-                        <Dialog open={uploadId === booking.id} onOpenChange={(open) => {
-                          setUploadId(open ? booking.id : null);
-                          if (!open) {
-                            setSelectedFile(null);
-                            setUploadError(null);
-                          }
-                        }}>
-                          <DialogTrigger render={<Button size="sm" className="bg-brand-gold hover:bg-brand-gold-light text-white" />}>
-                            Pay Now
-                          </DialogTrigger>
-                          <DialogContent className="glass border-border">
-                            <DialogHeader><DialogTitle>Complete Your Payment</DialogTitle></DialogHeader>
-                            <div className="py-4 space-y-6">
-                              <div className="bg-background/50 border border-border p-4 rounded-lg space-y-4">
-                                <div className="space-y-2">
-                                  <Label className="text-xs text-muted-foreground">Select UPI ID</Label>
-                                  {systemSettings && systemSettings.upiIds.length > 0 ? (
-                                    <Select value={selectedUPI} onValueChange={(val) => setSelectedUPI(val ?? '')}>
-                                      <SelectTrigger className="w-full bg-background/50">
-                                        <SelectValue placeholder="Select UPI ID" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {systemSettings.upiIds.map((upi) => (
-                                          <SelectItem key={upi.id} value={upi.value}>
-                                            {upi.label} ({upi.value})
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  ) : (
-                                    <p className="font-mono text-sm bg-muted/50 p-2 rounded border border-border select-all">payments@arachnidsark</p>
-                                  )}
-                                  {selectedUPI && (
-                                    <div 
-                                      onClick={() => handleCopy(selectedUPI)}
-                                      className={`mt-2 p-2 rounded border transition-all duration-300 flex items-center justify-between cursor-pointer group ${copiedUPI ? 'bg-green-500/10 border-green-500/50' : 'bg-muted/30 border-border hover:bg-muted/50'}`}
-                                    >
-                                      <span className="font-mono text-sm select-all">{selectedUPI}</span>
-                                      <div className="flex items-center gap-1.5">
-                                        {copiedUPI ? (
-                                          <>
-                                            <Check className="h-3 w-3 text-green-500" />
-                                            <span className="text-[10px] text-green-500 uppercase tracking-widest font-black">Copied!</span>
-                                          </>
-                                        ) : (
-                                          <>
-                                            <Copy className="h-3 w-3 text-muted-foreground group-hover:text-brand-gold transition-colors" />
-                                            <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold group-hover:text-brand-gold transition-colors">Copy</span>
-                                          </>
-                                        )}
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-
-                                <div className="space-y-1 mt-2 border-t border-border pt-3">
-                                  <p className="text-xs text-muted-foreground">Bank Transfer Details</p>
-                                  <div className="font-mono text-xs bg-muted/50 p-2 rounded border border-border space-y-1">
-                                    {systemSettings?.bankDetails ? (
-                                      <pre className="whitespace-pre-wrap font-mono text-[10px]">{systemSettings.bankDetails}</pre>
-                                    ) : (
-                                      <>
-                                        <p>Bank: HDFC Bank</p>
-                                        <p>Account Name: ArachnidsArk Pvt Ltd</p>
-                                        <p>A/C Number: <span className="select-all">50200001234567</span></p>
-                                        <p>IFSC: <span className="select-all">HDFC0001234</span></p>
-                                      </>
-                                    )}
-                                  </div>
-                                </div>
-                                <p className="text-[10px] text-brand-gold italic">
-                                  {systemSettings?.paymentInstructions || `Please include your booking ID (${booking.id.split('-')[1] || booking.id}) in the transfer remarks.`}
-                                </p>
-                              </div>
-
-                              <div className="space-y-2 border-t border-border pt-4">
-                                <Label>Upload Payment Screenshot</Label>
-                                <Input
-                                  type="file"
-                                  accept="image/*"
-                                  className={`bg-background/50 cursor-pointer ${uploadError ? 'border-red-500' : ''}`}
-                                  onChange={(e) => {
-                                    setSelectedFile(e.target.files?.[0] || null);
-                                    setUploadError(null);
-                                  }}
-                                />
-                                {uploadError && <p className="text-xs text-red-500 font-medium">{uploadError}</p>}
-                                <p className="text-xs text-muted-foreground">Upload your payment proof for verification.</p>
-                              </div>
-                            </div>
-                            <DialogFooter>
-                              <Button variant="outline" onClick={() => setUploadId(null)}>Cancel</Button>
-                              <Button onClick={() => handleUpload(booking.id)} className="bg-brand-red hover:bg-brand-red-light text-white">Submit</Button>
-                            </DialogFooter>
-                          </DialogContent>
-                        </Dialog>
-                      )}
+                      <StatusBadge status={booking.status} type="booking" />
                     </div>
                   </div>
 
                   {/* Scheduled Calls & Usage */}
-                  {booking.status !== 'awaiting_payment' && booking.items?.some(i => i.slots?.length || i.minutesUsed) && (
-                    <div className="mt-4 pt-4 border-t border-border grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-3">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                          <Calendar className="h-3 w-3 text-brand-gold" />
-                          Scheduled Calls
-                        </p>
-                        <div className="space-y-2">
-                          {booking.items.flatMap(i => i.slots || []).length > 0 ? (
-                            booking.items.flatMap(i => i.slots || []).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map(slot => (
-                              <div key={slot.id} className="flex items-center justify-between p-2 rounded-lg bg-accent/5 border border-border text-xs">
-                                <div>
-                                  <p className="font-bold">{new Date(slot.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
-                                  <p className="text-muted-foreground">{slot.time}</p>
+                  <div className="mt-4 pt-4 border-t border-border space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-3">
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                            <Calendar className="h-3 w-3 text-brand-gold" />
+                            Scheduled Calls
+                          </p>
+                          <div className="space-y-2">
+                            {booking.items?.flatMap(i => i.slots || []).length ? (
+                              booking.items.flatMap(i => i.slots || []).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map(slot => (
+                                <div key={slot.id} className="flex items-center justify-between p-2 rounded-lg bg-accent/5 border border-border text-xs">
+                                  <div>
+                                    <p className="font-bold">{new Date(slot.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                                    <p className="text-muted-foreground">{slot.time}</p>
+                                  </div>
+                                  <Badge variant="outline" className="text-[8px]">{slot.duration} mins</Badge>
                                 </div>
-                                <Badge variant="outline" className="text-[8px]">{slot.duration} mins</Badge>
-                              </div>
-                            ))
-                          ) : (
-                            <p className="text-[10px] text-muted-foreground italic">Your calls will be scheduled by the admin soon.</p>
-                          )}
+                              ))
+                            ) : (
+                              <p className="text-[10px] text-muted-foreground italic">Your calls will be scheduled by the admin soon.</p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                            <PlayCircle className="h-3 w-3 text-brand-red" />
+                            Talktime Usage
+                          </p>
+                          <div className="p-3 rounded-lg bg-brand-gold/5 border border-brand-gold/10 space-y-2">
+                            <div className="flex justify-between text-xs">
+                              <span className="text-muted-foreground">Total Minutes Used</span>
+                              <span className="font-bold text-brand-red">{booking.minutesUsed || 0}m</span>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                              <span className="text-muted-foreground">Remaining Balance</span>
+                              <span className="font-bold text-brand-gold">{booking.duration - (booking.minutesUsed || 0)}m</span>
+                            </div>
+                            <div className="w-full bg-muted h-1 rounded-full overflow-hidden mt-2">
+                              <div
+                                className="bg-brand-gold h-full transition-all duration-500"
+                                style={{ width: `${Math.min(100, ((booking.minutesUsed || 0) / booking.duration) * 100)}%` }}
+                              />
+                            </div>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="space-y-3">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Talktime Usage</p>
-                        <div className="p-3 rounded-lg bg-brand-gold/5 border border-brand-gold/10 space-y-2">
-                          <div className="flex justify-between text-xs">
-                            <span className="text-muted-foreground">Total Minutes Used</span>
-                            <span className="font-bold text-brand-red">{booking.minutesUsed || 0}m</span>
+                      {/* Recording Section */}
+                      {booking.recordingUrl && (
+                        <div className="space-y-3 pt-2 border-t border-border/50">
+                          <div className="flex items-center justify-between">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                              <Eye className="h-3 w-3 text-brand-gold" />
+                              Session Recording
+                            </p>
+                            <Badge variant="outline" className="bg-brand-red/10 text-brand-red border-brand-red/20 text-[9px] uppercase font-black">Private</Badge>
                           </div>
-                          <div className="flex justify-between text-xs">
-                            <span className="text-muted-foreground">Remaining Balance</span>
-                            <span className="font-bold text-brand-gold">{booking.duration - (booking.minutesUsed || 0)}m</span>
-                          </div>
-                          <div className="w-full bg-muted h-1 rounded-full overflow-hidden mt-2">
-                            <div
-                              className="bg-brand-gold h-full transition-all duration-500"
-                              style={{ width: `${Math.min(100, ((booking.minutesUsed || 0) / booking.duration) * 100)}%` }}
+                          <div className="max-w-2xl mx-auto">
+                            <VideoPlayer 
+                              src={booking.recordingUrl} 
+                              title={`Session Recording - ${new Date(booking.createdAt).toLocaleDateString()}`}
                             />
                           </div>
+                          <p className="text-[10px] text-center text-muted-foreground italic">
+                            This recording is private and visible only to you.
+                          </p>
                         </div>
-                      </div>
+                      )}
                     </div>
-                  )}
                 </CardContent>
               </Card>
             </motion.div>
