@@ -509,7 +509,17 @@ export default function ProductDetailPage() {
           {/* Review Form */}
           <Card className="lg:col-span-1 border-border bg-card/50 h-fit">
             <CardContent className="p-6 space-y-4">
-              <h3 className="font-semibold">Write a Review</h3>
+              <div className="flex items-center gap-3 mb-2">
+                {isAuthenticated && user && (
+                  <Avatar className="h-8 w-8 border border-brand-red/30">
+                    <AvatarImage src={user.avatar} />
+                    <AvatarFallback className="bg-brand-red text-white text-[10px]">
+                      {user.name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
+                <h3 className="font-semibold">Write a Review</h3>
+              </div>
               {isAuthenticated ? (
                 hasPurchased ? (
                   <div className="space-y-4">
@@ -537,7 +547,7 @@ export default function ProductDetailPage() {
                       />
                     </div>
                     <Button
-                      className="w-full bg-brand-red hover:bg-brand-red-light text-white"
+                      className="w-full bg-brand-red hover:bg-brand-red-light text-white font-bold"
                       disabled={!reviewComment.trim() || submittingReview}
                       onClick={async () => {
                         if (!user || !product) return;
@@ -591,7 +601,7 @@ export default function ProductDetailPage() {
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3">
-                        <Avatar>
+                        <Avatar className="h-10 w-10 border border-brand-red/30">
                           <AvatarImage src={review.userAvatar} />
                           <AvatarFallback className="bg-brand-red text-white">
                             {review.userName.charAt(0).toUpperCase()}
@@ -599,7 +609,7 @@ export default function ProductDetailPage() {
                         </Avatar>
                         <div>
                           <p className="text-sm font-bold">{review.userName}</p>
-                          <div className="flex gap-0.5">
+                          <div className="flex gap-0.5 mt-1">
                             {[1, 2, 3, 4, 5].map((star) => (
                               <Star
                                 key={star}

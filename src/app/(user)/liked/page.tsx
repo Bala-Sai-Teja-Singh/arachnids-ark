@@ -4,19 +4,20 @@
 import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ShoppingCart, Bug, ArrowLeft, Trash2 } from 'lucide-react';
+import { ShoppingCart, Bug, ArrowLeft, Trash2, GraduationCap, Clock, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { LocalStorage } from '@/mock-db/storage';
-import type { Product } from '@/types';
+import type { Product, Course, CourseEnrollment } from '@/types';
 import { formatPrice } from '@/constants/pricing';
 import { useCartStore } from '@/store/cart-store';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/shared/empty-state';
 import { useAuthStore } from '@/store/auth-store';
 import { useRouter } from 'next/navigation';
+import { useFavoriteStore } from '@/store/favorite-store';
 
 const careLevelColors: Record<string, string> = {
   beginner: 'bg-green-500 text-black hover:bg-green-400',
@@ -25,14 +26,17 @@ const careLevelColors: Record<string, string> = {
   expert: 'bg-red-500 text-white hover:bg-red-400',
 };
 
-export default function LikedProductsPage() {
+export default function FavoritesPage() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [likedIds, setLikedIds] = useState<string[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [enrollments, setEnrollments] = useState<CourseEnrollment[]>([]);
   const [loading, setLoading] = useState(true);
   const [quickSelectProduct, setQuickSelectProduct] = useState<Product | null>(null);
   const [selectedQuickSize, setSelectedQuickSize] = useState<number>(0);
+  
   const addItem = useCartStore((state) => state.addItem);
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
+  const { likedIds, toggleLike } = useFavoriteStore();
   const router = useRouter();
 
   useEffect(() => {
@@ -41,37 +45,29 @@ export default function LikedProductsPage() {
       return;
     }
 
-    const all = LocalStorage.getAll<Product>('products');
-    setProducts(all);
-    
-    const savedLikes = localStorage.getItem('arachnidsark_liked_products');
-    if (savedLikes) {
-      setLikedIds(JSON.parse(savedLikes));
-    }
+    const allProducts = LocalStorage.getAll<Product>('products');
+    const allCourses = LocalStorage.getAll<Course>('courses');
+    const allEnrollments = LocalStorage.getAll<CourseEnrollment>('enrollments');
+    setProducts(allProducts);
+    setCourses(allCourses);
+    setEnrollments(allEnrollments);
     setLoading(false);
   }, [isAuthenticated, router]);
 
   const likedProducts = useMemo(() => {
-    return products.filter(p => likedIds.includes(p.id));
-  }, [products, likedIds]);
+    return products.filter(p => likedIds.product.includes(p.id));
+  }, [products, likedIds.product]);
 
-  const handleUnlike = (e: React.MouseEvent, productId: string) => {
+  const likedCourses = useMemo(() => {
+    return courses.filter(c => likedIds.course.includes(c.id));
+  }, [courses, likedIds.course]);
+
+  const totalFavorites = likedProducts.length + likedCourses.length;
+
+  const handleUnlike = (e: React.MouseEvent, id: string, type: 'product' | 'course') => {
     e.preventDefault();
     e.stopPropagation();
-    
-    const newLikedIds = likedIds.filter(id => id !== productId);
-    setLikedIds(newLikedIds);
-    localStorage.setItem('arachnidsark_liked_products', JSON.stringify(newLikedIds));
-    
-    // Update the like count in the mock database
-    const product = products.find(p => p.id === productId);
-    if (product) {
-      const newLikes = Math.max(0, (product.likes || 0) - 1);
-      LocalStorage.update<Product>('products', productId, { likes: newLikes });
-      setProducts(prev => prev.map(p => p.id === productId ? { ...p, likes: newLikes } : p));
-    }
-    
-    toast.info('Removed from liked products');
+    toggleLike(id, type);
   };
 
   const handleAddToCart = (e: React.MouseEvent, product: Product) => {
@@ -80,7 +76,6 @@ export default function LikedProductsPage() {
     
     if (product.sizes && product.sizes.length > 0) {
       if (product.sizes.length === 1) {
-        // If only one size, add directly
         const size = product.sizes[0];
         addItem(product, 'product', { size, quantity: 1 });
         toast.success(`${product.name} added to cart!`, {
@@ -88,10 +83,20 @@ export default function LikedProductsPage() {
           icon: <ShoppingCart className="h-4 w-4" />,
         });
       } else {
-        // Otherwise open quick select
         setQuickSelectProduct(product);
         setSelectedQuickSize(0);
       }
+    }
+  };
+
+  const handleAddCourseToCart = (e: React.MouseEvent, course: Course) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const success = addItem(course, 'course');
+    if (success) {
+      toast.success('Course added to cart!');
+    } else {
+      toast.info('This course is already in your cart');
     }
   };
 
@@ -107,7 +112,7 @@ export default function LikedProductsPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-12">
+    <div className="container mx-auto px-4 py-12 min-h-screen">
       <div className="mb-8 flex items-center justify-between">
         <div>
           <Link href="/shop" className="text-sm text-muted-foreground hover:text-brand-gold flex items-center gap-2 mb-2 transition-colors">
@@ -117,7 +122,7 @@ export default function LikedProductsPage() {
             My <span className="text-gradient-red">Favorites</span>
           </h1>
           <p className="text-sm sm:text-base text-muted-foreground mt-2">
-            You have {likedProducts.length} species in your wishlist
+            You have {totalFavorites} items in your wishlist
           </p>
         </div>
       </div>
@@ -128,89 +133,169 @@ export default function LikedProductsPage() {
             <div key={i} className="h-80 rounded-xl bg-card/20 animate-pulse border border-border" />
           ))}
         </div>
-      ) : likedProducts.length === 0 ? (
+      ) : totalFavorites === 0 ? (
         <EmptyState 
           title="No favorites yet" 
-          description="Start browsing the shop and click the heart icon to save species you love!"
+          description="Start browsing the shop and courses to save items you love!"
           action={
-            <Link href="/shop">
-              <Button className="bg-brand-red hover:bg-brand-red/90 text-white font-bold px-8">
-                Go to Shop
-              </Button>
-            </Link>
+            <div className="flex gap-4">
+              <Link href="/shop">
+                <Button className="bg-brand-red hover:bg-brand-red/90 text-white font-bold px-8">
+                  Browse Shop
+                </Button>
+              </Link>
+              <Link href="/courses">
+                <Button variant="outline" className="border-border px-8">
+                  View Courses
+                </Button>
+              </Link>
+            </div>
           }
         />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {likedProducts.map((product, i) => (
-            <motion.div
-              key={product.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-            >
-              <Card className="vibe-card group overflow-hidden border-border bg-card/30 backdrop-blur-sm h-full flex flex-col">
-                <Link href={`/shop/${product.id}`} className="block relative h-48 overflow-hidden">
-                  {product.images && product.images.length > 0 ? (
-                    <img
-                      src={product.images[0]}
-                      alt={product.name}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center bg-muted">
-                      <Bug className="h-16 w-16 text-muted-foreground/20" />
-                    </div>
-                  )}
-                  
-                  <Badge className={`absolute top-3 right-3 z-10 border border-white/20 shadow-xl capitalize px-3 py-1 text-[10px] font-bold ${careLevelColors[product.careLevel]}`}>
-                    {product.careLevel}
-                  </Badge>
-
-                  <button
-                    onClick={(e) => handleUnlike(e, product.id)}
-                    className="absolute bottom-3 left-3 z-10 p-2 rounded-full bg-red-500 text-white border border-red-400 shadow-xl transition-all duration-300 hover:scale-110"
-                    title="Remove from favorites"
+        <div className="space-y-12">
+          {likedProducts.length > 0 && (
+            <section>
+              <h2 className="text-xl font-bold mb-6 flex items-center gap-2 uppercase tracking-widest text-brand-gold">
+                <Bug className="h-5 w-5" /> Favorite Species
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {likedProducts.map((product, i) => (
+                  <motion.div
+                    key={product.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.1 }}
                   >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                    <Card className="vibe-card group overflow-hidden border-border bg-card/30 backdrop-blur-sm h-full flex flex-col">
+                      <Link href={`/shop/${product.id}`} className="block relative h-48 overflow-hidden">
+                        {product.images && product.images.length > 0 ? (
+                          <img
+                            src={product.images[0]}
+                            alt={product.name}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                            <Bug className="h-16 w-16 text-muted-foreground/20" />
+                          </div>
+                        )}
+                        
+                        <Badge className={`absolute top-3 right-3 z-10 border border-white/20 shadow-xl capitalize px-3 py-1 text-[10px] font-bold ${careLevelColors[product.careLevel]}`}>
+                          {product.careLevel}
+                        </Badge>
 
-                  <div className="absolute top-3 left-3 flex flex-col gap-1 z-10">
-                    <Badge variant="outline" className="border-white/30 bg-black/70 text-white text-[9px] font-black uppercase tracking-widest backdrop-blur-md px-2 py-0.5 shadow-2xl w-fit">
-                      {product.mainCategory}
-                    </Badge>
-                  </div>
-                </Link>
+                        <button
+                          onClick={(e) => handleUnlike(e, product.id, 'product')}
+                          className="absolute bottom-3 left-3 z-10 p-2 rounded-full bg-red-500 text-white border border-red-400 shadow-xl transition-all duration-300 hover:scale-110"
+                          title="Remove from favorites"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </Link>
 
-                <CardContent className="p-4 flex-1 flex flex-col gap-2">
-                  <Link href={`/shop/${product.id}`}>
-                    <h3 className="font-heading font-bold text-base group-hover:text-brand-gold transition-colors line-clamp-1 uppercase tracking-wide">{product.name}</h3>
-                  </Link>
-                  <p className="text-xs text-muted-foreground italic line-clamp-1">{product.scientificName}</p>
+                      <CardContent className="p-4 flex-1 flex flex-col gap-2">
+                        <Link href={`/shop/${product.id}`}>
+                          <h3 className="font-heading font-bold text-base group-hover:text-brand-gold transition-colors line-clamp-1 uppercase tracking-wide">{product.name}</h3>
+                        </Link>
+                        <p className="text-xs text-muted-foreground italic line-clamp-1">{product.scientificName}</p>
 
-                  <div className="flex items-center justify-between mt-auto pt-4">
-                    <div className="flex flex-col">
-                      <span className="text-xs text-muted-foreground">Price</span>
-                      <span className="text-lg font-bold text-brand-gold leading-none">
-                        {product.sizes?.length > 0
-                          ? formatPrice(Math.min(...product.sizes.map(s => s.price)))
-                          : 'N/A'}
-                      </span>
-                    </div>
+                        <div className="flex items-center justify-between mt-auto pt-4">
+                          <div className="flex flex-col">
+                            <span className="text-xs text-muted-foreground">Price</span>
+                            <span className="text-lg font-bold text-brand-gold leading-none">
+                              {product.sizes?.length > 0
+                                ? formatPrice(Math.min(...product.sizes.map(s => s.price)))
+                                : 'N/A'}
+                            </span>
+                          </div>
 
-                    <Button
-                      size="sm"
-                      onClick={(e) => handleAddToCart(e, product)}
-                      disabled={product.available === false || !product.sizes?.some(s => s.stock > 0)}
-                      className="bg-brand-red hover:bg-brand-red/90 text-white font-bold h-9 px-4 flex items-center gap-2"
-                    >
-                      <ShoppingCart className="h-4 w-4" /> Add
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
+                          <Button
+                            size="sm"
+                            onClick={(e) => handleAddToCart(e, product)}
+                            disabled={product.available === false || !product.sizes?.some(s => s.stock > 0)}
+                            className="bg-brand-red hover:bg-brand-red/90 text-white font-bold h-9 px-4 flex items-center gap-2"
+                          >
+                            <ShoppingCart className="h-4 w-4" /> Add
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {likedCourses.length > 0 && (
+            <section>
+              <h2 className="text-xl font-bold mb-6 flex items-center gap-2 uppercase tracking-widest text-brand-gold">
+                <GraduationCap className="h-5 w-5" /> Favorite Courses
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {likedCourses.map((course, i) => (
+                  <motion.div
+                    key={course.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.1 }}
+                  >
+                    <Card className="vibe-card group overflow-hidden border-border bg-card/30 backdrop-blur-sm h-full flex flex-col">
+                      <Link href={`/courses/${course.id}`} className="block relative h-48 overflow-hidden">
+                        <img
+                          src={course.thumbnail}
+                          alt={course.title}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        />
+                        <Badge className="absolute top-3 right-3 z-10 bg-brand-gold text-black border border-brand-gold/30 shadow-xl px-3 py-1 text-[10px] font-bold">
+                          Course
+                        </Badge>
+                        <button
+                          onClick={(e) => handleUnlike(e, course.id, 'course')}
+                          className="absolute bottom-3 left-3 z-10 p-2 rounded-full bg-red-500 text-white border border-red-400 shadow-xl transition-all duration-300 hover:scale-110"
+                          title="Remove from favorites"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </Link>
+
+                      <CardContent className="p-4 flex-1 flex flex-col gap-2">
+                        <Link href={`/courses/${course.id}`}>
+                          <h3 className="font-heading font-bold text-base group-hover:text-brand-gold transition-colors line-clamp-1 uppercase tracking-wide">{course.title}</h3>
+                        </Link>
+                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <Clock className="h-3 w-3" /> {course.duration}
+                        </div>
+
+                        <div className="flex items-center justify-between mt-auto pt-4">
+                          <div className="flex flex-col">
+                            <span className="text-xs text-muted-foreground">Price</span>
+                            <span className="text-lg font-bold text-brand-gold leading-none">
+                              {formatPrice(course.price)}
+                            </span>
+                          </div>
+
+                          {user && enrollments.some(e => e.courseId === course.id && e.status === 'enrolled') ? (
+                            <div className="flex items-center gap-1 text-green-400 text-xs font-bold bg-green-400/10 px-3 py-1.5 rounded-lg border border-green-400/20">
+                              <CheckCircle className="h-3 w-3" /> Enrolled
+                            </div>
+                          ) : (
+                            <Button
+                              size="sm"
+                              onClick={(e) => handleAddCourseToCart(e, course)}
+                              className="bg-brand-red hover:bg-brand-red/90 text-white font-bold h-9 px-4 flex items-center gap-2"
+                            >
+                              <ShoppingCart className="h-4 w-4" /> Add
+                            </Button>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            </section>
+          )}
         </div>
       )}
 
@@ -224,7 +309,7 @@ export default function LikedProductsPage() {
             <div className="py-4 space-y-4">
               <div className="flex gap-4 items-center mb-4">
                 <div className="h-16 w-16 rounded-lg overflow-hidden border border-border">
-                  <img src={quickSelectProduct.images[0]} alt={quickSelectProduct.name} className="h-full w-full object-cover" />
+                  <img src={quickSelectProduct.images?.[0]} alt={quickSelectProduct.name} className="h-full w-full object-cover" />
                 </div>
                 <div>
                   <h4 className="font-bold uppercase tracking-tight">{quickSelectProduct.name}</h4>
@@ -232,7 +317,7 @@ export default function LikedProductsPage() {
                 </div>
               </div>
               <div className="grid grid-cols-1 gap-2">
-                {quickSelectProduct.sizes.map((size, idx) => (
+                {quickSelectProduct.sizes?.map((size, idx) => (
                   <button
                     key={idx}
                     onClick={() => setSelectedQuickSize(idx)}

@@ -24,12 +24,20 @@ export default function ProfilePage() {
     setLoading(true);
     await new Promise(r => setTimeout(r, 500));
     
-    if (phone && !/^\d{10}$/.test(phone.replace(/\s/g, ''))) {
+    // Sanitize phone number: remove non-digits and leading 91 if it exists as part of +91
+    let cleanPhone = phone.replace(/\D/g, '');
+    if (cleanPhone.length > 10 && cleanPhone.startsWith('91')) {
+      cleanPhone = cleanPhone.substring(2);
+    }
+
+    if (cleanPhone && cleanPhone.length !== 10) {
       toast.error('Mobile number must be exactly 10 digits');
       setLoading(false);
       return;
     }
-    updateProfile({ name, phone, avatar });
+
+    updateProfile({ name, phone: cleanPhone, avatar });
+    setPhone(cleanPhone); // Update state with sanitized version
     toast.success('Profile updated successfully');
     setLoading(false);
   };
@@ -56,14 +64,14 @@ export default function ProfilePage() {
   if (!user) return null;
 
   return (
-    <div>
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+    <div className="max-w-2xl mx-auto">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6 text-center">
         <h1 className="text-2xl font-bold mb-1">Profile Settings</h1>
         <p className="text-muted-foreground text-sm">Manage your personal information</p>
       </motion.div>
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-        <Card className="border-border max-w-xl">
+        <Card className="border-border mx-auto">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <User className="h-5 w-5 text-brand-gold" /> Personal Info
@@ -121,11 +129,13 @@ export default function ProfilePage() {
                   id="phone"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+91 98765 43210"
+                  placeholder="10-digit mobile number"
                   className="bg-background/50"
+                  maxLength={15}
                 />
+                <p className="text-[10px] text-muted-foreground italic">Enter 10 digits only (we'll automatically remove +91 if included)</p>
               </div>
-              <Button type="submit" disabled={loading} className="w-full bg-brand-red hover:bg-brand-red-light text-white">
+              <Button type="submit" disabled={loading} className="w-full bg-brand-red hover:bg-brand-red-light text-white font-bold h-11">
                 {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...</> : 'Save Changes'}
               </Button>
             </form>

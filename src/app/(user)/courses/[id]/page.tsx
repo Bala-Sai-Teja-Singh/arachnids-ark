@@ -216,13 +216,23 @@ export default function CourseDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <Card className="lg:col-span-1 border-border bg-card/50 h-fit">
             <CardContent className="p-6 space-y-4">
-              <h3 className="font-semibold">Share your feedback</h3>
+              <div className="flex items-center gap-3 mb-2">
+                {isAuthenticated && user && (
+                  <Avatar className="h-8 w-8 border border-brand-red/30">
+                    <AvatarImage src={user.avatar} />
+                    <AvatarFallback className="bg-brand-red text-white text-[10px]">
+                      {user.name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
+                <h3 className="font-semibold">Share your feedback</h3>
+              </div>
               {isAuthenticated ? (
                 hasPurchased ? (
                   <div className="space-y-4">
                     <div className="flex gap-1">
                       {[1, 2, 3, 4, 5].map((star) => (
-                        <button key={star} onClick={() => setReviewRating(star)}>
+                        <button key={star} onClick={() => setReviewRating(star)} className="hover:scale-110 transition-transform">
                           <Star className={`h-6 w-6 ${reviewRating >= star ? 'text-brand-gold fill-brand-gold' : 'text-muted-foreground'}`} />
                         </button>
                       ))}
@@ -234,7 +244,7 @@ export default function CourseDetailPage() {
                       className="bg-background/50"
                     />
                     <Button
-                      className="w-full bg-brand-red text-white"
+                      className="w-full bg-brand-red text-white font-bold"
                       disabled={!reviewComment.trim() || submittingReview}
                       onClick={async () => {
                         setSubmittingReview(true);
@@ -267,26 +277,37 @@ export default function CourseDetailPage() {
 
           <div className="lg:col-span-2 space-y-4">
             {reviews.filter(r => r.status === 'approved').length === 0 ? (
-              <p className="text-muted-foreground italic">No approved reviews yet.</p>
+              <div className="text-center py-12 border border-dashed border-border rounded-xl bg-accent/5">
+                <p className="text-muted-foreground italic">No approved reviews yet.</p>
+              </div>
             ) : (
               reviews.filter(r => r.status === 'approved').map((review) => (
                 <Card key={review.id} className="border-border bg-card/30">
                   <CardContent className="p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={review.userAvatar} />
-                        <AvatarFallback>{review.userName.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="text-sm font-bold">{review.userName}</p>
-                        <div className="flex gap-0.5">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <Star key={star} className={`h-3 w-3 ${review.rating >= star ? 'text-brand-gold fill-brand-gold' : 'text-muted-foreground'}`} />
-                          ))}
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10 border border-brand-red/30">
+                          <AvatarImage src={review.userAvatar} />
+                          <AvatarFallback className="bg-brand-red text-white">
+                            {review.userName.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="text-sm font-bold">{review.userName}</p>
+                          <div className="flex gap-0.5 mt-0.5">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star key={star} className={`h-3 w-3 ${review.rating >= star ? 'text-brand-gold fill-brand-gold' : 'text-muted-foreground'}`} />
+                            ))}
+                          </div>
                         </div>
                       </div>
+                      <span className="text-[10px] text-muted-foreground">
+                        {new Date(review.createdAt).toLocaleDateString()}
+                      </span>
                     </div>
-                    <p className="text-sm text-muted-foreground italic">"{review.comment}"</p>
+                    <p className="text-sm text-muted-foreground italic leading-relaxed">
+                      &quot;{review.comment}&quot;
+                    </p>
                   </CardContent>
                 </Card>
               ))

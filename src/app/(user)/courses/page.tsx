@@ -3,14 +3,15 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { GraduationCap, Clock, BookOpen, Heart, ShoppingCart } from 'lucide-react';
+import { GraduationCap, Clock, BookOpen, Heart, ShoppingCart, CheckCircle } from 'lucide-react';
 import { useCartStore } from '@/store/cart-store';
 import { useFavoriteStore } from '@/store/favorite-store';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { SkeletonCard } from '@/components/shared/skeleton-card';
 import { LocalStorage } from '@/mock-db/storage';
-import type { Course } from '@/types';
+import { useAuthStore } from '@/store/auth-store';
+import type { Course, CourseEnrollment } from '@/types';
 import { formatPrice } from '@/constants/pricing';
 import { toast } from 'sonner';
 
@@ -23,13 +24,16 @@ const diffColors: Record<string, string> = {
 
 export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
+  const [enrollments, setEnrollments] = useState<CourseEnrollment[]>([]);
   const [loading, setLoading] = useState(true);
   const addItem = useCartStore((state) => state.addItem);
   const { toggleLike, isLiked } = useFavoriteStore();
+  const { user } = useAuthStore();
 
   useEffect(() => {
     setTimeout(() => {
       setCourses(LocalStorage.getAll<Course>('courses'));
+      setEnrollments(LocalStorage.getAll<CourseEnrollment>('enrollments'));
       setLoading(false);
     }, 300);
   }, []);
@@ -102,21 +106,27 @@ export default function CoursesPage() {
                     <p className="text-sm text-muted-foreground line-clamp-2">{course.contentPreview}</p>
                     <div className="flex items-center justify-between pt-3 border-t border-border">
                       <span className="text-xl font-bold text-brand-gold">{formatPrice(course.price)}</span>
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          const success = addItem(course, 'course');
-                          if (success) {
-                            toast.success('Course added to cart!');
-                          } else {
-                            toast.info('This course is already in your cart');
-                          }
-                        }}
-                        className="text-xs text-brand-red font-medium flex items-center gap-1 hover:underline"
-                      >
-                        <ShoppingCart className="h-3 w-3" /> Add to Cart
-                      </button>
+                      {user && enrollments.some(e => e.courseId === course.id && e.status === 'enrolled') ? (
+                        <span className="text-xs text-green-400 font-medium flex items-center gap-1">
+                          <CheckCircle className="h-3 w-3" /> Enrolled
+                        </span>
+                      ) : (
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const success = addItem(course, 'course');
+                            if (success) {
+                              toast.success('Course added to cart!');
+                            } else {
+                              toast.info('This course is already in your cart');
+                            }
+                          }}
+                          className="text-xs text-brand-red font-medium flex items-center gap-1 hover:underline"
+                        >
+                          <ShoppingCart className="h-3 w-3" /> Add to Cart
+                        </button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

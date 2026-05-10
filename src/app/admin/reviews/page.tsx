@@ -131,7 +131,7 @@ export default function AdminReviewsPage() {
                   <CardContent className="p-6">
                     <div className="flex flex-col md:flex-row gap-6">
                       <div className="flex items-center gap-4 min-w-[200px]">
-                        <Avatar className="h-12 w-12 border border-border">
+                        <Avatar className="h-10 w-10 border border-brand-red/30">
                           <AvatarImage src={review.userAvatar} />
                           <AvatarFallback className="bg-brand-red text-white font-bold">
                             {review.userName.charAt(0).toUpperCase()}

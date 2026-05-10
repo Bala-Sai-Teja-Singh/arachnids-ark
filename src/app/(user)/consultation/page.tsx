@@ -460,7 +460,17 @@ export default function ConsultationPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <Card className="lg:col-span-1 border-border bg-card/40 backdrop-blur-sm h-fit">
             <CardContent className="p-6 space-y-4">
-              <h3 className="font-bold text-sm uppercase tracking-widest text-brand-gold">Share your experience</h3>
+              <div className="flex items-center gap-3 mb-2">
+                {isAuthenticated && user && (
+                  <Avatar className="h-8 w-8 border border-brand-red/30">
+                    <AvatarImage src={user.avatar} />
+                    <AvatarFallback className="bg-brand-red text-white text-[10px]">
+                      {user.name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
+                <h3 className="font-bold text-sm uppercase tracking-widest text-brand-gold">Share your experience</h3>
+              </div>
               {isAuthenticated ? (
                 hasPurchased ? (
                   <div className="space-y-4">

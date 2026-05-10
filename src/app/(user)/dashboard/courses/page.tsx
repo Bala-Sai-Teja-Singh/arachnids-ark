@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { GraduationCap, Upload, Check, Copy } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -61,21 +62,23 @@ export default function MyCoursesPage() {
         <div className="space-y-4">
           {enrollments.map((enr, i) => (
             <motion.div key={enr.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-              <Card className="border-border">
-                <CardContent className="p-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="space-y-1">
-                      <h3 className="font-medium">{enr.courseTitle}</h3>
-                      <p className="text-xs text-muted-foreground">{new Date(enr.createdAt).toLocaleDateString()}</p>
-                      {enr.adminNote && <p className="text-xs text-brand-gold">Admin: {enr.adminNote}</p>}
+              <Link href={`/courses/${enr.courseId}`}>
+                <Card className="border-border hover:border-brand-gold/50 transition-colors cursor-pointer group">
+                  <CardContent className="p-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="space-y-1">
+                        <h3 className="font-medium group-hover:text-brand-gold transition-colors">{enr.courseTitle}</h3>
+                        <p className="text-xs text-muted-foreground">{new Date(enr.createdAt).toLocaleDateString()}</p>
+                        {enr.adminNote && <p className="text-xs text-brand-gold">Admin: {enr.adminNote}</p>}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg font-bold text-brand-gold">{formatPrice(enr.totalPrice)}</span>
+                        <StatusBadge status={enr.status} type="enrollment" />
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-lg font-bold text-brand-gold">{formatPrice(enr.totalPrice)}</span>
-                      <StatusBadge status={enr.status} type="enrollment" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </Link>
             </motion.div>
           ))}
         </div>
