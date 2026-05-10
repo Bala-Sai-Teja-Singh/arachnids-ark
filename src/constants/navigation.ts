@@ -16,7 +16,7 @@ export const MOBILE_NAV_ITEMS = [
   { label: 'Shop', href: '/shop', icon: ShoppingBag },
   { label: 'Courses', href: '/courses', icon: GraduationCap },
   { label: 'Consult', href: '/consultation', icon: Calendar },
-  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { label: 'My Orders', href: '/dashboard/orders', icon: ClipboardList },
 ];
 
 export const ADMIN_NAV_ITEMS = [
@@ -35,10 +35,10 @@ export const ADMIN_NAV_ITEMS = [
 ];
 
 export const DASHBOARD_NAV_ITEMS = [
-  { label: 'Overview', href: '/dashboard', icon: LayoutDashboard },
   { label: 'My Orders', href: '/dashboard/orders', icon: ClipboardList },
   { label: 'My Courses', href: '/dashboard/courses', icon: GraduationCap },
   { label: 'My Consultations', href: '/dashboard/consultations', icon: Calendar },
+
   { label: 'Favorites', href: '/liked', icon: Heart },
 
   { label: 'Profile', href: '/dashboard/profile', icon: Settings },

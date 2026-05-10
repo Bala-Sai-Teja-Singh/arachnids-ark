@@ -19,7 +19,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { useNotificationStore } from '@/store/notification-store';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { Order, Product, ProductSize, SystemSettings, ShippingRule } from '@/types';
+import type { Order, Product, ProductSize, SystemSettings, ShippingRule, User } from '@/types';
 import { Badge } from '@/components/ui/badge';
 
 export default function CheckoutPage() {
@@ -174,13 +174,16 @@ export default function CheckoutPage() {
       } : null;
 
       if (paymentDetails) {
+        const adminUser = LocalStorage.getAll<User>('users').find(u => u.role === 'admin');
+        const adminEmail = adminUser?.email || 'harrysweettt@gmail.com';
+
         fetch('/api/emails/order-confirmation', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             order,
             paymentDetails,
-            adminEmail: 'harrysweettt@gmail.com'
+            adminEmail
           })
         }).catch((err: Error) => console.error('Failed to trigger email:', err));
       }

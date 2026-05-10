@@ -1,6 +1,6 @@
 'use client';
 
-import { Menu, Bell } from 'lucide-react';
+import { Menu, Bell, Settings, LogOut, Shield } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -11,9 +11,19 @@ import { Badge } from '@/components/ui/badge';
 import { useNotificationStore } from '@/store/notification-store';
 import { NotificationCenter } from '../shared/notification-center';
 import { useState, useEffect } from 'react';
+import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
-export function AdminHeader() {
-  const { user } = useAuthStore();
+export function AdminHeader({ isSidebarCollapsed = false }: { isSidebarCollapsed?: boolean }) {
+  const router = useRouter();
+  const { user, logout } = useAuthStore();
   const { unreadCount, loadNotifications } = useNotificationStore();
   const [showNotifications, setShowNotifications] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -24,27 +34,32 @@ export function AdminHeader() {
     }
   }, [user, loadNotifications]);
 
+  const handleLogout = () => {
+    logout();
+    window.location.href = '/';
+  };
+
   return (
-    <header className="h-16 flex items-center justify-between px-4 border-b border-border bg-background/80 backdrop-blur-md fixed top-0 left-0 right-0 z-40 lg:left-64">
+    <header className={cn(
+      "h-16 flex items-center justify-between px-4 border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-40 shrink-0",
+    )}>
       <div className="flex items-center gap-4">
         {/* Mobile Sidebar Toggle */}
         <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-          <SheetTrigger render={<Button variant="ghost" size="icon" className="lg:hidden border border-border rounded-lg" />}>
+          <SheetTrigger render={<Button variant="ghost" size="icon" className="md:hidden border border-border rounded-lg" />}>
             <Menu className="h-5 w-5" />
           </SheetTrigger>
-          <SheetContent side="left" className="p-0 w-64 border-r border-border">
+          <SheetContent side="left" className="p-0 bg-transparent border-none shadow-none w-72!" showCloseButton={true}>
             <AdminSidebar onItemClick={() => setIsMobileMenuOpen(false)} />
           </SheetContent>
         </Sheet>
-
-
       </div>
 
       <div className="flex items-center gap-3">
         <ThemeToggle />
-        <Button 
-          variant="ghost" 
-          size="icon" 
+        <Button
+          variant="ghost"
+          size="icon"
           className="relative border border-border rounded-lg"
           onClick={() => setShowNotifications(true)}
         >
@@ -56,18 +71,35 @@ export function AdminHeader() {
           )}
         </Button>
         <NotificationCenter open={showNotifications} onOpenChange={setShowNotifications} />
-        <div className="flex items-center gap-2 border-l border-border pl-4">
-          <div className="hidden sm:block text-right">
-            <p className="text-sm font-medium leading-none">{user?.name}</p>
-            <p className="text-xs text-muted-foreground mt-1">Administrator</p>
-          </div>
-          <Avatar className="h-8 w-8 border border-border translate-y-[2px] after:hidden">
-            {user?.avatar && <AvatarImage src={user.avatar} />}
-            <AvatarFallback className="bg-brand-red/10 text-brand-red text-xs">
-              {user?.name?.charAt(0).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-        </div>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger render={
+            <button className="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-3 border-l border-border ml-1 sm:ml-2 hover:bg-accent/50 transition-all p-1 px-2 group">
+              <Avatar className="h-8 w-8 transition-transform group-active:scale-95 border border-border">
+                {user?.avatar && <AvatarImage src={user.avatar} alt={user.name} />}
+                <AvatarFallback className="bg-brand-red text-white font-bold text-xs uppercase">
+                  {user?.name?.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+            </button>
+          } />
+          <DropdownMenuContent align="end" className="w-64 glass border-border mt-2 p-2">
+            <div className="px-3 py-3 border-b border-border/50 mb-2">
+              <p className="text-sm font-bold truncate text-foreground">{user?.name}</p>
+              <p className="text-[11px] text-muted-foreground truncate mt-0.5">{user?.email}</p>
+            </div>
+            
+            <DropdownMenuItem onClick={() => router.push('/admin/profile')} className="gap-2 cursor-pointer focus:bg-brand-red/10 focus:text-brand-red rounded-lg py-2">
+              <Settings className="h-4 w-4" /> Profile Settings
+            </DropdownMenuItem>
+            
+            <DropdownMenuSeparator className="bg-border/50 my-2" />
+            
+            <DropdownMenuItem onClick={handleLogout} className="gap-2 text-brand-red focus:bg-brand-red focus:text-white cursor-pointer rounded-lg py-2">
+              <LogOut className="h-4 w-4" /> Logout
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

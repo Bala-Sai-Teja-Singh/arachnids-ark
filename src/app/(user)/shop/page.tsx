@@ -1,7 +1,7 @@
 'use client';
 /* eslint-disable @next/next/no-img-element */
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Search, X, Bug, SlidersHorizontal, ShoppingCart, Heart } from 'lucide-react';
@@ -155,9 +155,26 @@ export default function ShopPage() {
   const [venomPotency, setVenomPotency] = useState('');
   const [quickSelectProduct, setQuickSelectProduct] = useState<Product | null>(null);
   const [selectedQuickSize, setSelectedQuickSize] = useState<number>(0);
+  const [showLeftShade, setShowLeftShade] = useState(false);
+  const [showRightShade, setShowRightShade] = useState(false);
+  const tabsListRef = useRef<HTMLDivElement>(null);
   const addItem = useCartStore((state) => state.addItem);
   const { isAuthenticated } = useAuthStore();
   const router = useRouter();
+
+  const checkScroll = () => {
+    const el = tabsListRef.current;
+    if (el) {
+      setShowLeftShade(el.scrollLeft > 10);
+      setShowRightShade(el.scrollLeft + el.clientWidth < el.scrollWidth - 10);
+    }
+  };
+
+  useEffect(() => {
+    checkScroll();
+    window.addEventListener('resize', checkScroll);
+    return () => window.removeEventListener('resize', checkScroll);
+  }, [products]);
 
   useEffect(() => {
     setTimeout(() => {
@@ -185,30 +202,30 @@ export default function ShopPage() {
       });
       return;
     }
-    
+
     const isLiked = likedIds.includes(productId);
     let newLikedIds: string[];
-    
+
     if (isLiked) {
       newLikedIds = likedIds.filter(id => id !== productId);
     } else {
       newLikedIds = [...likedIds, productId];
     }
-    
+
     setLikedIds(newLikedIds);
     localStorage.setItem('arachnidsark_liked_products', JSON.stringify(newLikedIds));
-    
+
     // Update the like count in the mock database
     const product = products.find(p => p.id === productId);
     if (product) {
       const newLikes = isLiked ? Math.max(0, (product.likes || 0) - 1) : (product.likes || 0) + 1;
       LocalStorage.update<Product>('products', productId, { likes: newLikes });
-      
+
       // Update local state to reflect new like count
-      setProducts(prev => prev.map(p => 
+      setProducts(prev => prev.map(p =>
         p.id === productId ? { ...p, likes: newLikes } : p
       ));
-      
+
       if (!isLiked) {
         toast.success(`You liked ${product.name}!`, {
           icon: <Heart className="h-4 w-4 text-red-500 fill-red-500" />,
@@ -227,25 +244,25 @@ export default function ShopPage() {
 
   const filtered = useMemo(() => {
     let result = products.filter(p => p.isVisible !== false && p.mainCategory === mainCategory);
-    
+
     if (search) {
       const q = search.toLowerCase();
       result = result.filter(p => p.name.toLowerCase().includes(q) || p.scientificName.toLowerCase().includes(q));
     }
-    
+
     if (habitat) {
-      result = result.filter(p => 
-        p.category === habitat || 
-        p.scorpionMeta?.habitatType.toLowerCase() === habitat.toLowerCase() || 
+      result = result.filter(p =>
+        p.category === habitat ||
+        p.scorpionMeta?.habitatType.toLowerCase() === habitat.toLowerCase() ||
         p.centipedeMeta?.habitatType.toLowerCase() === habitat.toLowerCase()
       );
     }
-    
+
     if (origin) result = result.filter(p => p.origin === origin);
     if (careLevel) result = result.filter(p => p.careLevel === careLevel);
     if (venomPotency) {
-      result = result.filter(p => 
-        p.scorpionMeta?.venomPotency === venomPotency || 
+      result = result.filter(p =>
+        p.scorpionMeta?.venomPotency === venomPotency ||
         p.centipedeMeta?.venomPotency === venomPotency
       );
     }
@@ -265,7 +282,16 @@ export default function ShopPage() {
     return result;
   }, [products, search, mainCategory, habitat, origin, careLevel, sortBy, venomPotency]);
 
-  const activeFilters = [habitat !== '', origin !== '', careLevel !== '', venomPotency !== ''].filter(Boolean).length;
+  const clearFilters = () => {
+    setHabitat('');
+    setOrigin('');
+    setCareLevel('');
+    setVenomPotency('');
+    setSearch('');
+    setSortBy('');
+  };
+
+  const activeFilters = [habitat !== '', origin !== '', careLevel !== '', venomPotency !== '', search !== ''].filter(Boolean).length;
 
   const handleAddToCart = (e: React.MouseEvent, product: Product) => {
     e.preventDefault();
@@ -311,12 +337,32 @@ export default function ShopPage() {
       {/* Tabs for Main Categories */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mb-8">
         <Tabs value={mainCategory} onValueChange={(val) => setMainCategory(val as MainCategory)} className="w-full">
-          <TabsList className="bg-black/40 border border-border/50 p-1.5 gap-1.5 sm:gap-3 w-full sm:w-auto flex justify-start overflow-x-auto no-scrollbar rounded-xl sm:rounded-full backdrop-blur-xl h-auto min-h-[48px] sm:min-h-[56px] shadow-2xl">
+          <TabsList 
+            ref={tabsListRef}
+            onScroll={checkScroll}
+            className="bg-black/40 border border-border/50 p-1.5 gap-1.5 sm:gap-3 w-full sm:w-auto flex justify-start overflow-x-auto no-scrollbar rounded-xl sm:rounded-full backdrop-blur-xl h-auto min-h-[48px] sm:min-h-[56px] shadow-2xl relative transition-all duration-300"
+            style={{
+              maskImage: showLeftShade && showRightShade 
+                ? 'linear-gradient(to right, transparent, white 10%, white 90%, transparent)'
+                : showLeftShade 
+                  ? 'linear-gradient(to right, transparent, white 10%)'
+                  : showRightShade 
+                    ? 'linear-gradient(to left, transparent, white 10%)'
+                    : 'none',
+              WebkitMaskImage: showLeftShade && showRightShade 
+                ? 'linear-gradient(to right, transparent, white 10%, white 90%, transparent)'
+                : showLeftShade 
+                  ? 'linear-gradient(to right, transparent, white 10%)'
+                  : showRightShade 
+                    ? 'linear-gradient(to left, transparent, white 10%)'
+                    : 'none'
+            }}
+          >
             {CATEGORIES.map((cat) => (
               <TabsTrigger
                 key={cat.value}
                 value={cat.value}
-                className="data-[state=active]:bg-brand-gold data-[state=active]:text-black data-[state=active]:shadow-[0_8px_25px_rgba(197,150,58,0.5)] transition-all duration-500 font-heading uppercase tracking-[0.15em] sm:tracking-[0.2em] text-[10px] sm:text-[12px] px-5 sm:px-12 h-9 sm:h-11 rounded-lg sm:rounded-full border border-transparent data-[state=active]:border-black/5 whitespace-nowrap font-black flex items-center gap-3 group"
+                className="data-[state=active]:bg-brand-gold data-[state=active]:text-black data-[state=active]:shadow-[0_8px_25px_rgba(197,150,58,0.5)] transition-all duration-500 font-heading uppercase tracking-[0.15em] sm:tracking-[0.2em] text-[10px] sm:text-[12px] px-5 sm:px-12 h-9 sm:h-11 rounded-lg sm:rounded-full border border-transparent data-[state=active]:border-black/5 whitespace-nowrap font-black flex items-center gap-3 group shrink-0"
               >
                 {cat.label}
               </TabsTrigger>
@@ -358,7 +404,7 @@ export default function ShopPage() {
               }).map(h => <SelectItem key={h.value} value={h.value}>{h.label}</SelectItem>)}
             </SelectContent>
           </Select>
-          
+
           {mainCategory === 'Tarantulas' && (
             <Select value={origin} onValueChange={(val) => setOrigin(val ?? '')}>
               <SelectTrigger className="w-[150px] bg-card/40 border-border">
@@ -403,6 +449,18 @@ export default function ShopPage() {
               <SelectItem value="newest">Sort By: Newest</SelectItem>
             </SelectContent>
           </Select>
+
+          {activeFilters > 0 && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={clearFilters}
+              className="hidden md:flex items-center gap-2 text-xs font-medium text-brand-red hover:bg-brand-red/10 h-10 px-4 rounded-xl transition-all"
+            >
+              <X className="h-4 w-4" />
+              Clear Filters
+            </Button>
+          )}
         </div>
 
         {/* Mobile Filter Sheet */}
@@ -416,8 +474,18 @@ export default function ShopPage() {
             )}
           </SheetTrigger>
           <SheetContent className="glass border-l border-border">
-            <SheetHeader>
-              <SheetTitle className="font-heading uppercase tracking-widest text-sm">Filters</SheetTitle>
+            <SheetHeader className="flex flex-row items-center justify-between space-y-0 pr-12 pb-2">
+              <SheetTitle className="font-heading uppercase tracking-widest text-xs font-black">Filters</SheetTitle>
+              {activeFilters > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="text-[9px] h-6 px-3 uppercase tracking-tighter font-bold border-brand-red/20 text-brand-red hover:bg-brand-red hover:text-white rounded-full transition-all"
+                >
+                  Clear All
+                </Button>
+              )}
             </SheetHeader>
             <div className="mt-6">
               <FilterPanel
@@ -468,19 +536,18 @@ export default function ShopPage() {
                   <Badge className={`absolute top-3 right-3 z-10 border border-white/20 shadow-xl capitalize px-3 py-1 text-[10px] font-bold ${careLevelColors[product.careLevel]}`}>
                     {product.careLevel}
                   </Badge>
-                  
+
                   {/* Like Button */}
                   <button
                     onClick={(e) => handleLike(e, product.id)}
-                    className={`absolute bottom-3 right-3 z-10 p-2 rounded-full backdrop-blur-md border border-white/20 shadow-xl transition-all duration-300 group/like ${
-                      likedIds.includes(product.id) 
-                        ? 'bg-red-500 text-white border-red-400' 
+                    className={`absolute bottom-3 right-3 z-10 p-2 rounded-full backdrop-blur-md border border-white/20 shadow-xl transition-all duration-300 group/like ${likedIds.includes(product.id)
+                        ? 'bg-red-500 text-white border-red-400'
                         : 'bg-black/60 text-white hover:bg-black/80'
-                    }`}
+                      }`}
                   >
                     <Heart className={`h-4 w-4 ${likedIds.includes(product.id) ? 'fill-current' : 'group-hover/like:scale-110 transition-transform'}`} />
                   </button>
-                  
+
                   {/* Like Count */}
                   <div className="absolute bottom-3 right-14 z-10 bg-black/60 backdrop-blur-md border border-white/20 rounded-full px-2 py-0.5 shadow-xl">
                     <span className="text-[10px] font-bold text-white flex items-center gap-1">
@@ -607,11 +674,10 @@ export default function ShopPage() {
                   <button
                     key={idx}
                     onClick={() => setSelectedQuickSize(idx)}
-                    className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
-                      selectedQuickSize === idx 
-                        ? 'border-brand-gold bg-brand-gold/10 ring-1 ring-brand-gold' 
+                    className={`flex items-center justify-between p-3 rounded-xl border transition-all ${selectedQuickSize === idx
+                        ? 'border-brand-gold bg-brand-gold/10 ring-1 ring-brand-gold'
                         : 'border-border bg-card/40 hover:bg-card/60'
-                    }`}
+                      }`}
                   >
                     <span className="font-medium text-sm">{size.size}</span>
                     <span className="font-bold text-brand-gold">{formatPrice(size.price)}</span>

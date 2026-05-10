@@ -6,7 +6,7 @@ import { useAuthStore } from '@/store/auth-store';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, isLoading } = useAuthStore();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -14,15 +14,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, []);
 
   useEffect(() => {
-    if (mounted && !isAuthenticated) {
+    if (mounted && !isLoading && !isAuthenticated) {
       router.push('/login');
     }
-  }, [mounted, isAuthenticated, router]);
+  }, [mounted, isAuthenticated, isLoading, router]);
 
-  if (!mounted || !isAuthenticated) return null;
+  if (!mounted || isLoading || !isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-red"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-0 w-full">
       {children}
     </div>
   );

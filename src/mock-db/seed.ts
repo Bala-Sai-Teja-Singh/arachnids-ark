@@ -195,33 +195,33 @@ const PRODUCTS: Product[] = [
 
 const COURSES: Course[] = [
   {
-    id: 'course-001', 
-    title: 'Tarantula Keeping 101', 
+    id: 'course-001',
+    title: 'Tarantula Keeping 101',
     description: 'The complete beginner\'s guide to keeping your first tarantula. Learn about enclosure setup, feeding, temperature and humidity requirements, and common health issues.',
-    price: 999, 
+    price: 999,
     thumbnail: '/images/curlyHair.webp',
     contentPreview: 'This comprehensive course covers everything from choosing your first species to creating the perfect habitat.',
     videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ', // Placeholder
-    difficulty: 'beginner', 
-    duration: '4 hours', 
+    difficulty: 'beginner',
+    duration: '4 hours',
     featured: true,
     likes: 124,
-    createdAt: '2025-01-01T00:00:00Z', 
+    createdAt: '2025-01-01T00:00:00Z',
     updatedAt: '2025-01-01T00:00:00Z'
   },
   {
-    id: 'course-002', 
-    title: 'Advanced Husbandry', 
+    id: 'course-002',
+    title: 'Advanced Husbandry',
     description: 'Deep dive into advanced tarantula husbandry techniques including breeding, creating bioactive enclosures, and managing large collections.',
-    price: 1999, 
+    price: 1999,
     thumbnail: '/images/brazilianBlack-1.webp',
     contentPreview: 'Take your tarantula keeping to the next level with professional-grade husbandry techniques.',
     videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ', // Placeholder
-    difficulty: 'advanced', 
-    duration: '8 hours', 
+    difficulty: 'advanced',
+    duration: '8 hours',
     featured: true,
     likes: 89,
-    createdAt: '2025-01-02T00:00:00Z', 
+    createdAt: '2025-01-02T00:00:00Z',
     updatedAt: '2025-01-02T00:00:00Z'
   },
 ];
@@ -262,8 +262,8 @@ const CARE_GUIDES: CareGuide[] = [
 const DEFAULT_USERS: User[] = [
   {
     id: 'admin',
-    name: 'Admin',
-    email: 'admin@arachnidsark.com',
+    name: 'Harmanpreet',
+    email: 'harrysweettt@gmail.com',
     password: 'admin123',
     role: 'admin',
     phone: '+91 9876543210',

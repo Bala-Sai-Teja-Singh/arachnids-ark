@@ -145,21 +145,7 @@ export default function ConsultationPage() {
               Get personalized guidance from experienced arachnid specialists
             </p>
           </div>
-          <div className="flex flex-col items-end gap-2">
-            <button
-              onClick={() => toggleLike('consultation-general', 'consultation')}
-              className={`p-3 rounded-full backdrop-blur-md border border-white/20 shadow-xl transition-all duration-300 ${
-                isLiked('consultation-general', 'consultation') 
-                  ? 'bg-red-500 text-white border-red-400' 
-                  : 'bg-black/60 text-white hover:bg-black/80'
-              }`}
-            >
-              <Heart className={`h-5 w-5 ${isLiked('consultation-general', 'consultation') ? 'fill-current' : ''}`} />
-            </button>
-            <Badge variant="outline" className="bg-black/50 border-white/20 text-white font-bold">
-              Liked by others
-            </Badge>
-          </div>
+
         </div>
       </motion.div>
 

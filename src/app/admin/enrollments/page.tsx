@@ -41,7 +41,7 @@ export default function AdminEnrollmentsPage() {
           body: JSON.stringify({
             to: enr.userEmail,
             userName: enr.userName,
-            courseTitle: enr.courseTitle,
+            courses: [enr.courseTitle],
             enrollmentId: enr.id
           })
         }).catch(console.error);

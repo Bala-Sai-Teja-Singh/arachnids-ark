@@ -5,7 +5,6 @@ import { useSearchParams } from 'next/navigation';
 import {
   ShoppingBag,
   Package,
-  User,
   Phone,
   MapPin,
   Truck,
@@ -19,7 +18,8 @@ import {
   AlertCircle,
   XCircle,
   Undo2,
-  Search
+  Search,
+  User as UserIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -33,7 +33,7 @@ import { useNotificationStore } from '@/store/notification-store';
 import { ALL_STATUSES, STATUS_CONFIG } from '@/constants/statuses';
 import { formatPrice } from '@/constants/pricing';
 import { toast } from 'sonner';
-import type { Order, OrderStatus, CourseEnrollment, SystemSettings, ConsultationBooking } from '@/types';
+import type { Order, OrderStatus, CourseEnrollment, SystemSettings, ConsultationBooking, User } from '@/types';
 import { cn } from '@/lib/utils';
 
 export default function AdminOrdersPage() {
@@ -121,11 +121,13 @@ export default function AdminOrdersPage() {
 
     // AUTOMATIC ENROLLMENT & BOOKING
     if (order && status === 'payment_verified') {
+      const newlyUnlockedCourses: string[] = [];
+
       order.items.forEach(item => {
         if (item.type === 'course') {
           const enrollments = LocalStorage.getAll<CourseEnrollment>('enrollments');
           const alreadyCreated = enrollments.some((e: CourseEnrollment) => e.orderId === order.id && e.courseId === item.id);
-          
+
           if (!alreadyCreated) {
             LocalStorage.create<CourseEnrollment>('enrollments', {
               id: `enr-${Date.now()}-${item.id}`,
@@ -140,29 +142,17 @@ export default function AdminOrdersPage() {
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString()
             } as CourseEnrollment);
-            
-            // Trigger course unlocked email
-            fetch('/api/emails/course-unlocked', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                to: order.userEmail,
-                userName: order.userName,
-                courseTitle: item.name,
-                enrollmentId: `enr-${Date.now()}-${item.id}`
-              })
-            }).catch(console.error);
 
-            toast.success(`Course enrollment created and email sent for ${item.name}`);
+            newlyUnlockedCourses.push(item.name);
           }
         } else if (item.type === 'consultation') {
           const bookings = LocalStorage.getAll<ConsultationBooking>('bookings');
           const alreadyCreated = bookings.some((b: ConsultationBooking) => b.orderId === order.id);
-          
+
           if (!alreadyCreated) {
             const consultationItems = order.items.filter(i => i.type === 'consultation');
             const totalConsultationPrice = consultationItems.reduce((acc, i) => acc + (i.price * i.quantity), 0);
-            
+
             // Use the first item for top-level metadata defaults
             const firstItem = consultationItems[0];
 
@@ -195,6 +185,21 @@ export default function AdminOrdersPage() {
           }
         }
       });
+
+      // Trigger grouped course unlocked email
+      if (newlyUnlockedCourses.length > 0) {
+        fetch('/api/emails/course-unlocked', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: order.userEmail,
+            userName: order.userName,
+            courses: newlyUnlockedCourses,
+          })
+        })
+        .then(() => toast.success(`Unlocked ${newlyUnlockedCourses.length} course(s) and sent notification`))
+        .catch(console.error);
+      }
     }
 
     // EMAIL NOTIFICATIONS
@@ -268,7 +273,7 @@ export default function AdminOrdersPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         order,
-        adminEmail: 'harrysweettt@gmail.com'
+        adminEmail: LocalStorage.getAll<User>('users').find(u => u.role === 'admin')?.email || 'harrysweettt@gmail.com'
       })
     })
       .then(() => {
@@ -306,7 +311,7 @@ export default function AdminOrdersPage() {
             bankDetails: settingsData[0].bankDetails,
             paymentInstructions: settingsData[0].paymentInstructions
           },
-          adminEmail: 'harrysweettt@gmail.com'
+          adminEmail: LocalStorage.getAll<User>('users').find(u => u.role === 'admin')?.email || 'harrysweettt@gmail.com'
         })
       })
         .then(() => toast.success('Payment instruction email resent!'))
@@ -352,6 +357,7 @@ export default function AdminOrdersPage() {
     LocalStorage.update<Order>('orders', selectedOrder.id, {
       trackingId,
       courierPartner,
+      status: 'order_shipped',
       updatedAt: new Date().toISOString()
     });
     const updatedOrders = LocalStorage.getAll<Order>('orders').sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -369,7 +375,7 @@ export default function AdminOrdersPage() {
     // Send email notification with new tracking details
     sendEmailNotification({ ...selectedOrder!, trackingId, courierPartner }, 'order-shipped');
 
-    toast.success('Tracking information updated & email sent');
+    toast.success('Order marked as Dispatched & email sent');
   };
 
   return (
@@ -381,8 +387,8 @@ export default function AdminOrdersPage() {
         </div>
         <div className="relative w-full sm:w-96">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input 
-            placeholder="Search by customer name, email or phone..." 
+          <Input
+            placeholder="Search by customer name, email or phone..."
             className="pl-10 bg-card border-border"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -430,29 +436,29 @@ export default function AdminOrdersPage() {
                     );
                   })
                   .map((order) => (
-                  <TableRow key={order.id} className="border-border group">
-                    <TableCell className="font-mono text-[10px] text-muted-foreground">#{order.id.split('-')[0]}</TableCell>
-                    <TableCell>
-                      <div className="font-bold text-xs">{order.userName}</div>
-                      <div className="text-[10px] text-muted-foreground">{order.userEmail}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-medium text-xs truncate max-w-[150px]">
-                        {order.items.map(i => i.name).join(', ')}
-                      </div>
-                      <div className="text-[10px] text-muted-foreground">{order.items.length} item(s)</div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <StatusBadge status={order.status} className="scale-90" />
-                    </TableCell>
-                    <TableCell className="text-right font-bold text-brand-gold text-sm">{formatPrice(order.totalPrice)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-brand-gold" onClick={() => setSelectedOrder(order)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
+                    <TableRow key={order.id} className="border-border group">
+                      <TableCell className="font-mono text-[10px] text-muted-foreground">#{order.id.split('-')[0]}</TableCell>
+                      <TableCell>
+                        <div className="font-bold text-xs">{order.userName}</div>
+                        <div className="text-[10px] text-muted-foreground">{order.userEmail}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium text-xs truncate max-w-[150px]">
+                          {order.items.map(i => i.name).join(', ')}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground">{order.items.length} item(s)</div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <StatusBadge status={order.status} className="scale-90" />
+                      </TableCell>
+                      <TableCell className="text-right font-bold text-brand-gold text-sm">{formatPrice(order.totalPrice)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-brand-gold" onClick={() => setSelectedOrder(order)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
               )}
             </TableBody>
           </Table>
@@ -471,29 +477,29 @@ export default function AdminOrdersPage() {
               );
             })
             .map((order) => (
-            <div key={order.id} className="p-4 space-y-4 active:bg-muted/30 transition-colors group relative" onClick={() => setSelectedOrder(order)}>
-              <div className="flex justify-between items-start">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-sm">#{order.id.split('-')[0]}</h3>
-                    <StatusBadge status={order.status} className="scale-75 origin-left" />
+              <div key={order.id} className="p-4 space-y-4 active:bg-muted/30 transition-colors group relative" onClick={() => setSelectedOrder(order)}>
+                <div className="flex justify-between items-start">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-sm">#{order.id.split('-')[0]}</h3>
+                      <StatusBadge status={order.status} className="scale-75 origin-left" />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">{order.userName}</p>
                   </div>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">{order.userName}</p>
+                  <div className="text-right">
+                    <p className="font-bold text-brand-gold text-sm">{formatPrice(order.totalPrice)}</p>
+                    <p className="text-[9px] text-muted-foreground">{new Date(order.createdAt).toLocaleDateString()}</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-bold text-brand-gold text-sm">{formatPrice(order.totalPrice)}</p>
-                  <p className="text-[9px] text-muted-foreground">{new Date(order.createdAt).toLocaleDateString()}</p>
-                </div>
-              </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-border/30">
-                <p className="text-[9px] text-muted-foreground italic truncate">
-                  {order.items.map(i => i.name).join(', ')}
-                </p>
-                <Eye className="h-3 w-3 text-muted-foreground" />
+                <div className="flex items-center justify-between pt-2 border-t border-border/30">
+                  <p className="text-[9px] text-muted-foreground italic truncate">
+                    {order.items.map(i => i.name).join(', ')}
+                  </p>
+                  <Eye className="h-3 w-3 text-muted-foreground" />
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
       </div>
 
@@ -657,7 +663,7 @@ export default function AdminOrdersPage() {
                       <div className="p-4 rounded-2xl border border-border bg-background/50 space-y-4 shadow-inner">
                         <div className="space-y-3">
                           <div className="flex items-start gap-3">
-                            <User className="h-3.5 w-3.5 text-brand-red mt-0.5" />
+                            <UserIcon className="h-3.5 w-3.5 text-brand-red mt-0.5" />
                             <div className="min-w-0">
                               <p className="text-[8px] text-muted-foreground uppercase font-black">Recipient</p>
                               <p className="text-xs font-bold">{selectedOrder!.deliveryName}</p>
@@ -774,28 +780,28 @@ export default function AdminOrdersPage() {
           </DialogHeader>
           <div className="py-4 space-y-4">
             <p className="text-xs text-muted-foreground leading-relaxed">
-              You are moving this order to a status that was previously reached or is a backward step. 
+              You are moving this order to a status that was previously reached or is a backward step.
               Do you want to <strong>resend</strong> the status update email to the customer?
             </p>
           </div>
           <DialogFooter className="flex flex-col sm:flex-row gap-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => {
                 if (pendingStatusUpdate) {
                   executeStatusUpdate(pendingStatusUpdate.id, pendingStatusUpdate.status, pendingStatusUpdate.userId, false);
                 }
-              }} 
+              }}
               className="text-[10px] uppercase tracking-widest font-bold flex-1"
             >
               Update Without Email
             </Button>
-            <Button 
+            <Button
               onClick={() => {
                 if (pendingStatusUpdate) {
                   executeStatusUpdate(pendingStatusUpdate.id, pendingStatusUpdate.status, pendingStatusUpdate.userId, true);
                 }
-              }} 
+              }}
               className="bg-brand-gold hover:bg-brand-gold/90 text-black text-[10px] uppercase tracking-widest font-bold px-8 flex-1"
             >
               Update & Resend Email
