@@ -18,7 +18,8 @@ import {
   CreditCard,
   AlertCircle,
   XCircle,
-  Undo2
+  Undo2,
+  Search
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -45,6 +46,7 @@ export default function AdminOrdersPage() {
   const [orderToCancel, setOrderToCancel] = useState<{ id: string, userId: string } | null>(null);
   const [pendingStatusUpdate, setPendingStatusUpdate] = useState<{ id: string, status: OrderStatus, userId: string } | null>(null);
   const [isResendModalOpen, setIsResendModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const { addNotification } = useNotificationStore();
   const searchParams = useSearchParams();
 
@@ -372,10 +374,19 @@ export default function AdminOrdersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Orders</h1>
           <p className="text-muted-foreground text-sm">Manage customer purchases and multi-item orders.</p>
+        </div>
+        <div className="relative w-full sm:w-96">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input 
+            placeholder="Search by customer name, email or phone..." 
+            className="pl-10 bg-card border-border"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
       </div>
 
@@ -393,12 +404,32 @@ export default function AdminOrdersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {orders.length === 0 ? (
+              {orders
+                .filter(o => {
+                  const query = searchQuery.toLowerCase();
+                  return (
+                    o.userName?.toLowerCase().includes(query) ||
+                    o.userEmail?.toLowerCase().includes(query) ||
+                    o.deliveryPhone?.includes(query) ||
+                    o.id.toLowerCase().includes(query)
+                  );
+                })
+                .length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-12 text-muted-foreground italic">No orders found.</TableCell>
                 </TableRow>
               ) : (
-                orders.map((order) => (
+                orders
+                  .filter(o => {
+                    const query = searchQuery.toLowerCase();
+                    return (
+                      o.userName?.toLowerCase().includes(query) ||
+                      o.userEmail?.toLowerCase().includes(query) ||
+                      o.deliveryPhone?.includes(query) ||
+                      o.id.toLowerCase().includes(query)
+                    );
+                  })
+                  .map((order) => (
                   <TableRow key={order.id} className="border-border group">
                     <TableCell className="font-mono text-[10px] text-muted-foreground">#{order.id.split('-')[0]}</TableCell>
                     <TableCell>
@@ -429,7 +460,17 @@ export default function AdminOrdersPage() {
 
         {/* Mobile View */}
         <div className="md:hidden divide-y divide-border">
-          {orders.map((order) => (
+          {orders
+            .filter(o => {
+              const query = searchQuery.toLowerCase();
+              return (
+                o.userName?.toLowerCase().includes(query) ||
+                o.userEmail?.toLowerCase().includes(query) ||
+                o.deliveryPhone?.includes(query) ||
+                o.id.toLowerCase().includes(query)
+              );
+            })
+            .map((order) => (
             <div key={order.id} className="p-4 space-y-4 active:bg-muted/30 transition-colors group relative" onClick={() => setSelectedOrder(order)}>
               <div className="flex justify-between items-start">
                 <div className="space-y-1">

@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Eye } from 'lucide-react';
+import { Eye, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LocalStorage } from '@/mock-db/storage';
 import { useNotificationStore } from '@/store/notification-store';
+import { Input } from '@/components/ui/input';
 import type { CourseEnrollment, EnrollmentStatus, Course } from '@/types';
 import { formatPrice } from '@/constants/pricing';
 import { ALL_ENROLLMENT_STATUSES, ENROLLMENT_STATUS_CONFIG } from '@/constants/statuses';
@@ -17,6 +18,7 @@ import { User, Mail, Calendar, CreditCard, BookOpen, Clock, Smartphone, MapPin }
 export default function AdminEnrollmentsPage() {
   const [enrollments, setEnrollments] = useState<CourseEnrollment[]>([]);
   const [selectedEnrollment, setSelectedEnrollment] = useState<CourseEnrollment | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const { addNotification } = useNotificationStore();
 
   useEffect(() => {
@@ -65,17 +67,28 @@ export default function AdminEnrollmentsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-gradient">Course Enrollments</h1>
-        <p className="text-muted-foreground text-sm">Manage hobbyist enrollments and course access.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-gradient">Course Enrollments</h1>
+          <p className="text-muted-foreground text-sm">Manage hobbyist enrollments and course access.</p>
+        </div>
+        <div className="relative w-full sm:w-96">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input 
+            placeholder="Search by hobbyist name, email or phone..." 
+            className="pl-10 bg-card border-border"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
       </div>
 
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
         {/* Desktop Table View */}
         <div className="hidden md:block">
           <Table>
             <TableHeader>
-              <TableRow className="border-border bg-muted/30">
+              <TableRow className="border-border bg-muted/30 hover:bg-transparent">
                 <TableHead className="font-bold">Hobbyist</TableHead>
                 <TableHead className="font-bold">Course</TableHead>
                 <TableHead className="font-bold">Date</TableHead>
@@ -85,15 +98,35 @@ export default function AdminEnrollmentsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {enrollments.length === 0 ? (
+              {enrollments
+                .filter(e => {
+                  const query = searchQuery.toLowerCase();
+                  return (
+                    e.userName?.toLowerCase().includes(query) ||
+                    e.userEmail?.toLowerCase().includes(query) ||
+                    (e as any).userPhone?.includes(query) ||
+                    e.id.toLowerCase().includes(query) ||
+                    e.courseTitle.toLowerCase().includes(query)
+                  );
+                })
+                .length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    No enrollments found.
-                  </TableCell>
+                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground italic">No enrollments found.</TableCell>
                 </TableRow>
               ) : (
-                enrollments.map((enr) => (
-                  <TableRow key={enr.id} className="border-border">
+                enrollments
+                  .filter(e => {
+                    const query = searchQuery.toLowerCase();
+                    return (
+                      e.userName?.toLowerCase().includes(query) ||
+                      e.userEmail?.toLowerCase().includes(query) ||
+                      (e as any).userPhone?.includes(query) ||
+                      e.id.toLowerCase().includes(query) ||
+                      e.courseTitle.toLowerCase().includes(query)
+                    );
+                  })
+                  .map((enr) => (
+                  <TableRow key={enr.id} className="border-border hover:bg-muted/5 group transition-colors">
                     <TableCell>
                       <div className="font-medium">{enr.userName}</div>
                       <div className="text-xs text-muted-foreground">{enr.userEmail}</div>
@@ -103,7 +136,7 @@ export default function AdminEnrollmentsPage() {
                     <TableCell>{formatPrice(enr.totalPrice)}</TableCell>
                     <TableCell>
                       <Select value={enr.status} onValueChange={(val) => val && updateStatus(enr.id, val as EnrollmentStatus, enr.userId, enr.courseId)}>
-                        <SelectTrigger className="h-8 text-xs w-[140px] border-border">
+                        <SelectTrigger className="h-8 text-xs w-[140px] border-border bg-background/50">
                           <SelectValue placeholder="Status" />
                         </SelectTrigger>
                         <SelectContent className="bg-background border-border">
@@ -131,31 +164,39 @@ export default function AdminEnrollmentsPage() {
         </div>
 
         {/* Mobile List View */}
-        <div className="md:hidden divide-y divide-border rounded-xl border border-border bg-card overflow-hidden">
-          {enrollments.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground">No enrollments found.</div>
-          ) : (
-            enrollments.map((enr) => (
-              <div key={enr.id} className="p-4 space-y-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-bold text-sm">{enr.userName}</h3>
-                    <p className="text-[10px] text-muted-foreground">{enr.userEmail}</p>
-                  </div>
-                  {(() => {
-                    const config = ENROLLMENT_STATUS_CONFIG[enr.status as EnrollmentStatus] || ENROLLMENT_STATUS_CONFIG.enrolled;
-                    return (
-                      <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${config.bgColor} ${config.color}`}>
-                        {config.label}
-                      </div>
-                    );
-                  })()}
+        <div className="md:hidden divide-y divide-border">
+          {enrollments
+            .filter(e => {
+              const query = searchQuery.toLowerCase();
+              return (
+                e.userName?.toLowerCase().includes(query) ||
+                e.userEmail?.toLowerCase().includes(query) ||
+                (e as any).userPhone?.includes(query) ||
+                e.id.toLowerCase().includes(query) ||
+                e.courseTitle.toLowerCase().includes(query)
+              );
+            })
+            .map((enr) => (
+            <div key={enr.id} className="p-4 space-y-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="font-bold text-sm">{enr.userName}</h3>
+                  <p className="text-[10px] text-muted-foreground">{enr.userEmail}</p>
                 </div>
+                {(() => {
+                  const config = ENROLLMENT_STATUS_CONFIG[enr.status as EnrollmentStatus] || ENROLLMENT_STATUS_CONFIG.enrolled;
+                  return (
+                    <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${config.bgColor} ${config.color}`}>
+                      {config.label}
+                    </div>
+                  );
+                })()}
+              </div>
 
-                <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
-                  <BookOpen className="h-3 w-3 text-brand-gold" />
-                  <p className="text-xs font-medium truncate">{enr.courseTitle}</p>
-                </div>
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+                <BookOpen className="h-3 w-3 text-brand-gold" />
+                <p className="text-xs font-medium truncate">{enr.courseTitle}</p>
+              </div>
 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
@@ -185,9 +226,8 @@ export default function AdminEnrollmentsPage() {
                     <Eye className="h-4 w-4" />
                   </Button>
                 </div>
-              </div>
-            ))
-          )}
+            </div>
+          ))}
         </div>
       </div>
 

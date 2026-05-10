@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Eye, Calendar, Clock, Check, Video, X } from 'lucide-react';
+import { Eye, Calendar, Clock, Check, Video, X, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -36,6 +36,7 @@ export default function AdminBookingsPage() {
   const [slotMeetingLink, setSlotMeetingLink] = useState('');
   const [slotRecordingLink, setSlotRecordingLink] = useState('');
   const [deleteConfirmInfo, setDeleteConfirmInfo] = useState<{ itemIdx: number, slotId: string } | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const { addNotification } = useNotificationStore();
 
   useEffect(() => {
@@ -137,7 +138,7 @@ export default function AdminBookingsPage() {
         duration: slot.duration
       })
     })
-      .then(() => toast.success('Update email sent to customer'))
+      .then(() => toast.success('Update email sent to client'))
       .catch(err => {
         console.error('Email error:', err);
         toast.error('Failed to send update email');
@@ -158,7 +159,7 @@ export default function AdminBookingsPage() {
         duration: slot.duration
       })
     })
-      .then(() => toast.success('Schedule email sent to customer'))
+      .then(() => toast.success('Schedule email sent to client'))
       .catch(err => {
         console.error('Email error:', err);
         toast.error('Failed to send schedule email');
@@ -178,7 +179,7 @@ export default function AdminBookingsPage() {
         reason: 'Administrative update'
       })
     })
-      .then(() => toast.success('Cancellation email sent to customer'))
+      .then(() => toast.success('Cancellation email sent to client'))
       .catch(err => {
         console.error('Email error:', err);
         toast.error('Failed to send cancellation email');
@@ -252,7 +253,7 @@ export default function AdminBookingsPage() {
     // Notify user of update
     sendUpdatedEmail(selectedBooking, updatedSlot);
     
-    toast.success('Call details updated and customer notified');
+    toast.success('Call details updated and client notified');
   };
 
   const handleDeleteSlot = (itemIdx: number, slotId: string) => {
@@ -284,7 +285,7 @@ export default function AdminBookingsPage() {
       sendCancelledEmail(selectedBooking, slotToDelete);
     }
     
-    toast.success('Call deleted and customer notified');
+    toast.success('Call deleted and client notified');
     setDeleteConfirmInfo(null);
   };
 
@@ -347,6 +348,15 @@ export default function AdminBookingsPage() {
           <h1 className="text-2xl font-bold tracking-tight">Consultation Bookings</h1>
           <p className="text-muted-foreground">Manage expert consultation appointments and scheduling.</p>
         </div>
+        <div className="relative w-full sm:w-96">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input 
+            placeholder="Search by client name, email or phone..." 
+            className="pl-10 bg-card border-border"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
       </div>
 
       <div className="rounded-xl border border-border bg-card overflow-hidden">
@@ -355,7 +365,7 @@ export default function AdminBookingsPage() {
           <Table>
             <TableHeader>
               <TableRow className="border-border bg-muted/30">
-                <TableHead>Customer</TableHead>
+                <TableHead>Client</TableHead>
                 <TableHead>Requested Plan</TableHead>
                 <TableHead>Assigned Slot</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
@@ -363,7 +373,17 @@ export default function AdminBookingsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {bookings.length === 0 ? (
+              {bookings
+                .filter(b => {
+                  const query = searchQuery.toLowerCase();
+                  return (
+                    b.userName?.toLowerCase().includes(query) ||
+                    b.userEmail?.toLowerCase().includes(query) ||
+                    (b as any).userPhone?.includes(query) ||
+                    b.id.toLowerCase().includes(query)
+                  );
+                })
+                .length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                     <Calendar className="mx-auto h-8 w-8 mb-4 opacity-20" />
@@ -371,7 +391,17 @@ export default function AdminBookingsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                bookings.map((booking) => (
+                bookings
+                  .filter(b => {
+                    const query = searchQuery.toLowerCase();
+                    return (
+                      b.userName?.toLowerCase().includes(query) ||
+                      b.userEmail?.toLowerCase().includes(query) ||
+                      (b as any).userPhone?.includes(query) ||
+                      b.id.toLowerCase().includes(query)
+                    );
+                  })
+                  .map((booking) => (
                   <TableRow key={booking.id} className="border-border hover:bg-muted/10 transition-colors">
                     <TableCell>
                       <div className="font-medium">{booking.userName}</div>
@@ -728,7 +758,7 @@ export default function AdminBookingsPage() {
           <DialogHeader>
             <DialogTitle>Cancel Scheduled Call</DialogTitle>
             <DialogDescription>
-              Are you sure you want to cancel this call? This will notify the customer via email.
+              Are you sure you want to cancel this call? This will notify the client via email.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
