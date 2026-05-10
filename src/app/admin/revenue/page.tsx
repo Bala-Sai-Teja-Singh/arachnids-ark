@@ -13,10 +13,11 @@ import { Badge } from '@/components/ui/badge';
 
 interface RevenueItem {
   id: string;
-  type: 'product' | 'course' | 'consultation';
+  type: 'product' | 'course' | 'consultation' | 'mixed';
   name: string;
   userName: string;
   userEmail: string;
+  userPhone?: string;
   amount: number;
   date: string;
   status: string;
@@ -41,42 +42,97 @@ export default function AdminRevenuePage() {
 
     const completedOrders: RevenueItem[] = orders
       .filter(o => ['payment_verified', 'order_shipped', 'order_completed'].includes(o.status))
-      .map(o => ({
-        id: o.id,
-        type: 'product',
-        name: o.items.length === 1 ? o.items[0].name : `${o.items.length} Species Order`,
-        userName: o.userName,
-        userEmail: o.userEmail,
-        amount: o.totalPrice,
-        date: o.createdAt,
-        status: o.status
-      }));
+      .flatMap(o => {
+        const itemsByType = o.items.reduce((acc, item) => {
+          if (!acc[item.type]) acc[item.type] = [];
+          acc[item.type].push(item);
+          return acc;
+        }, {} as Record<string, typeof o.items>);
+
+        const rows: RevenueItem[] = [];
+
+        // 1. Group products into one row
+        if (itemsByType['product']) {
+          const products = itemsByType['product'];
+          const totalQty = products.reduce((acc, i) => acc + (i.quantity || 1), 0);
+          const totalAmount = products.reduce((acc, i) => acc + (i.price * (i.quantity || 1)), 0);
+          
+          rows.push({
+            id: `${o.id}-products`,
+            type: 'product',
+            name: products.length === 1 && products[0].quantity === 1 
+              ? products[0].name 
+              : `${totalQty} Items (${products.length} Species)`,
+            userName: o.userName,
+            userEmail: o.userEmail,
+            userPhone: o.deliveryPhone,
+            amount: totalAmount + (o.shippingCharge || 0), // Add shipping to product row
+            date: o.createdAt,
+            status: o.status
+          });
+        }
+
+        // 2. Individual rows for courses and consultations
+        ['course', 'consultation'].forEach(type => {
+          if (itemsByType[type]) {
+            itemsByType[type].forEach((item, idx) => {
+              rows.push({
+                id: `${o.id}-${type}-${idx}`,
+                type: type as any,
+                name: item.name + (item.quantity > 1 ? ` (x${item.quantity})` : ''),
+                userName: o.userName,
+                userEmail: o.userEmail,
+                userPhone: o.deliveryPhone,
+                amount: item.price * (item.quantity || 1),
+                date: o.createdAt,
+                status: o.status
+              });
+            });
+          }
+        });
+
+        return rows;
+      });
 
     const completedEnrollments: RevenueItem[] = enrollments
-      .filter(e => e.status === 'enrolled')
+      .filter(e => e.status === 'enrolled' && !e.orderId)
       .map(e => ({
         id: e.id,
         type: 'course',
         name: e.courseTitle,
         userName: e.userName,
         userEmail: e.userEmail,
+        userPhone: (e as any).userPhone,
         amount: e.totalPrice,
         date: e.createdAt,
         status: e.status
       }));
 
     const completedBookings: RevenueItem[] = bookings
-      .filter(b => ['payment_verified', 'scheduled', 'completed'].includes(b.status))
-      .map(b => ({
-        id: b.id,
-        type: 'consultation',
-        name: `${b.duration} min Consultation`,
-        userName: b.userName,
-        userEmail: b.userEmail,
-        amount: b.totalPrice || 0,
-        date: b.createdAt,
-        status: b.status
-      }));
+      .filter(b => ['payment_verified', 'scheduled', 'completed'].includes(b.status) && !b.orderId)
+      .map(b => {
+        let name = `${b.duration} min Consultation`;
+        if (b.items && b.items.length > 0) {
+          if (b.items.length === 1) {
+            name = b.items[0].label;
+          } else {
+            const totalMins = b.items.reduce((acc, curr) => acc + (curr.duration * (curr.quantity || 1)), 0);
+            name = `${b.items.length} Sessions (${totalMins} mins)`;
+          }
+        }
+        
+        return {
+          id: b.id,
+          type: 'consultation',
+          name,
+          userName: b.userName,
+          userEmail: b.userEmail,
+          userPhone: (b as any).userPhone,
+          amount: b.totalPrice || 0,
+          date: b.createdAt,
+          status: b.status
+        };
+      });
 
     const allItems = [...completedOrders, ...completedEnrollments, ...completedBookings].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -96,10 +152,13 @@ export default function AdminRevenuePage() {
   useEffect(() => {
     let result = revenueItems;
     if (searchTerm) {
+      const query = searchTerm.toLowerCase();
       result = result.filter(item => 
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.userEmail.toLowerCase().includes(searchTerm.toLowerCase())
+        item.name.toLowerCase().includes(query) ||
+        item.userName.toLowerCase().includes(query) ||
+        item.userEmail.toLowerCase().includes(query) ||
+        item.userPhone?.includes(query) ||
+        item.id.toLowerCase().includes(query)
       );
     }
     if (filterType !== 'all') {
@@ -166,11 +225,11 @@ export default function AdminRevenuePage() {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+        <div className="relative w-full sm:w-96">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input 
-            placeholder="Search transactions..." 
-            className="pl-9 bg-card/50 border-border"
+            placeholder="Search by client name, email or phone..." 
+            className="pl-10 bg-card/50 border-border"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
           />
@@ -228,7 +287,8 @@ export default function AdminRevenuePage() {
                       <Badge variant="outline" className={`text-[10px] uppercase tracking-widest border-0 ${
                         item.type === 'product' ? 'bg-brand-red/10 text-brand-red' :
                         item.type === 'course' ? 'bg-brand-gold/10 text-brand-gold' :
-                        'bg-green-500/10 text-green-400'
+                        item.type === 'consultation' ? 'bg-green-500/10 text-green-400' :
+                        'bg-blue-500/10 text-blue-400'
                       }`}>
                         {item.type}
                       </Badge>
@@ -265,7 +325,8 @@ export default function AdminRevenuePage() {
                   <Badge variant="outline" className={`text-[10px] uppercase tracking-widest border-0 ${
                     item.type === 'product' ? 'bg-brand-red/10 text-brand-red' :
                     item.type === 'course' ? 'bg-brand-gold/10 text-brand-gold' :
-                    'bg-green-500/10 text-green-400'
+                    item.type === 'consultation' ? 'bg-green-500/10 text-green-400' :
+                    'bg-blue-500/10 text-blue-400'
                   }`}>
                     {item.type}
                   </Badge>
