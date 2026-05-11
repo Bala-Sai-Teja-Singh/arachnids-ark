@@ -1,9 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Eye, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LocalStorage } from '@/mock-db/storage';
 import { useNotificationStore } from '@/store/notification-store';
@@ -13,7 +11,8 @@ import { formatPrice } from '@/constants/pricing';
 import { ALL_ENROLLMENT_STATUSES, ENROLLMENT_STATUS_CONFIG } from '@/constants/statuses';
 import { toast } from 'sonner';
 import { Modal } from '@/components/shared/molecules/modal';
-import { User, Mail, Calendar, CreditCard, BookOpen, Clock, Smartphone, MapPin } from 'lucide-react';
+import { TableMolecule } from '@/components/shared/molecules/table';
+import { User, Mail, Calendar, CreditCard, BookOpen, Clock, Smartphone, MapPin, Eye, Search } from 'lucide-react';
 
 export default function AdminEnrollmentsPage() {
   const [enrollments, setEnrollments] = useState<CourseEnrollment[]>([]);
@@ -69,8 +68,8 @@ export default function AdminEnrollmentsPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-4">
         <div className="w-full sm:w-96">
-          <Input 
-            placeholder="Search by hobbyist name, email or phone..." 
+          <Input
+            placeholder="Search by hobbyist name, email or phone..."
             className="bg-card border-border h-10"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -81,157 +80,127 @@ export default function AdminEnrollmentsPage() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
-        {/* Desktop Table View */}
-        <div className="hidden md:block">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border bg-muted/30 hover:bg-transparent">
-                <TableHead className="font-bold">Hobbyist</TableHead>
-                <TableHead className="font-bold">Course</TableHead>
-                <TableHead className="font-bold">Date</TableHead>
-                <TableHead className="font-bold">Amount</TableHead>
-                <TableHead className="font-bold">Status</TableHead>
-                <TableHead className="text-right font-bold">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {enrollments
-                .filter(e => {
-                  const query = searchQuery.toLowerCase();
-                  return (
-                    e.userName?.toLowerCase().includes(query) ||
-                    e.userEmail?.toLowerCase().includes(query) ||
-                    (e as any).userPhone?.includes(query) ||
-                    e.id.toLowerCase().includes(query) ||
-                    e.courseTitle.toLowerCase().includes(query)
-                  );
-                })
-                .length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground italic">No enrollments found.</TableCell>
-                </TableRow>
-              ) : (
-                enrollments
-                  .filter(e => {
-                    const query = searchQuery.toLowerCase();
-                    return (
-                      e.userName?.toLowerCase().includes(query) ||
-                      e.userEmail?.toLowerCase().includes(query) ||
-                      (e as any).userPhone?.includes(query) ||
-                      e.id.toLowerCase().includes(query) ||
-                      e.courseTitle.toLowerCase().includes(query)
-                    );
-                  })
-                  .map((enr) => (
-                  <TableRow key={enr.id} className="border-border hover:bg-muted/5 group transition-colors">
-                    <TableCell>
-                      <div className="font-medium">{enr.userName}</div>
-                      <div className="text-xs text-muted-foreground">{enr.userEmail}</div>
-                    </TableCell>
-                    <TableCell className="font-medium max-w-[200px] truncate">{enr.courseTitle}</TableCell>
-                    <TableCell className="text-xs">{new Date(enr.createdAt).toLocaleDateString()}</TableCell>
-                    <TableCell>{formatPrice(enr.totalPrice)}</TableCell>
-                    <TableCell>
-                      <Select value={enr.status} onValueChange={(val) => val && updateStatus(enr.id, val as EnrollmentStatus, enr.userId, enr.courseId)}>
-                        <SelectTrigger className="h-8 text-xs w-[140px] border-border bg-background/50">
-                          <SelectValue placeholder="Status" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-background border-border">
-                          {ALL_ENROLLMENT_STATUSES.map(s => (
-                            <SelectItem key={s} value={s} className="text-xs capitalize">{ENROLLMENT_STATUS_CONFIG[s].label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-muted-foreground hover:text-brand-gold h-8 w-8"
-                        onClick={() => setSelectedEnrollment(enr)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* Mobile List View */}
-        <div className="md:hidden divide-y divide-border">
-          {enrollments
-            .filter(e => {
-              const query = searchQuery.toLowerCase();
-              return (
-                e.userName?.toLowerCase().includes(query) ||
-                e.userEmail?.toLowerCase().includes(query) ||
-                (e as any).userPhone?.includes(query) ||
-                e.id.toLowerCase().includes(query) ||
-                e.courseTitle.toLowerCase().includes(query)
-              );
-            })
-            .map((enr) => (
-            <div key={enr.id} className="p-4 space-y-4">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-bold text-sm">{enr.userName}</h3>
-                  <p className="text-[10px] text-muted-foreground">{enr.userEmail}</p>
-                </div>
-                {(() => {
-                  const config = ENROLLMENT_STATUS_CONFIG[enr.status as EnrollmentStatus] || ENROLLMENT_STATUS_CONFIG.enrolled;
-                  return (
-                    <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${config.bgColor} ${config.color}`}>
-                      {config.label}
-                    </div>
-                  );
-                })()}
+      <TableMolecule
+        data={enrollments.filter(e => {
+          const query = searchQuery.toLowerCase();
+          return (
+            e.userName?.toLowerCase().includes(query) ||
+            e.userEmail?.toLowerCase().includes(query) ||
+            (e as any).userPhone?.includes(query) ||
+            e.id.toLowerCase().includes(query) ||
+            e.courseTitle.toLowerCase().includes(query)
+          );
+        })}
+        columns={[
+          {
+            header: 'Hobbyist',
+            cell: (enr) => (
+              <>
+                <div className="font-medium">{enr.userName}</div>
+                <div className="text-xs text-muted-foreground">{enr.userEmail}</div>
+              </>
+            )
+          },
+          {
+            header: 'Course',
+            cell: (enr) => <div className="font-medium max-w-[200px] truncate">{enr.courseTitle}</div>
+          },
+          {
+            header: 'Date',
+            cell: (enr) => <span className="text-xs">{new Date(enr.createdAt).toLocaleDateString()}</span>
+          },
+          {
+            header: 'Amount',
+            cell: (enr) => formatPrice(enr.totalPrice)
+          },
+          {
+            header: 'Status',
+            cell: (enr) => (
+              <Select value={enr.status} onValueChange={(val) => val && updateStatus(enr.id, val as EnrollmentStatus, enr.userId, enr.courseId)}>
+                <SelectTrigger className="h-8 text-xs w-[140px] border-border bg-background/50">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent className="bg-background border-border">
+                  {ALL_ENROLLMENT_STATUSES.map(s => (
+                    <SelectItem key={s} value={s} className="text-xs capitalize">{ENROLLMENT_STATUS_CONFIG[s].label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )
+          },
+          {
+            header: 'Actions',
+            align: 'right',
+            cell: (enr) => (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-muted-foreground hover:text-brand-gold h-8 w-8"
+                onClick={() => setSelectedEnrollment(enr)}
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
+            )
+          }
+        ]}
+        renderMobileItem={(enr) => (
+          <div className="space-y-4">
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="font-bold text-sm">{enr.userName}</h3>
+                <p className="text-[10px] text-muted-foreground">{enr.userEmail}</p>
               </div>
-
-              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
-                <BookOpen className="h-3 w-3 text-brand-gold" />
-                <p className="text-xs font-medium truncate">{enr.courseTitle}</p>
-              </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
-                    {new Date(enr.createdAt).toLocaleDateString()}
+              {(() => {
+                const config = ENROLLMENT_STATUS_CONFIG[enr.status as EnrollmentStatus] || ENROLLMENT_STATUS_CONFIG.enrolled;
+                return (
+                  <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${config.bgColor} ${config.color}`}>
+                    {config.label}
                   </div>
-                  <p className="text-sm font-bold text-brand-gold">{formatPrice(enr.totalPrice)}</p>
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  <Select value={enr.status} onValueChange={(val) => val && updateStatus(enr.id, val as EnrollmentStatus, enr.userId, enr.courseId)}>
-                    <SelectTrigger className="h-9 text-xs flex-1 border-border bg-background/50">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background border-border">
-                      {ALL_ENROLLMENT_STATUSES.map(s => (
-                        <SelectItem key={s} value={s} className="text-xs capitalize">{ENROLLMENT_STATUS_CONFIG[s].label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-9 w-9 text-muted-foreground border-border"
-                    onClick={() => setSelectedEnrollment(enr)}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                </div>
+                );
+              })()}
             </div>
-          ))}
-        </div>
-      </div>
+
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+              <BookOpen className="h-3 w-3 text-brand-gold" />
+              <p className="text-xs font-medium truncate">{enr.courseTitle}</p>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                <Calendar className="h-3 w-3" />
+                {new Date(enr.createdAt).toLocaleDateString()}
+              </div>
+              <p className="text-sm font-bold text-brand-gold">{formatPrice(enr.totalPrice)}</p>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <Select value={enr.status} onValueChange={(val) => val && updateStatus(enr.id, val as EnrollmentStatus, enr.userId, enr.courseId)}>
+                <SelectTrigger className="h-9 text-xs flex-1 border-border bg-background/50">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent className="bg-background border-border">
+                  {ALL_ENROLLMENT_STATUSES.map(s => (
+                    <SelectItem key={s} value={s} className="text-xs capitalize">{ENROLLMENT_STATUS_CONFIG[s].label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 text-muted-foreground border-border"
+                onClick={() => setSelectedEnrollment(enr)}
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+        emptyDescription="No enrollments found."
+      />
 
       {/* Detail Modal */}
-      <Modal 
-        isOpen={!!selectedEnrollment} 
+      <Modal
+        isOpen={!!selectedEnrollment}
         onClose={() => setSelectedEnrollment(null)}
         variant="extra-large"
         title="Enrollment Details"
@@ -239,7 +208,7 @@ export default function AdminEnrollmentsPage() {
       >
         {selectedEnrollment && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-b border-border/50 pb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-b border-border/50 pb-4">
               <div className="space-y-1">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Enrollment ID</p>
                 <p className="text-sm font-mono">{selectedEnrollment.id.slice(0, 8)}</p>

@@ -22,7 +22,7 @@ import {
   User as UserIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { TableMolecule } from '@/components/shared/molecules/table';
 import { StatusBadge } from '@/components/shared/molecules/status-badge';
 import { SectionHeader } from '@/components/shared/molecules/section-header';
 import { Loading } from '@/components/shared/molecules/loading';
@@ -403,112 +403,88 @@ export default function AdminOrdersPage() {
         </div>
       </SectionHeader>
 
-      <div className="rounded-xl border border-border bg-card/50 backdrop-blur-md overflow-hidden shadow-sm">
-        <div className="hidden md:block">
-          <Table>
-            <TableHeader className="bg-muted/50">
-              <TableRow className="border-border hover:bg-transparent">
-                <TableHead className="text-[10px] uppercase font-bold tracking-widest">Order ID</TableHead>
-                <TableHead className="text-[10px] uppercase font-bold tracking-widest">Customer</TableHead>
-                <TableHead className="text-[10px] uppercase font-bold tracking-widest">Items</TableHead>
-                <TableHead className="text-[10px] uppercase font-bold tracking-widest text-center">Status</TableHead>
-                <TableHead className="text-[10px] uppercase font-bold tracking-widest text-right">Total</TableHead>
-                <TableHead className="text-[10px] uppercase font-bold tracking-widest text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {orders
-                .filter(o => {
-                  const query = searchQuery.toLowerCase();
-                  return (
-                    o.userName?.toLowerCase().includes(query) ||
-                    o.userEmail?.toLowerCase().includes(query) ||
-                    o.deliveryPhone?.includes(query) ||
-                    o.id.toLowerCase().includes(query)
-                  );
-                })
-                .length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground italic">No orders found.</TableCell>
-                </TableRow>
-              ) : (
-                orders
-                  .filter(o => {
-                    const query = searchQuery.toLowerCase();
-                    return (
-                      o.userName?.toLowerCase().includes(query) ||
-                      o.userEmail?.toLowerCase().includes(query) ||
-                      o.deliveryPhone?.includes(query) ||
-                      o.id.toLowerCase().includes(query)
-                    );
-                  })
-                  .map((order) => (
-                    <TableRow key={order.id} className="border-border group">
-                      <TableCell className="font-mono text-[10px] text-muted-foreground">#{order.id.split('-')[0]}</TableCell>
-                      <TableCell>
-                        <div className="font-bold text-xs">{order.userName}</div>
-                        <div className="text-[10px] text-muted-foreground">{order.userEmail}</div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-medium text-xs truncate max-w-[150px]">
-                          {order.items.map(i => i.name).join(', ')}
-                        </div>
-                        <div className="text-[10px] text-muted-foreground">{order.items.length} item(s)</div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <StatusBadge status={order.status} className="scale-90" />
-                      </TableCell>
-                      <TableCell className="text-right font-bold text-brand-gold text-sm">{formatPrice(order.totalPrice)}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-brand-gold shrink-0" onClick={() => setSelectedOrder(order)}>
-                          <Eye className="h-4 w-4 shrink-0" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* Mobile View */}
-        <div className="md:hidden divide-y divide-border">
-          {orders
-            .filter(o => {
-              const query = searchQuery.toLowerCase();
-              return (
-                o.userName?.toLowerCase().includes(query) ||
-                o.userEmail?.toLowerCase().includes(query) ||
-                o.deliveryPhone?.includes(query) ||
-                o.id.toLowerCase().includes(query)
-              );
-            })
-            .map((order) => (
-              <div key={order.id} className="p-4 space-y-4 active:bg-muted/30 transition-colors group relative" onClick={() => setSelectedOrder(order)}>
-                <div className="flex justify-between items-start">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-sm">#{order.id.split('-')[0]}</h3>
-                      <StatusBadge status={order.status} className="scale-75 origin-left" />
-                    </div>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">{order.userName}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-brand-gold text-sm">{formatPrice(order.totalPrice)}</p>
-                    <p className="text-[9px] text-muted-foreground">{new Date(order.createdAt).toLocaleDateString()}</p>
-                  </div>
+      <TableMolecule
+        data={orders.filter(o => {
+          const query = searchQuery.toLowerCase();
+          return (
+            o.userName?.toLowerCase().includes(query) ||
+            o.userEmail?.toLowerCase().includes(query) ||
+            o.deliveryPhone?.includes(query) ||
+            o.id.toLowerCase().includes(query)
+          );
+        })}
+        columns={[
+          {
+            header: 'Order ID',
+            cell: (order) => <span className="font-mono text-[10px] text-muted-foreground">#{order.id.split('-')[0]}</span>
+          },
+          {
+            header: 'Customer',
+            cell: (order) => (
+              <>
+                <div className="font-bold text-xs">{order.userName}</div>
+                <div className="text-[10px] text-muted-foreground">{order.userEmail}</div>
+              </>
+            )
+          },
+          {
+            header: 'Items',
+            cell: (order) => (
+              <>
+                <div className="font-medium text-xs truncate max-w-[150px]">
+                  {order.items.map(i => i.name).join(', ')}
                 </div>
-
-                <div className="flex items-center justify-between pt-2 border-t border-border/30 gap-4">
-                  <p className="text-[9px] text-muted-foreground italic truncate flex-1">
-                    {order.items.map(i => i.name).join(', ')}
-                  </p>
-                  <Eye className="h-3 w-3 text-muted-foreground shrink-0" />
+                <div className="text-[10px] text-muted-foreground">{order.items.length} item(s)</div>
+              </>
+            )
+          },
+          {
+            header: 'Status',
+            align: 'center',
+            cell: (order) => <StatusBadge status={order.status} className="scale-90" />
+          },
+          {
+            header: 'Total',
+            align: 'right',
+            cell: (order) => <span className="font-bold text-brand-gold text-sm">{formatPrice(order.totalPrice)}</span>
+          },
+          {
+            header: 'Actions',
+            align: 'right',
+            cell: (order) => (
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-brand-gold shrink-0" onClick={() => setSelectedOrder(order)}>
+                <Eye className="h-4 w-4 shrink-0" />
+              </Button>
+            )
+          }
+        ]}
+        renderMobileItem={(order) => (
+          <div className="space-y-4 relative" onClick={() => setSelectedOrder(order)}>
+            <div className="flex justify-between items-start">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-sm">#{order.id.split('-')[0]}</h3>
+                  <StatusBadge status={order.status} className="scale-75 origin-left" />
                 </div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">{order.userName}</p>
               </div>
-            ))}
-        </div>
-      </div>
+              <div className="text-right">
+                <p className="font-bold text-brand-gold text-sm">{formatPrice(order.totalPrice)}</p>
+                <p className="text-[9px] text-muted-foreground">{new Date(order.createdAt).toLocaleDateString()}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-2 border-t border-border/30 gap-4">
+              <p className="text-[9px] text-muted-foreground italic truncate flex-1">
+                {order.items.map(i => i.name).join(', ')}
+              </p>
+              <Eye className="h-3 w-3 text-muted-foreground shrink-0" />
+            </div>
+          </div>
+        )}
+        emptyDescription="No orders found."
+        onRowClick={(order) => setSelectedOrder(order)}
+      />
 
       {/* Detail Modal */}
       <Modal 

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/shared/atoms/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { TableMolecule } from '@/components/shared/molecules/table';
 import { Badge } from '@/components/ui/badge';
 import { Modal } from '@/components/shared/molecules/modal';
 import { LocalStorage } from '@/mock-db/storage';
@@ -109,61 +109,51 @@ export default function AdminCareGuidesPage() {
         </div>
       </SectionHeader>
 
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-border hover:bg-transparent">
-              <TableHead>Guide</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Read Time</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                  No care guides found.
-                </TableCell>
-              </TableRow>
-            ) : (
-              filtered.map((guide) => (
-                <TableRow key={guide.id} className="border-border">
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-md bg-muted overflow-hidden shrink-0 border border-border">
-                        {guide.image ? (
-                          <img src={guide.image} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-muted-foreground/30">
-                            <BookOpen className="h-4 w-4" />
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <div className="font-medium">{guide.title}</div>
-                        <div className="text-xs text-muted-foreground line-clamp-1 max-w-[300px]">{guide.excerpt}</div>
-                      </div>
+      <TableMolecule
+        data={filtered}
+        columns={[
+          {
+            header: 'Guide',
+            cell: (guide) => (
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-md bg-muted overflow-hidden shrink-0 border border-border">
+                  {guide.image ? (
+                    <img src={guide.image} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-muted-foreground/30">
+                      <BookOpen className="h-4 w-4" />
                     </div>
-                  </TableCell>
-                  <TableCell><Badge variant="outline">{guide.category}</Badge></TableCell>
-                  <TableCell className="text-xs">{guide.readTime}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-brand-gold" onClick={() => handleOpenEdit(guide)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-400" onClick={() => setDeleteId(guide.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                  )}
+                </div>
+                <div>
+                  <div className="font-medium">{guide.title}</div>
+                  <div className="text-xs text-muted-foreground line-clamp-1 max-w-[300px]">{guide.excerpt}</div>
+                </div>
+              </div>
+            )
+          },
+          {
+            header: 'Category',
+            cell: (guide) => <Badge variant="outline">{guide.category}</Badge>
+          },
+          { header: 'Read Time', accessorKey: 'readTime', className: 'text-xs' },
+          {
+            header: 'Actions',
+            align: 'right',
+            cell: (guide) => (
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-brand-gold" onClick={() => handleOpenEdit(guide)}>
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-400" onClick={() => setDeleteId(guide.id)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            )
+          }
+        ]}
+        emptyDescription="No care guides found."
+      />
 
       <Modal
         isOpen={isModalOpen}
@@ -182,7 +172,7 @@ export default function AdminCareGuidesPage() {
                 placeholder="e.g. Complete Beginner's Guide to Tarantula Care"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Category</Label>
                 <Input

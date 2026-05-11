@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react';
 import { Shield, ShieldAlert, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Modal } from '@/components/shared/molecules/modal';
+import { TableMolecule } from '@/components/shared/molecules/table';
 import { LocalStorage } from '@/mock-db/storage';
 import type { User, UserRole } from '@/types';
 import { toast } from 'sonner';
@@ -61,65 +61,61 @@ export default function AdminUsersPage() {
   return (
     <div className="space-y-6">
 
-      <div className="rounded-md border border-border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-border">
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Joined</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {users.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                  No users found.
-                </TableCell>
-              </TableRow>
-            ) : (
-              users.map((u) => (
-                <TableRow key={u.id} className="border-border">
-                  <TableCell className="font-medium">
-                    {u.name}
-                    {u.id === currentUser?.id && <Badge variant="outline" className="ml-2 text-[10px] h-4 border-brand-gold/30 text-brand-gold">You</Badge>}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{u.email}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={u.role === 'admin' ? 'border-red-400/30 text-red-400 bg-red-400/10' : 'border-border'}>
-                      {u.role}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{new Date(u.createdAt).toLocaleDateString()}</TableCell>
-                  <TableCell className="text-right">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="text-muted-foreground hover:text-brand-gold"
-                      onClick={() => promptRoleChange(u.id, u.name, u.role)}
-                      disabled={u.id === currentUser?.id}
-                      title={u.role === 'admin' ? 'Demote to User' : 'Promote to Admin'}
-                    >
-                      {u.role === 'admin' ? <ShieldAlert className="h-4 w-4" /> : <Shield className="h-4 w-4" />}
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="text-muted-foreground hover:text-red-400" 
-                      onClick={() => promptDelete(u.id)}
-                      disabled={u.id === currentUser?.id}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <TableMolecule
+        data={users}
+        columns={[
+          {
+            header: 'Name',
+            cell: (u) => (
+              <div className="font-medium">
+                {u.name}
+                {u.id === currentUser?.id && <Badge variant="outline" className="ml-2 text-[10px] h-4 border-brand-gold/30 text-brand-gold">You</Badge>}
+              </div>
+            )
+          },
+          { header: 'Email', accessorKey: 'email', className: 'text-muted-foreground' },
+          {
+            header: 'Role',
+            cell: (u) => (
+              <Badge variant="outline" className={u.role === 'admin' ? 'border-red-400/30 text-red-400 bg-red-400/10' : 'border-border'}>
+                {u.role}
+              </Badge>
+            )
+          },
+          {
+            header: 'Joined',
+            cell: (u) => <span className="text-xs text-muted-foreground">{new Date(u.createdAt).toLocaleDateString()}</span>
+          },
+          {
+            header: 'Actions',
+            align: 'right',
+            cell: (u) => (
+              <div className="flex justify-end gap-1">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="text-muted-foreground hover:text-brand-gold h-8 w-8"
+                  onClick={() => promptRoleChange(u.id, u.name, u.role)}
+                  disabled={u.id === currentUser?.id}
+                  title={u.role === 'admin' ? 'Demote to User' : 'Promote to Admin'}
+                >
+                  {u.role === 'admin' ? <ShieldAlert className="h-4 w-4" /> : <Shield className="h-4 w-4" />}
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="text-muted-foreground hover:text-red-400 h-8 w-8" 
+                  onClick={() => promptDelete(u.id)}
+                  disabled={u.id === currentUser?.id}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            )
+          }
+        ]}
+        emptyDescription="No users found."
+      />
 
       {/* Role Change Confirmation Modal */}
       <Modal 

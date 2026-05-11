@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Eye, Calendar, Clock, Check, Video, X, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { TableMolecule } from '@/components/shared/molecules/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Modal } from '@/components/shared/molecules/modal';
 import { Input } from '@/components/shared/atoms/input';
@@ -358,140 +358,118 @@ export default function AdminBookingsPage() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
-        {/* Desktop Table */}
-        <div className="hidden md:block">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border bg-muted/30">
-                <TableHead>Client</TableHead>
-                <TableHead>Requested Plan</TableHead>
-                <TableHead>Assigned Slot</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {bookings
-                .filter(b => {
-                  const query = searchQuery.toLowerCase();
-                  return (
-                    b.userName?.toLowerCase().includes(query) ||
-                    b.userEmail?.toLowerCase().includes(query) ||
-                    (b as any).userPhone?.includes(query) ||
-                    b.id.toLowerCase().includes(query)
-                  );
-                })
-                .length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                    <Calendar className="mx-auto h-8 w-8 mb-4 opacity-20" />
-                    No bookings found.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                bookings
-                  .filter(b => {
-                    const query = searchQuery.toLowerCase();
-                    return (
-                      b.userName?.toLowerCase().includes(query) ||
-                      b.userEmail?.toLowerCase().includes(query) ||
-                      (b as any).userPhone?.includes(query) ||
-                      b.id.toLowerCase().includes(query)
-                    );
-                  })
-                  .map((booking) => (
-                  <TableRow key={booking.id} className="border-border hover:bg-muted/10 transition-colors">
-                    <TableCell>
-                      <div className="font-medium">{booking.userName}</div>
-                      <div className="text-xs text-muted-foreground">{booking.userEmail}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        {booking.items?.map((item, idx) => (
-                          <div key={idx} className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-[9px] h-4 font-bold border-brand-gold/20 text-brand-gold bg-brand-gold/5">
-                              {item.duration}m
-                            </Badge>
-                            <span className="text-[10px] font-medium text-muted-foreground uppercase truncate max-w-[100px]">
-                              {item.urgency}
-                            </span>
-                          </div>
-                        ))}
-                        {(!booking.items || booking.items.length === 0) && (
-                          <>
-                            <div className="text-sm font-medium">{booking.duration} min</div>
-                            <div className="text-xs capitalize text-brand-gold">{booking.urgency}</div>
-                          </>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {booking.items?.some(i => i.slots?.length) ? (
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium">Multiple Slots</span>
-                          <span className="text-[10px] text-muted-foreground uppercase">{booking.items.reduce((a, b) => a + (b.slots?.length || 0), 0)} scheduled</span>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground italic">No slots assigned</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      <div className="flex flex-col gap-1 items-end">
-                        <span className="text-sm">{formatPrice(booking.totalPrice ?? 0)}</span>
-                        <StatusBadge status={booking.status} type="booking" className="scale-75 origin-right" />
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-brand-gold"
-                        onClick={() => openDetailModal(booking)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* Mobile List */}
-        <div className="md:hidden divide-y divide-border">
-          {bookings.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground">No bookings found.</div>
-          ) : (
-            bookings.map((booking) => (
-              <div key={booking.id} className="p-4 space-y-3 active:bg-muted/30 transition-colors" onClick={() => openDetailModal(booking)}>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-bold">{booking.userName}</h3>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {booking.items?.map((item, idx) => (
-                        <Badge key={idx} variant="outline" className="text-[8px] h-3 px-1 border-brand-gold/20 text-brand-gold">
-                          {item.duration}m {item.urgency.charAt(0)}
-                        </Badge>
-                      ))}
-                    </div>
+      <TableMolecule
+        data={bookings.filter(b => {
+          const query = searchQuery.toLowerCase();
+          return (
+            b.userName?.toLowerCase().includes(query) ||
+            b.userEmail?.toLowerCase().includes(query) ||
+            (b as any).userPhone?.includes(query) ||
+            b.id.toLowerCase().includes(query)
+          );
+        })}
+        columns={[
+          {
+            header: 'Hobbyist',
+            cell: (booking) => (
+              <>
+                <div className="font-medium">{booking.userName}</div>
+                <div className="text-xs text-muted-foreground">{booking.userEmail}</div>
+              </>
+            )
+          },
+          {
+            header: 'Sessions',
+            cell: (booking) => (
+              <div className="space-y-1">
+                {booking.items?.map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-[9px] h-4 font-bold border-brand-gold/20 text-brand-gold bg-brand-gold/5">
+                      {item.duration}m
+                    </Badge>
+                    <span className="text-[10px] font-medium text-muted-foreground uppercase truncate max-w-[100px]">
+                      {item.urgency}
+                    </span>
                   </div>
-                  <div className="text-right space-y-1">
-                    <p className="font-bold text-brand-gold text-sm">{formatPrice(booking.totalPrice ?? 0)}</p>
-                    <StatusBadge status={booking.status} type="booking" className="scale-75 origin-right" />
+                ))}
+                {(!booking.items || booking.items.length === 0) && (
+                  <>
+                    <div className="text-sm font-medium">{booking.duration} min</div>
+                    <div className="text-xs capitalize text-brand-gold">{booking.urgency}</div>
+                  </>
+                )}
+              </div>
+            )
+          },
+          {
+            header: 'Scheduling',
+            cell: (booking) => (
+              <>
+                {booking.items?.some(i => i.slots?.length) ? (
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium">Multiple Slots</span>
+                    <span className="text-[10px] text-muted-foreground uppercase">{booking.items.reduce((a, b) => a + (b.slots?.length || 0), 0)} scheduled</span>
                   </div>
-                </div>
-                <div className="flex justify-between items-center text-xs">
-                  <div className="text-muted-foreground">
-                    {booking.items?.reduce((a, b) => a + (b.slots?.length || 0), 0) || 0} calls scheduled
-                  </div>
+                ) : (
+                  <span className="text-xs text-muted-foreground italic">No slots assigned</span>
+                )}
+              </>
+            )
+          },
+          {
+            header: 'Total & Status',
+            align: 'right',
+            cell: (booking) => (
+              <div className="flex flex-col gap-1 items-end">
+                <span className="text-sm font-medium">{formatPrice(booking.totalPrice ?? 0)}</span>
+                <StatusBadge status={booking.status} type="booking" className="scale-75 origin-right" />
+              </div>
+            )
+          },
+          {
+            header: 'Actions',
+            align: 'right',
+            cell: (booking) => (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-brand-gold"
+                onClick={() => openDetailModal(booking)}
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
+            )
+          }
+        ]}
+        renderMobileItem={(booking) => (
+          <div className="space-y-3" onClick={() => openDetailModal(booking)}>
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="font-bold">{booking.userName}</h3>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {booking.items?.map((item, idx) => (
+                    <Badge key={idx} variant="outline" className="text-[8px] h-3 px-1 border-brand-gold/20 text-brand-gold">
+                      {item.duration}m {item.urgency.charAt(0)}
+                    </Badge>
+                  ))}
                 </div>
               </div>
-            ))
-          )}
-        </div>
-      </div>
+              <div className="text-right space-y-1">
+                <p className="font-bold text-brand-gold text-sm">{formatPrice(booking.totalPrice ?? 0)}</p>
+                <StatusBadge status={booking.status} type="booking" className="scale-75 origin-right" />
+              </div>
+            </div>
+            <div className="flex justify-between items-center text-xs">
+              <div className="text-muted-foreground">
+                {booking.items?.reduce((a, b) => a + (b.slots?.length || 0), 0) || 0} calls scheduled
+              </div>
+              <Eye className="h-3 w-3 text-muted-foreground" />
+            </div>
+          </div>
+        )}
+        emptyDescription="No bookings found."
+        onRowClick={(booking) => openDetailModal(booking)}
+      />
 
       {/* Add Call Slot Modal */}
       <Modal 
@@ -514,7 +492,7 @@ export default function AdminBookingsPage() {
         )}
       >
         <div className="space-y-4 py-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Date</Label>
               <Input type="date" value={slotDate} onChange={e => setSlotDate(e.target.value)} className="bg-background/50" />
@@ -570,7 +548,7 @@ export default function AdminBookingsPage() {
       >
         {selectedBooking && (
           <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4 border-b border-border/50 pb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-b border-border/50 pb-4">
               <div className="space-y-1">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Booking ID</p>
                 <p className="text-sm font-mono">{selectedBooking.id.slice(0, 8)}</p>

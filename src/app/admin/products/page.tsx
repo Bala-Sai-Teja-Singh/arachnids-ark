@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Modal } from '@/components/shared/molecules/modal';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TableMolecule } from '@/components/shared/molecules/table';
 import { SectionHeader } from '@/components/shared/molecules/section-header';
 import { TabMolecule, type TabOption } from '@/components/shared/molecules/tabs';
 import { FormBuilder, type FormFieldConfig } from '@/components/shared/organisms/form-builder';
@@ -64,11 +65,11 @@ export default function AdminProductsPage() {
   };
 
   const productFields: FormFieldConfig<ProductSchemaType>[] = [
-    { name: 'name', label: 'Name', type: 'text', gridSpan: 'col-span-2 md:col-span-1' },
-    { name: 'scientificName', label: 'Scientific Name', type: 'text', gridSpan: 'col-span-2 md:col-span-1' },
-    { name: 'mainCategory', label: 'Main Category', type: 'select', options: CATEGORIES, gridSpan: 'col-span-2 md:col-span-1' },
-    { name: 'careLevel', label: 'Care Level', type: 'select', options: CARE_LEVELS, gridSpan: 'col-span-2 md:col-span-1' },
-    { name: 'description', label: 'Description', type: 'textarea', gridSpan: 'col-span-2' },
+    { name: 'name', label: 'Name', type: 'text', gridSpan: 'md:col-span-1' },
+    { name: 'scientificName', label: 'Scientific Name', type: 'text', gridSpan: 'md:col-span-1' },
+    { name: 'mainCategory', label: 'Main Category', type: 'select', options: CATEGORIES, gridSpan: 'md:col-span-1' },
+    { name: 'careLevel', label: 'Care Level', type: 'select', options: CARE_LEVELS, gridSpan: 'md:col-span-1' },
+    { name: 'description', label: 'Description', type: 'textarea', gridSpan: 'md:col-span-2' },
 
     // Tarantula Meta
     {
@@ -105,9 +106,9 @@ export default function AdminProductsPage() {
       renderIf: (v) => v.mainCategory === 'Scorpions'
     },
 
-    { name: 'humidity', label: 'Humidity', type: 'text' },
-    { name: 'temperature', label: 'Temperature', type: 'text' },
-    { name: 'feeding', label: 'Feeding', type: 'text', gridSpan: 'col-span-2' },
+    { name: 'humidity', label: 'Humidity', type: 'text', gridSpan: 'md:col-span-1' },
+    { name: 'temperature', label: 'Temperature', type: 'text', gridSpan: 'md:col-span-1' },
+    { name: 'feeding', label: 'Feeding', type: 'text', gridSpan: 'md:col-span-2' },
   ];
 
   const handleToggle = (id: string, field: 'isVisible' | 'available') => {
@@ -194,66 +195,65 @@ export default function AdminProductsPage() {
         </div>
       </SectionHeader>
 
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-border hover:bg-transparent">
-              <TableHead>Name</TableHead>
-              <TableHead>Attributes</TableHead>
-              <TableHead>Price/Stock</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground">No products found.</TableCell></TableRow>
-            ) : (
-              filtered.map((product) => (
-                <TableRow key={product.id} className="border-border">
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-md bg-muted overflow-hidden border border-border">
-                        {product.images?.[0] ? <img src={product.images[0]} alt="" className="w-full h-full object-cover" /> : <Bug className="m-auto h-4 w-4 opacity-20" />}
-                      </div>
-                      <div>
-                        <div className="font-medium">{product.name}</div>
-                        <div className="text-xs text-muted-foreground italic">{product.scientificName}</div>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col gap-1">
-                      <Badge variant="outline" className="w-fit text-[9px] uppercase">{product.mainCategory}</Badge>
-                      <span className="text-[10px] text-muted-foreground">{product.careLevel} Care</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col gap-1">
-                      {product.sizes?.map((s, i) => (
-                        <div key={i} className="text-[10px]"><span className="text-muted-foreground">{s.size}:</span> <span className="font-bold">{formatPrice(s.price)}</span> ({s.stock})</div>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1.5">
-                      <Badge variant="outline" className={product.isVisible ? "bg-blue-500/10 text-blue-400 border-blue-500/20" : "bg-gray-500/10 text-gray-400"}>{product.isVisible ? 'Visible' : 'Hidden'}</Badge>
-                      <Badge variant="outline" className={product.available ? "bg-green-500/10 text-green-400 border-green-500/20" : "bg-red-500/10 text-red-400"}>{product.available ? 'In Stock' : 'Out'}</Badge>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleToggle(product.id, 'isVisible')}><Eye className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingProduct(product); setIsProductModalOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 hover:text-red-400" onClick={() => handleDelete(product.id)}><Trash2 className="h-4 w-4" /></Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <TableMolecule
+        data={filtered}
+        columns={[
+          {
+            header: 'Name',
+            cell: (product) => (
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-md bg-muted overflow-hidden border border-border">
+                  {product.images?.[0] ? <img src={product.images[0]} alt="" className="w-full h-full object-cover" /> : <Bug className="m-auto h-4 w-4 opacity-20" />}
+                </div>
+                <div>
+                  <div className="font-medium">{product.name}</div>
+                  <div className="text-xs text-muted-foreground italic">{product.scientificName}</div>
+                </div>
+              </div>
+            )
+          },
+          {
+            header: 'Attributes',
+            cell: (product) => (
+              <div className="flex flex-col gap-1">
+                <Badge variant="outline" className="w-fit text-[9px] uppercase">{product.mainCategory}</Badge>
+                <span className="text-[10px] text-muted-foreground">{product.careLevel} Care</span>
+              </div>
+            )
+          },
+          {
+            header: 'Price/Stock',
+            cell: (product) => (
+              <div className="flex flex-col gap-1">
+                {product.sizes?.map((s, i) => (
+                  <div key={i} className="text-[10px]"><span className="text-muted-foreground">{s.size}:</span> <span className="font-bold">{formatPrice(s.price)}</span> ({s.stock})</div>
+                ))}
+              </div>
+            )
+          },
+          {
+            header: 'Status',
+            cell: (product) => (
+              <div className="flex gap-1.5">
+                <Badge variant="outline" className={product.isVisible ? "bg-blue-500/10 text-blue-400 border-blue-500/20" : "bg-gray-500/10 text-gray-400"}>{product.isVisible ? 'Visible' : 'Hidden'}</Badge>
+                <Badge variant="outline" className={product.available ? "bg-green-500/10 text-green-400 border-green-500/20" : "bg-red-500/10 text-red-400"}>{product.available ? 'In Stock' : 'Out'}</Badge>
+              </div>
+            )
+          },
+          {
+            header: 'Actions',
+            align: 'right',
+            cell: (product) => (
+              <div className="flex justify-end gap-1">
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleToggle(product.id, 'isVisible')}><Eye className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingProduct(product); setIsProductModalOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 hover:text-red-400" onClick={() => handleDelete(product.id)}><Trash2 className="h-4 w-4" /></Button>
+              </div>
+            )
+          }
+        ]}
+        emptyDescription="No products found."
+      />
 
       <Modal 
         isOpen={isProductModalOpen} 

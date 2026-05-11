@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react';
 import { DollarSign, ShoppingBag, GraduationCap, Calendar, ArrowUpRight, TrendingUp, Search, Filter, Download } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { TableMolecule } from '@/components/shared/molecules/table';
 import { Input } from '@/components/shared/atoms/input';
 import { Button } from '@/components/ui/button';
 import { LocalStorage } from '@/mock-db/storage';
@@ -175,12 +177,74 @@ export default function AdminRevenuePage() {
     setFilteredItems(result);
   }, [searchTerm, filterType, revenueItems]);
 
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(22);
+    doc.setTextColor(184, 134, 11); // Brand gold
+    doc.text('Revenue Report', 14, 22);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text('ArachnidsArk Administration Dashboard', 14, 30);
+    
+    doc.setFontSize(11);
+    doc.setTextColor(0);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 40);
+    doc.text(`Category: ${filterType === 'all' ? 'All Categories' : filterType.charAt(0).toUpperCase() + filterType.slice(1)}`, 14, 46);
+    
+    // Stats Summary
+    doc.setFillColor(245, 245, 245);
+    doc.rect(14, 52, 182, 20, 'F');
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text('Total Transactions:', 20, 60);
+    doc.text('Total Revenue:', 110, 60);
+    
+    doc.setFontSize(12);
+    doc.setTextColor(0);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`${filteredItems.length}`, 20, 66);
+    doc.text(`Rs. ${filteredItems.reduce((acc, curr) => acc + curr.amount, 0).toLocaleString('en-IN')}`, 110, 66);
+
+    const tableData = filteredItems.map(item => [
+      new Date(item.date).toLocaleDateString(),
+      item.name,
+      item.type.charAt(0).toUpperCase() + item.type.slice(1),
+      item.userName,
+      `Rs. ${item.amount.toLocaleString('en-IN')}`
+    ]);
+
+    autoTable(doc, {
+      startY: 80,
+      head: [['Date', 'Description', 'Category', 'Customer', 'Amount']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { 
+        fillColor: [184, 134, 11],
+        textColor: [255, 255, 255],
+        fontSize: 10,
+        fontStyle: 'bold'
+      },
+      styles: { 
+        fontSize: 9,
+        cellPadding: 3
+      },
+      columnStyles: {
+        4: { halign: 'right' }
+      }
+    });
+
+    const fileName = `revenue-report-${filterType}-${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-end gap-4">
-        <Button variant="outline" className="gap-2 border-border bg-card/50">
-          <Download className="h-4 w-4" /> Export Report
-        </Button>
+        {/* Header content if any */}
       </div>
 
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
@@ -244,97 +308,88 @@ export default function AdminRevenuePage() {
           onValueChange={(val) => setFilterType(val as any)}
           className="w-full sm:w-auto"
         />
+        <Button 
+          variant="outline" 
+          className="gap-2 border-border bg-brand-gold/10 hover:bg-brand-gold/20 text-brand-gold ml-auto"
+          onClick={exportToPDF}
+        >
+          <Download className="h-4 w-4" /> Export Report
+        </Button>
       </div>
 
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
-        {/* Desktop View */}
-        <div className="hidden md:block">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border bg-muted/30">
-                <TableHead className="font-bold">Transaction Details</TableHead>
-                <TableHead className="font-bold">Category</TableHead>
-                <TableHead className="font-bold">Customer</TableHead>
-                <TableHead className="font-bold">Date</TableHead>
-                <TableHead className="font-bold text-right">Amount</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredItems.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-12 text-muted-foreground italic">
-                    No completed transactions found matching your criteria.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredItems.map((item) => (
-                  <TableRow key={item.id} className="border-border group hover:bg-muted/30 transition-colors">
-                    <TableCell>
-                      <div className="font-medium text-sm">{item.name}</div>
-                      <div className="text-[10px] text-muted-foreground font-mono">#{item.id.slice(0, 8)}</div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={`text-[10px] uppercase tracking-widest border-0 ${
-                        item.type === 'product' ? 'bg-brand-red/10 text-brand-red' :
-                        item.type === 'course' ? 'bg-brand-gold/10 text-brand-gold' :
-                        item.type === 'consultation' ? 'bg-green-500/10 text-green-400' :
-                        'bg-blue-500/10 text-blue-400'
-                      }`}>
-                        {item.type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm font-medium">{item.userName}</div>
-                      <div className="text-xs text-muted-foreground">{item.userEmail}</div>
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {new Date(item.date).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <span className="font-bold text-brand-gold">{formatPrice(item.amount)}</span>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* Mobile View */}
-        <div className="md:hidden divide-y divide-border">
-          {filteredItems.length === 0 ? (
-            <div className="p-12 text-center text-muted-foreground italic">No transactions found.</div>
-          ) : (
-            filteredItems.map((item) => (
-              <div key={item.id} className="p-4 space-y-3">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-bold text-sm">{item.name}</h3>
-                    <p className="text-[10px] text-muted-foreground font-mono">#{item.id.slice(0, 8)}</p>
-                  </div>
-                  <Badge variant="outline" className={`text-[10px] uppercase tracking-widest border-0 ${
-                    item.type === 'product' ? 'bg-brand-red/10 text-brand-red' :
-                    item.type === 'course' ? 'bg-brand-gold/10 text-brand-gold' :
-                    item.type === 'consultation' ? 'bg-green-500/10 text-green-400' :
-                    'bg-blue-500/10 text-blue-400'
-                  }`}>
-                    {item.type}
-                  </Badge>
-                </div>
-                <div className="flex justify-between items-end">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium">{item.userName}</p>
-                    <p className="text-[10px] text-muted-foreground">{new Date(item.date).toLocaleDateString()}</p>
-                  </div>
-                  <div className="text-lg font-bold text-brand-gold">
-                    {formatPrice(item.amount)}
-                  </div>
-                </div>
+      <TableMolecule
+        data={filteredItems}
+        columns={[
+          {
+            header: 'Transaction Details',
+            cell: (item) => (
+              <>
+                <div className="font-medium text-sm">{item.name}</div>
+                <div className="text-[10px] text-muted-foreground font-mono">#{item.id.slice(0, 8)}</div>
+              </>
+            )
+          },
+          {
+            header: 'Category',
+            cell: (item) => (
+              <Badge variant="outline" className={`text-[10px] uppercase tracking-widest border-0 ${
+                item.type === 'product' ? 'bg-brand-red/10 text-brand-red' :
+                item.type === 'course' ? 'bg-brand-gold/10 text-brand-gold' :
+                item.type === 'consultation' ? 'bg-green-500/10 text-green-400' :
+                'bg-blue-500/10 text-blue-400'
+              }`}>
+                {item.type}
+              </Badge>
+            )
+          },
+          {
+            header: 'Customer',
+            cell: (item) => (
+              <>
+                <div className="text-sm font-medium">{item.userName}</div>
+                <div className="text-xs text-muted-foreground">{item.userEmail}</div>
+              </>
+            )
+          },
+          {
+            header: 'Date',
+            cell: (item) => <span className="text-xs text-muted-foreground">{new Date(item.date).toLocaleDateString()}</span>
+          },
+          {
+            header: 'Amount',
+            align: 'right',
+            cell: (item) => <span className="font-bold text-brand-gold">{formatPrice(item.amount)}</span>
+          }
+        ]}
+        renderMobileItem={(item) => (
+          <div className="space-y-3">
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="font-bold text-sm">{item.name}</h3>
+                <p className="text-[10px] text-muted-foreground font-mono">#{item.id.slice(0, 8)}</p>
               </div>
-            ))
-          )}
-        </div>
-      </div>
+              <Badge variant="outline" className={`text-[10px] uppercase tracking-widest border-0 ${
+                item.type === 'product' ? 'bg-brand-red/10 text-brand-red' :
+                item.type === 'course' ? 'bg-brand-gold/10 text-brand-gold' :
+                item.type === 'consultation' ? 'bg-green-500/10 text-green-400' :
+                'bg-blue-500/10 text-blue-400'
+              }`}>
+                {item.type}
+              </Badge>
+            </div>
+            <div className="flex justify-between items-end">
+              <div className="space-y-1">
+                <p className="text-sm font-medium">{item.userName}</p>
+                <p className="text-[10px] text-muted-foreground">{new Date(item.date).toLocaleDateString()}</p>
+              </div>
+              <div className="text-lg font-bold text-brand-gold">
+                {formatPrice(item.amount)}
+              </div>
+            </div>
+          </div>
+        )}
+        emptyDescription="No transactions found."
+      />
     </div>
   );
 }

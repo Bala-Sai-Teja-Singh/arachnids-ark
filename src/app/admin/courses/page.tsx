@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react';
 import { Plus, Edit, Trash2, GraduationCap, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Modal } from '@/components/shared/molecules/modal';
+import { TableMolecule } from '@/components/shared/molecules/table';
 import { LocalStorage } from '@/mock-db/storage';
 import type { Course } from '@/types';
 import { formatPrice } from '@/constants/pricing';
@@ -42,13 +42,13 @@ export default function AdminCoursesPage() {
   }, []);
 
   const fields: FormFieldConfig[] = [
-    { name: 'title', label: 'Course Title', type: 'text', placeholder: 'e.g. Tarantula Basics', required: true, gridSpan: 'col-span-2' },
-    { name: 'thumbnail', label: 'Thumbnail URL', type: 'text', placeholder: '/images/course-thumb.jpg', required: true, gridSpan: 'col-span-2' },
-    { name: 'difficulty', label: 'Difficulty Level', type: 'select', options: [{ label: 'Beginner', value: 'beginner' }, { label: 'Intermediate', value: 'intermediate' }, { label: 'Advanced', value: 'advanced' }, { label: 'Expert', value: 'expert' }], required: true, gridSpan: 'col-span-1' },
-    { name: 'duration', label: 'Duration', type: 'text', placeholder: 'e.g. 5 hours', required: true, gridSpan: 'col-span-1' },
-    { name: 'videoUrl', label: 'Course Video URL', type: 'url', placeholder: 'https://youtube.com/...', required: true, gridSpan: 'col-span-2' },
-    { name: 'price', label: 'Price (₹)', type: 'number', placeholder: '0', required: true, gridSpan: 'col-span-1' },
-    { name: 'contentPreview', label: 'Short Preview Text', type: 'textarea', placeholder: 'Describe what students will learn...', required: true, gridSpan: 'col-span-2' }
+    { name: 'title', label: 'Course Title', type: 'text', placeholder: 'e.g. Tarantula Basics', required: true, gridSpan: 'md:col-span-2' },
+    { name: 'thumbnail', label: 'Thumbnail URL', type: 'text', placeholder: '/images/course-thumb.jpg', required: true, gridSpan: 'md:col-span-2' },
+    { name: 'difficulty', label: 'Difficulty Level', type: 'select', options: [{ label: 'Beginner', value: 'beginner' }, { label: 'Intermediate', value: 'intermediate' }, { label: 'Advanced', value: 'advanced' }, { label: 'Expert', value: 'expert' }], required: true, gridSpan: 'md:col-span-1' },
+    { name: 'duration', label: 'Duration', type: 'text', placeholder: 'e.g. 5 hours', required: true, gridSpan: 'md:col-span-1' },
+    { name: 'videoUrl', label: 'Course Video URL', type: 'url', placeholder: 'https://youtube.com/...', required: true, gridSpan: 'md:col-span-2' },
+    { name: 'price', label: 'Price (₹)', type: 'number', placeholder: '0', required: true, gridSpan: 'md:col-span-1' },
+    { name: 'contentPreview', label: 'Short Preview Text', type: 'textarea', placeholder: 'Describe what students will learn...', required: true, gridSpan: 'md:col-span-2' }
   ];
 
   const handleOpenEdit = (course: Course | null) => {
@@ -102,87 +102,65 @@ export default function AdminCoursesPage() {
         className="justify-end"
       />
 
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
-        <div className="hidden md:block">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border">
-                <TableHead>Title</TableHead>
-                <TableHead>Difficulty</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {courses.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5}>
-                    <EmptyState
-                      title="No courses found"
-                      description="Get started by creating your first professional training course."
-                      action={{ label: "Create Course", onClick: () => handleOpenEdit(null) }}
-                      className="border-none bg-transparent"
-                    />
-                  </TableCell>
-                </TableRow>
-              ) : (
-                courses.map((course) => (
-                  <TableRow key={course.id} className="border-border group">
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-md bg-muted overflow-hidden shrink-0 border border-border group-hover:border-brand-gold/50 transition-colors">
-                          {course.thumbnail ? <img src={course.thumbnail} alt="" className="w-full h-full object-cover" /> : <GraduationCap className="m-auto h-4 w-4 opacity-20" />}
-                        </div>
-                        <div className="font-medium group-hover:text-brand-gold transition-colors">{course.title}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell><Badge variant="outline" className="capitalize">{course.difficulty}</Badge></TableCell>
-                    <TableCell className="text-muted-foreground">{course.duration}</TableCell>
-                    <TableCell className="font-bold text-brand-gold">{formatPrice(course.price)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenEdit(course)}><Edit className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:text-red-400" onClick={() => setDeleteId(course.id)}><Trash2 className="h-4 w-4" /></Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        <div className="md:hidden divide-y divide-border">
-          {courses.length === 0 ? (
-            <div className="p-12 text-center text-muted-foreground italic">No courses found.</div>
-          ) : (
-            courses.map((course) => (
-              <div key={course.id} className="p-4 space-y-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-lg bg-muted overflow-hidden shrink-0 border border-border">
-                    {course.thumbnail ? <img src={course.thumbnail} alt="" className="w-full h-full object-cover" /> : <GraduationCap className="m-auto h-5 w-5 opacity-20" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-sm truncate">{course.title}</h3>
-                    <Badge variant="outline" className="text-[10px] uppercase tracking-widest mt-1">{course.difficulty}</Badge>
-                  </div>
+      <TableMolecule
+        data={courses}
+        columns={[
+          {
+            header: 'Title',
+            cell: (course) => (
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-md bg-muted overflow-hidden shrink-0 border border-border group-hover:border-brand-gold/50 transition-colors">
+                  {course.thumbnail ? <img src={course.thumbnail} alt="" className="w-full h-full object-cover" /> : <GraduationCap className="m-auto h-4 w-4 opacity-20" />}
                 </div>
-                <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                  <div className="space-y-0.5">
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Price</p>
-                    <p className="text-lg font-bold text-brand-gold">{formatPrice(course.price)}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="icon" className="h-9 w-9 border-border" onClick={() => handleOpenEdit(course)}><Pencil className="h-4 w-4" /></Button>
-                    <Button variant="outline" size="icon" className="h-9 w-9 border-border text-red-400" onClick={() => setDeleteId(course.id)}><Trash2 className="h-4 w-4" /></Button>
-                  </div>
-                </div>
+                <div className="font-medium group-hover:text-brand-gold transition-colors">{course.title}</div>
               </div>
-            ))
-          )}
-        </div>
-      </div>
+            )
+          },
+          {
+            header: 'Difficulty',
+            cell: (course) => <Badge variant="outline" className="capitalize">{course.difficulty}</Badge>
+          },
+          { header: 'Duration', accessorKey: 'duration', className: 'text-muted-foreground' },
+          {
+            header: 'Price',
+            cell: (course) => <span className="font-bold text-brand-gold">{formatPrice(course.price)}</span>
+          },
+          {
+            header: 'Actions',
+            align: 'right',
+            cell: (course) => (
+              <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenEdit(course)}><Edit className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 hover:text-red-400" onClick={() => setDeleteId(course.id)}><Trash2 className="h-4 w-4" /></Button>
+              </div>
+            )
+          }
+        ]}
+        renderMobileItem={(course) => (
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-lg bg-muted overflow-hidden shrink-0 border border-border">
+                {course.thumbnail ? <img src={course.thumbnail} alt="" className="w-full h-full object-cover" /> : <GraduationCap className="m-auto h-5 w-5 opacity-20" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-sm truncate">{course.title}</h3>
+                <Badge variant="outline" className="text-[10px] uppercase tracking-widest mt-1">{course.difficulty}</Badge>
+              </div>
+            </div>
+            <div className="flex items-center justify-between pt-2 border-t border-border/50">
+              <div className="space-y-0.5">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Price</p>
+                <p className="text-lg font-bold text-brand-gold">{formatPrice(course.price)}</p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="icon" className="h-9 w-9 border-border" onClick={() => handleOpenEdit(course)}><Pencil className="h-4 w-4" /></Button>
+                <Button variant="outline" size="icon" className="h-9 w-9 border-border text-red-400" onClick={() => setDeleteId(course.id)}><Trash2 className="h-4 w-4" /></Button>
+              </div>
+            </div>
+          </div>
+        )}
+        emptyDescription="No courses found."
+      />
 
       <Modal 
         isOpen={isCourseModalOpen} 

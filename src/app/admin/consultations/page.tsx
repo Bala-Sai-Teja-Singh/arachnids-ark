@@ -74,7 +74,7 @@ export default function AdminConsultationsSettingsPage() {
               </div>
             ) : (
               settings.pricing.map((p, idx) => (
-                <div key={idx} className="group relative grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-xl border border-border bg-background/30 hover:border-brand-gold/30 transition-all">
+                <div key={idx} className="group relative grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-xl border border-border bg-background/30 hover:border-brand-gold/30 transition-all">
                   <div className="space-y-2">
                     <Label className="text-xs">Label (e.g. 30 Minutes)</Label>
                     <Input 
