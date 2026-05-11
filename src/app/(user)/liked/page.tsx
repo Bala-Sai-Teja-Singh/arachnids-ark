@@ -113,18 +113,10 @@ export default function FavoritesPage() {
 
   return (
     <div className="container mx-auto px-4 py-12 min-h-screen">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <Link href="/shop" className="text-sm text-muted-foreground hover:text-brand-gold flex items-center gap-2 mb-2 transition-colors">
-            <ArrowLeft className="h-4 w-4" /> Back to Shop
-          </Link>
-          <h1 className="vibe-heading text-3xl sm:text-4xl font-bold">
-            My <span className="text-gradient-red">Favorites</span>
-          </h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-2">
-            You have {totalFavorites} items in your wishlist
-          </p>
-        </div>
+      <div className="mb-6">
+        <Link href="/shop" className="text-xs text-muted-foreground hover:text-brand-gold flex items-center gap-2 transition-colors">
+          <ArrowLeft className="h-3 w-3" /> Back to Shop
+        </Link>
       </div>
 
       {loading ? (

@@ -73,8 +73,8 @@ export function Navbar({
             </div>
           ) : (
             /* Logo - Left side for guests */
-            <Link href="/" className="flex items-center group">
-              <div className="w-32 sm:w-60 flex items-center justify-start overflow-hidden">
+            <Link href="/" className="flex items-center group shrink-0">
+              <div className="w-24 xs:w-32 sm:w-60 flex items-center justify-start overflow-hidden">
                 <img src="/logo.png" alt="ArachnidsArk" className="w-full h-auto object-contain object-left" />
               </div>
             </Link>
@@ -108,16 +108,20 @@ export function Navbar({
           )}
 
           {/* Dynamic Page Title */}
-          <div className="hidden lg:flex items-center border-l border-border pl-4 ml-2 animate-in fade-in slide-in-from-left-4 duration-500">
-            <span className="text-sm font-black uppercase tracking-[0.2em] text-foreground/80">
-              {PAGE_TITLES[pathname] || ''}
-            </span>
-          </div>
+          {PAGE_TITLES[pathname] && (
+            <div className="flex items-center animate-in fade-in slide-in-from-left-4 duration-500">
+              <span className="text-[9px] xs:text-[10px] sm:text-sm font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] text-foreground/80 whitespace-nowrap">
+                {PAGE_TITLES[pathname]}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Right side utilities */}
-        <div className="flex items-center gap-2 ml-auto">
-          <ThemeToggle />
+        <div className="flex items-center gap-1.5 sm:gap-2 ml-auto">
+          <div className="hidden sm:block">
+            <ThemeToggle />
+          </div>
           <CartDrawer />
 
           {showSidebar && user ? (
@@ -153,9 +157,14 @@ export function Navbar({
                   }
                 />
                 <DropdownMenuContent align="end" className="w-64 glass border-border mt-2 p-2">
-                  <div className="px-3 py-3 border-b border-border/50 mb-2">
-                    <p className="text-sm font-bold truncate text-foreground">{user.name}</p>
-                    <p className="text-[11px] text-muted-foreground truncate mt-0.5">{user.email}</p>
+                  <div className="px-3 py-3 border-b border-border/50 mb-2 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-bold truncate text-foreground">{user.name}</p>
+                      <p className="text-[11px] text-muted-foreground truncate mt-0.5">{user.email}</p>
+                    </div>
+                    <div className="sm:hidden">
+                      <ThemeToggle />
+                    </div>
                   </div>
 
                   <DropdownMenuItem onClick={() => router.push('/dashboard/profile')} className="gap-2 cursor-pointer focus:bg-brand-red/10 focus:text-brand-red rounded-lg py-2">
@@ -203,6 +212,10 @@ export function Navbar({
                 )}
               >
                 <div className="p-4 space-y-1">
+                  <div className="flex items-center justify-between px-4 py-2 mb-2 border-b border-border/50">
+                    <span className="text-xs font-heading uppercase tracking-widest text-muted-foreground">Appearance</span>
+                    <ThemeToggle />
+                  </div>
                   {USER_NAV_ITEMS.map((item) => (
                     <Link
                       key={item.href}

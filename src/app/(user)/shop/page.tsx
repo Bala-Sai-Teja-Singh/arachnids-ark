@@ -269,7 +269,7 @@ export default function ShopPage() {
         />
       </motion.div>
 
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="flex flex-col md:flex-row items-center gap-3 mb-6">
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="flex flex-row items-center gap-2 sm:gap-3 mb-6">
         <div className="flex-1">
           <Input 
             placeholder={`Search ${mainCategory.toLowerCase()}...`} 
@@ -333,7 +333,7 @@ export default function ShopPage() {
           onClose={() => setIsFilterOpen(false)}
           variant="side-right"
           title="Filters"
-          dismissible={false}
+          dismissible={true}
         >
           <FilterPanel 
             mainCategory={mainCategory} habitat={habitat} setHabitat={setHabitat} 

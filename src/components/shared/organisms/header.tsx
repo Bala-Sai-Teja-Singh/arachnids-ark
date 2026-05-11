@@ -67,7 +67,7 @@ export function Header({
   // Resolve title from pathname if not provided
   const resolvedTitle = providedTitle || (
     <div className="flex items-center gap-2">
-      <span className="text-sm font-black uppercase tracking-[0.2em] text-foreground/80">
+      <span className="text-[9px] xs:text-[10px] sm:text-sm font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] text-foreground/80 whitespace-nowrap">
         {PAGE_TITLES[pathname] || 'Dashboard'}
       </span>
     </div>
@@ -90,7 +90,7 @@ export function Header({
         )}
         
         {resolvedTitle && (
-          <div className="hidden sm:block animate-in fade-in slide-in-from-left-4 duration-300">
+          <div className="animate-in fade-in slide-in-from-left-4 duration-300 flex-shrink min-w-0">
             {resolvedTitle}
           </div>
         )}
@@ -110,8 +110,10 @@ export function Header({
       </div>
 
       {/* Right Area: Actions & Profile */}
-      <div className="flex items-center gap-2 md:gap-4">
-        <ThemeToggle />
+      <div className="flex items-center gap-1.5 md:gap-4">
+        <div className="hidden sm:block">
+          <ThemeToggle />
+        </div>
         {/* Notifications */}
         <Button 
           variant="ghost" 
@@ -140,9 +142,14 @@ export function Header({
             } />
             <DropdownMenuContent className="w-56 bg-background border-border shadow-xl mt-2" align="end">
               <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-bold leading-none">{user.name}</p>
-                  <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-bold leading-none">{user.name}</p>
+                    <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                  </div>
+                  <div className="sm:hidden">
+                    <ThemeToggle />
+                  </div>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />

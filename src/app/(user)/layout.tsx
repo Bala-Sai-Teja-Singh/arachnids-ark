@@ -71,7 +71,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
   if (!mounted) return null;
 
   return (
-    <div className="flex h-[100dvh] overflow-hidden bg-background">
+    <div className="flex min-h-screen md:h-[100dvh] md:overflow-hidden bg-background">
       {/* Universal Sidebar (Visible site-wide when logged in) */}
       {showSidebar && (
         <aside className="hidden md:block shrink-0">
@@ -116,7 +116,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+      <div className="flex-1 flex flex-col min-w-0 md:overflow-hidden relative">
         {/* Navbar replaces Header for public views, but we use the unified Header logic when in Dashboard? 
             Actually, the user wanted unification. I'll keep the Navbar for now but maybe it can be merged. 
             For now, let's keep the Navbar and add the menu trigger to it if showSidebar is true.
@@ -126,7 +126,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
           onMenuClick={() => setIsMobileOpen(true)}
         />
 
-        <main ref={mainRef} className="flex-1 overflow-y-auto">
+        <main ref={mainRef} className="flex-1 md:overflow-y-auto pb-20 md:pb-0">
           <div className="flex-1 w-full min-h-full">
             {children}
           </div>
