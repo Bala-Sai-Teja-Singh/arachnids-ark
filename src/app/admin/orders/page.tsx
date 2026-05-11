@@ -23,10 +23,12 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { StatusBadge } from '@/components/shared/status-badge';
+import { StatusBadge } from '@/components/shared/molecules/status-badge';
+import { SectionHeader } from '@/components/shared/molecules/section-header';
+import { Loading } from '@/components/shared/molecules/loading';
+import { Modal } from '@/components/shared/molecules/modal';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
+import { Input } from '@/components/shared/atoms/input';
 import { Separator } from '@/components/ui/separator';
 import { LocalStorage } from '@/mock-db/storage';
 import { useNotificationStore } from '@/store/notification-store';
@@ -38,6 +40,7 @@ import { cn } from '@/lib/utils';
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [trackingId, setTrackingId] = useState('');
   const [courierPartner, setCourierPartner] = useState('');
@@ -51,8 +54,10 @@ export default function AdminOrdersPage() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
+    setIsLoading(true);
     const allOrders = LocalStorage.getAll<Order>('orders').sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     setOrders(allOrders);
+    setTimeout(() => setIsLoading(false), 300);
 
     // Auto-select if ID is in search params
     const orderId = searchParams.get('id');
@@ -378,23 +383,25 @@ export default function AdminOrdersPage() {
     toast.success('Order marked as Dispatched & email sent');
   };
 
+  if (isLoading) {
+    return <Loading text="Fetching orders..." />;
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Orders</h1>
-          <p className="text-muted-foreground text-sm">Manage customer purchases and multi-item orders.</p>
-        </div>
-        <div className="relative w-full sm:w-96">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <SectionHeader className="justify-end">
+        <div className="w-full sm:w-96">
           <Input
-            placeholder="Search by customer name, email or phone..."
-            className="pl-10 bg-card border-border"
+            placeholder="Search by customer, email or phone..."
+            className="bg-card border-border h-10"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            startContent={<Search className="h-4 w-4 text-muted-foreground" />}
+            isClearable
+            onClear={() => setSearchQuery('')}
           />
         </div>
-      </div>
+      </SectionHeader>
 
       <div className="rounded-xl border border-border bg-card/50 backdrop-blur-md overflow-hidden shadow-sm">
         <div className="hidden md:block">
@@ -453,8 +460,8 @@ export default function AdminOrdersPage() {
                       </TableCell>
                       <TableCell className="text-right font-bold text-brand-gold text-sm">{formatPrice(order.totalPrice)}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-brand-gold" onClick={() => setSelectedOrder(order)}>
-                          <Eye className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-brand-gold shrink-0" onClick={() => setSelectedOrder(order)}>
+                          <Eye className="h-4 w-4 shrink-0" />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -492,33 +499,39 @@ export default function AdminOrdersPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-border/30">
-                  <p className="text-[9px] text-muted-foreground italic truncate">
+                <div className="flex items-center justify-between pt-2 border-t border-border/30 gap-4">
+                  <p className="text-[9px] text-muted-foreground italic truncate flex-1">
                     {order.items.map(i => i.name).join(', ')}
                   </p>
-                  <Eye className="h-3 w-3 text-muted-foreground" />
+                  <Eye className="h-3 w-3 text-muted-foreground shrink-0" />
                 </div>
               </div>
             ))}
         </div>
       </div>
 
-      {/* Detail Dialog */}
-      <Dialog open={!!selectedOrder} onOpenChange={(open) => !open && setSelectedOrder(null)}>
-        <DialogContent className="glass border-border sm:max-w-4xl max-h-[90vh] overflow-hidden p-0 flex flex-col">
-          {selectedOrder && (
-            <div className="p-6 border-b border-border bg-muted/30">
-              <DialogHeader>
-                <div className="flex items-center justify-between gap-4 pr-12">
+      {/* Detail Modal */}
+      <Modal 
+        isOpen={!!selectedOrder} 
+        onClose={() => setSelectedOrder(null)}
+        variant="extra-large"
+        size="extra-large"
+        className="sm:max-w-[95vw] sm:max-h-[95vh]"
+        noPadding
+      >
+        {selectedOrder && (
+          <div className="flex flex-col h-full">
+            <div className="p-4 sm:p-6 border-b border-border bg-muted/30">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:pr-12">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-brand-red/10 flex items-center justify-center">
+                    <div className="h-10 w-10 rounded-xl bg-brand-red/10 flex items-center justify-center shrink-0">
                       <ShoppingBag className="h-5 w-5 text-brand-red" />
                     </div>
                     <div>
-                      <DialogTitle className="text-lg">Order Details</DialogTitle>
-                      <DialogDescription className="text-[10px] uppercase tracking-widest font-bold">
+                      <h3 className="text-base sm:text-lg font-bold">Order Details</h3>
+                      <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">
                         #{selectedOrder.id.split('-')[0]} • {new Date(selectedOrder.createdAt).toLocaleString()}
-                      </DialogDescription>
+                      </p>
                     </div>
                   </div>
                   {selectedOrder.status !== 'order_completed' && (
@@ -526,7 +539,7 @@ export default function AdminOrdersPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => handleResendEmail(selectedOrder!)}
-                      className="h-8 px-3 text-[9px] uppercase font-bold tracking-widest border-brand-gold/30 text-brand-gold hover:bg-brand-gold/10 gap-2 shadow-sm"
+                      className="h-8 px-3 text-[9px] uppercase font-bold tracking-widest border-brand-gold/30 text-brand-gold hover:bg-brand-gold/10 gap-2 shadow-sm w-fit"
                     >
                       {(() => {
                         const info = getResendButtonInfo(selectedOrder.status);
@@ -540,251 +553,247 @@ export default function AdminOrdersPage() {
                     </Button>
                   )}
                 </div>
-              </DialogHeader>
-            </div>
-          )}
+              </div>
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8">
-            {selectedOrder && (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                {/* Left Column: Status Journey */}
-                <div className="lg:col-span-4 space-y-6">
-                  <div className="flex items-center justify-between gap-2">
-                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Lifecycle Journey</h4>
-                  </div>
-                  <div className="space-y-3">
-                    {[
-                      { id: 'pending', label: 'Order Received', icon: Clock },
-                      { id: 'awaiting_payment', label: 'Awaiting Payment', icon: CreditCard },
-                      { id: 'payment_verified', label: 'Payment Verified', icon: CheckCircle2 },
-                      { id: 'order_shipped', label: 'Dispatched', icon: Truck },
-                      { id: 'order_completed', label: 'Completed', icon: CheckCircle2 }
-                    ].map((step, idx, arr) => {
-                      const isCompleted = arr.findIndex(s => s.id === selectedOrder.status) >= idx;
-                      const isCurrent = selectedOrder.status === step.id;
-                      const isNext = arr.findIndex(s => s.id === selectedOrder.status) + 1 === idx;
-
-                      return (
-                        <div
-                          key={step.id}
-                          onClick={() => {
-                            if (selectedOrder.status === 'order_cancelled') {
-                              toast.error('Cannot change status of a cancelled order');
-                              return;
-                            }
-                            updateStatus(selectedOrder!.id, step.id as OrderStatus, selectedOrder!.userId);
-                          }}
-                          className={cn(
-                            "relative flex items-center gap-4 p-3 rounded-xl border transition-all duration-300 group cursor-pointer",
-                            selectedOrder.status === 'order_cancelled' && "cursor-not-allowed opacity-60",
-                            isCurrent ? "bg-brand-gold/10 border-brand-gold shadow-lg shadow-brand-gold/5" :
-                              isCompleted ? "bg-green-500/5 border-green-500/20 hover:border-green-500/50" :
-                                "bg-muted/30 border-border hover:border-brand-gold/50"
-                          )}
-                        >
-                          <div className={cn(
-                            "h-8 w-8 rounded-full flex items-center justify-center transition-colors",
-                            isCurrent ? "bg-brand-gold text-black" :
-                              isCompleted ? "bg-green-500/20 text-green-500" : "bg-muted text-muted-foreground"
-                          )}>
-                            {isCompleted && !isCurrent ? <CheckCircle2 className="h-4 w-4" /> : <step.icon className="h-4 w-4" />}
-                          </div>
-                          <div className="flex-1">
-                            <p className={cn("text-[10px] font-bold uppercase tracking-wider", isCurrent ? "text-brand-gold" : isCompleted ? "text-green-500" : "text-muted-foreground")}>
-                              {step.label}
-                            </p>
-                            {isCurrent && <p className="text-[9px] text-brand-gold/70 italic leading-none mt-1">Current Stage</p>}
-                          </div>
-                          {isNext && <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />}
-                        </div>
-                      );
-                    })}
-
-                    {/* Cancel Action */}
-                    <div className="pt-4 border-t border-border mt-4">
-                      {selectedOrder.status !== 'order_cancelled' ? (
-                        <Button
-                          variant="ghost"
-                          onClick={() => updateStatus(selectedOrder.id, 'order_cancelled', selectedOrder.userId)}
-                          className="w-full justify-start gap-3 text-red-500 hover:text-red-600 hover:bg-red-500/10 h-12 rounded-xl border border-transparent hover:border-red-500/20"
-                        >
-                          <XCircle className="h-5 w-5" />
-                          <div className="text-left">
-                            <p className="text-[10px] font-bold uppercase tracking-widest">Cancel Order</p>
-                            <p className="text-[8px] text-red-500/70">Voids items and notifies customer</p>
-                          </div>
-                        </Button>
-                      ) : (
-                        <div className="p-4 rounded-xl border border-red-500/20 bg-red-500/5 flex flex-col gap-2">
-                          <div className="flex items-center gap-2 text-red-500 font-bold text-xs">
-                            <XCircle className="h-4 w-4" /> Order Cancelled
-                          </div>
-                          <p className="text-[10px] text-muted-foreground italic">"{(selectedOrder!.cancellationReason || 'No reason specified')}"</p>
-                        </div>
-                      )}
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 space-y-8">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                  {/* Left Column: Status Journey */}
+                  <div className="lg:col-span-4 space-y-6">
+                    <div className="flex items-center justify-between gap-2">
+                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Lifecycle Journey</h4>
                     </div>
-                  </div>
-                </div>
+                    <div className="space-y-3">
+                      {[
+                        { id: 'pending', label: 'Order Received', icon: Clock },
+                        { id: 'awaiting_payment', label: 'Awaiting Payment', icon: CreditCard },
+                        { id: 'payment_verified', label: 'Payment Verified', icon: CheckCircle2 },
+                        { id: 'order_shipped', label: 'Dispatched', icon: Truck },
+                        { id: 'order_completed', label: 'Completed', icon: CheckCircle2 }
+                      ].map((step, idx, arr) => {
+                        const isCompleted = arr.findIndex(s => s.id === selectedOrder.status) >= idx;
+                        const isCurrent = selectedOrder.status === step.id;
+                        const isNext = arr.findIndex(s => s.id === selectedOrder.status) + 1 === idx;
 
-                {/* Right Column: Order Content */}
-                <div className="lg:col-span-8 space-y-8">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Items Section */}
-                    <div className="space-y-4">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                        <Package className="h-3 w-3" /> Items Purchased
-                      </h4>
-                      <div className="space-y-2">
-                        {selectedOrder!.items.map((item, idx) => (
-                          <div key={idx} className="flex gap-3 items-center p-3 rounded-xl bg-muted/30 border border-border/50 group hover:border-brand-gold/30 transition-colors">
-                            <div className="h-10 w-10 rounded-lg border border-border bg-background overflow-hidden flex-shrink-0 flex items-center justify-center">
-                              {item.image ? <img src={item.image} alt="" className="h-full w-full object-cover" /> : <ShoppingBag className="h-4 w-4 text-muted-foreground" />}
+                        return (
+                          <div
+                            key={step.id}
+                            onClick={() => {
+                              if (selectedOrder.status === 'order_cancelled') {
+                                toast.error('Cannot change status of a cancelled order');
+                                return;
+                              }
+                              
+                              // Scroll to shipping details if trying to dispatch without tracking info
+                              if (step.id === 'order_shipped' && (!trackingId || !courierPartner)) {
+                                const el = document.getElementById('shipping-details-form');
+                                if (el) {
+                                  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                  toast.info('Please enter shipping details first');
+                                  return;
+                                }
+                              }
+                              
+                              updateStatus(selectedOrder!.id, step.id as OrderStatus, selectedOrder!.userId);
+                            }}
+                            className={cn(
+                              "relative flex items-center gap-4 p-3 rounded-xl border transition-all duration-300 group cursor-pointer",
+                              selectedOrder.status === 'order_cancelled' && "cursor-not-allowed opacity-60",
+                              isCurrent ? "bg-brand-gold/10 border-brand-gold shadow-lg shadow-brand-gold/5" :
+                                isCompleted ? "bg-green-500/5 border-green-500/20 hover:border-green-500/50" :
+                                  "bg-muted/30 border-border hover:border-brand-gold/50"
+                            )}
+                          >
+                            <div className={cn(
+                              "h-8 w-8 rounded-full flex items-center justify-center transition-colors",
+                              isCurrent ? "bg-brand-gold text-black" :
+                                isCompleted ? "bg-green-500/20 text-green-500" : "bg-muted text-muted-foreground"
+                            )}>
+                              {isCompleted && !isCurrent ? <CheckCircle2 className="h-4 w-4" /> : <step.icon className="h-4 w-4" />}
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-bold uppercase truncate">{item.name}</p>
-                              <p className="text-[9px] text-muted-foreground">{item.type === 'product' ? (item.metadata?.size || 'N/A') : item.type} × {item.quantity}</p>
+                            <div className="flex-1">
+                              <p className={cn("text-[10px] font-bold uppercase tracking-wider", isCurrent ? "text-brand-gold" : isCompleted ? "text-green-500" : "text-muted-foreground")}>
+                                {step.label}
+                              </p>
+                              {isCurrent && <p className="text-[9px] text-brand-gold/70 italic leading-none mt-1">Current Stage</p>}
                             </div>
-                            <p className="text-xs font-bold text-brand-gold">{formatPrice(item.price * item.quantity)}</p>
+                            {isNext && <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />}
                           </div>
-                        ))}
-                        <div className="pt-2 px-2 space-y-1">
-                          <div className="flex justify-between text-[10px] text-muted-foreground"><span>Subtotal</span><span>{formatPrice(selectedOrder!.totalPrice - selectedOrder!.shippingCharge)}</span></div>
-                          <div className="flex justify-between text-[10px] text-muted-foreground"><span>Shipping</span><span>{formatPrice(selectedOrder!.shippingCharge)}</span></div>
-                          <div className="flex justify-between text-xs font-bold text-brand-gold pt-1 border-t border-border mt-1"><span>Total</span><span>{formatPrice(selectedOrder!.totalPrice)}</span></div>
-                        </div>
-                      </div>
-                    </div>
+                        );
+                      })}
 
-                    {/* Customer & Delivery Section */}
-                    <div className="space-y-4">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                        <MapPin className="h-3 w-3" /> Customer & Delivery
-                      </h4>
-                      <div className="p-4 rounded-2xl border border-border bg-background/50 space-y-4 shadow-inner">
-                        <div className="space-y-3">
-                          <div className="flex items-start gap-3">
-                            <UserIcon className="h-3.5 w-3.5 text-brand-red mt-0.5" />
-                            <div className="min-w-0">
-                              <p className="text-[8px] text-muted-foreground uppercase font-black">Recipient</p>
-                              <p className="text-xs font-bold">{selectedOrder!.deliveryName}</p>
-                              <p className="text-[9px] text-muted-foreground">{selectedOrder!.userEmail}</p>
+                      {/* Cancel Action */}
+                      <div className="pt-4 border-t border-border mt-4">
+                        {selectedOrder.status !== 'order_cancelled' ? (
+                          <Button
+                            variant="ghost"
+                            onClick={() => updateStatus(selectedOrder.id, 'order_cancelled', selectedOrder.userId)}
+                            className="w-full justify-start gap-3 text-red-500 hover:text-red-600 hover:bg-red-500/10 h-12 rounded-xl border border-transparent hover:border-red-500/20"
+                          >
+                            <XCircle className="h-5 w-5" />
+                            <div className="text-left">
+                              <p className="text-[10px] font-bold uppercase tracking-widest">Cancel Order</p>
+                              <p className="text-[8px] text-red-500/70">Voids items and notifies customer</p>
                             </div>
-                          </div>
-                          <div className="flex items-start gap-3">
-                            <Phone className="h-3.5 w-3.5 text-brand-red mt-0.5" />
-                            <div className="min-w-0">
-                              <p className="text-[8px] text-muted-foreground uppercase font-black">Phone</p>
-                              <p className="text-xs font-bold">{selectedOrder!.deliveryPhone}</p>
+                          </Button>
+                        ) : (
+                          <div className="p-4 rounded-xl border border-red-500/20 bg-red-500/5 flex flex-col gap-2">
+                            <div className="flex items-center gap-2 text-red-500 font-bold text-xs">
+                              <XCircle className="h-4 w-4" /> Order Cancelled
                             </div>
-                          </div>
-                          <div className="flex items-start gap-3">
-                            <MapPin className="h-3.5 w-3.5 text-brand-red mt-0.5" />
-                            <div className="min-w-0">
-                              <p className="text-[8px] text-muted-foreground uppercase font-black">Full Address</p>
-                              <p className="text-xs font-medium leading-relaxed">{selectedOrder!.deliveryAddress}</p>
-                            </div>
-                          </div>
-                        </div>
-                        {selectedOrder!.message && (
-                          <div className="p-2.5 rounded-xl bg-brand-gold/5 border border-brand-gold/10 italic text-[10px] text-muted-foreground">
-                            "{selectedOrder!.message}"
+                            <p className="text-[10px] text-muted-foreground italic">"{(selectedOrder!.cancellationReason || 'No reason specified')}"</p>
                           </div>
                         )}
                       </div>
+                    </div>
+                  </div>
 
-                      {/* Dispatch Logistics Section (Now under Customer & Delivery) */}
-                      {['payment_verified', 'order_shipped', 'order_completed'].includes(selectedOrder!.status) && (
-                        <div className="space-y-4 pt-2">
-                          <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                            <Truck className="h-3 w-3" /> Dispatch Logistics
-                          </h4>
-                          <div className="p-4 rounded-2xl border border-border bg-accent/10 space-y-4 shadow-sm">
-                            <div className="space-y-3">
-                              <div className="space-y-1">
-                                <Label className="text-[9px] uppercase tracking-widest text-muted-foreground">Courier Partner</Label>
+                  {/* Right Column: Order Content */}
+                  <div className="lg:col-span-8 space-y-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Items Section */}
+                      <div className="space-y-4">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                          <Package className="h-3 w-3" /> Items Purchased
+                        </h4>
+                        <div className="space-y-2">
+                          {selectedOrder!.items.map((item, idx) => (
+                            <div key={idx} className="flex gap-3 items-center p-3 rounded-xl bg-muted/30 border border-border/50 group hover:border-brand-gold/30 transition-colors">
+                              <div className="h-10 w-10 rounded-lg border border-border bg-background overflow-hidden flex-shrink-0 flex items-center justify-center">
+                                {item.image ? <img src={item.image} alt="" className="h-full w-full object-cover" /> : <ShoppingBag className="h-4 w-4 text-muted-foreground" />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-bold uppercase truncate">{item.name}</p>
+                                <p className="text-[9px] text-muted-foreground">{item.type === 'product' ? (item.metadata?.size || 'N/A') : item.type} × {item.quantity}</p>
+                              </div>
+                              <p className="text-xs font-bold text-brand-gold">{formatPrice(item.price * item.quantity)}</p>
+                            </div>
+                          ))}
+                          <div className="pt-2 px-2 space-y-1">
+                            <div className="flex justify-between text-[10px] text-muted-foreground"><span>Subtotal</span><span>{formatPrice(selectedOrder!.totalPrice - selectedOrder!.shippingCharge)}</span></div>
+                            <div className="flex justify-between text-[10px] text-muted-foreground"><span>Shipping</span><span>{formatPrice(selectedOrder!.shippingCharge)}</span></div>
+                            <div className="flex justify-between text-xs font-bold text-brand-gold pt-1 border-t border-border mt-1"><span>Total</span><span>{formatPrice(selectedOrder!.totalPrice)}</span></div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Customer & Delivery Section */}
+                      <div className="space-y-4">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                          <MapPin className="h-3 w-3" /> Customer & Delivery
+                        </h4>
+                        <div className="p-4 rounded-2xl border border-border bg-background/50 space-y-4 shadow-inner">
+                          <div className="space-y-3">
+                            <div className="flex items-start gap-3">
+                              <UserIcon className="h-3.5 w-3.5 text-brand-red mt-0.5" />
+                              <div className="min-w-0">
+                                <p className="text-[8px] text-muted-foreground uppercase font-black">Recipient</p>
+                                <p className="text-xs font-bold">{selectedOrder!.deliveryName}</p>
+                                <p className="text-[9px] text-muted-foreground">{selectedOrder!.userEmail}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <Phone className="h-3.5 w-3.5 text-brand-red mt-0.5" />
+                              <div className="min-w-0">
+                                <p className="text-[8px] text-muted-foreground uppercase font-black">Phone</p>
+                                <p className="text-xs font-bold">{selectedOrder!.deliveryPhone}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <MapPin className="h-3.5 w-3.5 text-brand-red mt-0.5" />
+                              <div className="min-w-0">
+                                <p className="text-[8px] text-muted-foreground uppercase font-black">Full Address</p>
+                                <p className="text-xs font-medium leading-relaxed">{selectedOrder!.deliveryAddress}</p>
+                              </div>
+                            </div>
+                          </div>
+                          {selectedOrder!.message && (
+                            <div className="p-2.5 rounded-xl bg-brand-gold/5 border border-brand-gold/10 italic text-[10px] text-muted-foreground">
+                              "{selectedOrder!.message}"
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Dispatch Logistics Section */}
+                        {['payment_verified', 'order_shipped', 'order_completed'].includes(selectedOrder!.status) && (
+                          <div id="shipping-details-form" className="space-y-4 pt-2">
+                            <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                              <Truck className="h-3 w-3" /> Dispatch Logistics
+                            </h4>
+                            <div className="p-4 rounded-2xl border border-border bg-accent/10 space-y-4 shadow-sm">
+                              <div className="space-y-3">
                                 <Input
+                                  label="Courier Partner"
+                                  labelClassName="text-[9px] uppercase tracking-widest text-muted-foreground"
                                   value={courierPartner}
                                   onChange={(e) => setCourierPartner(e.target.value)}
                                   placeholder="e.g. Delhivery, BlueDart"
                                   className="h-8 text-xs bg-background/50"
                                 />
-                              </div>
-                              <div className="space-y-1">
-                                <Label className="text-[9px] uppercase tracking-widest text-muted-foreground">Tracking ID / AWB</Label>
                                 <Input
+                                  label="Tracking ID / AWB"
+                                  labelClassName="text-[9px] uppercase tracking-widest text-muted-foreground"
                                   value={trackingId}
                                   onChange={(e) => setTrackingId(e.target.value)}
                                   placeholder="Enter tracking number"
                                   className="h-8 text-xs bg-background/50"
                                 />
                               </div>
+                              <Button
+                                onClick={updateTrackingInfo}
+                                disabled={selectedOrder!.status === 'order_cancelled'}
+                                className="w-full h-8 bg-brand-gold hover:bg-brand-gold/90 text-black font-bold text-[10px] uppercase tracking-widest gap-2 shadow-lg shadow-brand-gold/10"
+                              >
+                                <Save className="h-3 w-3" /> Update & Notify
+                              </Button>
+                              <p className="text-[8px] text-muted-foreground text-center italic">Triggers shipping email to customer</p>
                             </div>
-                            <Button
-                              onClick={updateTrackingInfo}
-                              disabled={selectedOrder!.status === 'order_cancelled'}
-                              className="w-full h-8 bg-brand-gold hover:bg-brand-gold/90 text-black font-bold text-[10px] uppercase tracking-widest gap-2 shadow-lg shadow-brand-gold/10"
-                            >
-                              <Save className="h-3 w-3" /> Update & Notify
-                            </Button>
-                            <p className="text-[8px] text-muted-foreground text-center italic">Triggers shipping email to customer</p>
                           </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Cancellation Reason Modal */}
-      <Dialog open={isCancellationModalOpen} onOpenChange={setIsCancellationModalOpen}>
-        <DialogContent className="glass border-border sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-500">
-              <AlertCircle className="h-5 w-5" />
-              Cancellation Audit
-            </DialogTitle>
-          </DialogHeader>
-          <div className="py-4 space-y-4">
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              You are about to cancel this order. This action will notify the customer and provide them with the following reason.
-            </p>
-            <div className="space-y-2">
-              <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">Reason for Cancellation</Label>
-              <textarea
-                className="w-full h-24 bg-background/50 border border-border rounded-xl p-3 text-xs focus:outline-none focus:ring-1 focus:ring-red-500/50 transition-all resize-none shadow-inner"
-                placeholder="e.g. Items out of stock, shipping zone unreachable..."
-                value={cancellationReason}
-                onChange={(e) => setCancellationReason(e.target.value)}
-              />
             </div>
-          </div>
-          <DialogFooter className="gap-2 sm:gap-0">
+        )}
+      </Modal>
+
+      {/* Cancellation Modal */}
+      <Modal 
+        isOpen={isCancellationModalOpen} 
+        onClose={() => setIsCancellationModalOpen(false)}
+        variant="confirm"
+        title="Cancellation Audit"
+        description="You are about to cancel this order. This action will notify the customer and provide them with the following reason."
+        footer={(
+          <div className="flex gap-2 w-full justify-end">
             <Button variant="outline" onClick={() => setIsCancellationModalOpen(false)} className="text-[10px] uppercase tracking-widest font-bold">Dismiss</Button>
             <Button onClick={handleCancelOrder} className="bg-red-500 hover:bg-red-600 text-white text-[10px] uppercase tracking-widest font-bold px-8">Confirm Cancellation</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        )}
+      >
+        <div className="py-2 space-y-4">
+          <div className="space-y-2">
+            <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">Reason for Cancellation</Label>
+            <textarea
+              className="w-full h-24 bg-background/50 border border-border rounded-xl p-3 text-xs focus:outline-none focus:ring-1 focus:ring-red-500/50 transition-all resize-none shadow-inner"
+              placeholder="e.g. Items out of stock, shipping zone unreachable..."
+              value={cancellationReason}
+              onChange={(e) => setCancellationReason(e.target.value)}
+            />
+          </div>
+        </div>
+      </Modal>
 
       {/* Resend Email Confirmation Modal */}
-      <Dialog open={isResendModalOpen} onOpenChange={setIsResendModalOpen}>
-        <DialogContent className="glass border-border sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-brand-gold">
-              <AlertCircle className="h-5 w-5" />
-              Email Notification Guard
-            </DialogTitle>
-          </DialogHeader>
-          <div className="py-4 space-y-4">
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              You are moving this order to a status that was previously reached or is a backward step.
-              Do you want to <strong>resend</strong> the status update email to the customer?
-            </p>
-          </div>
-          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+      <Modal 
+        isOpen={isResendModalOpen} 
+        onClose={() => setIsResendModalOpen(false)}
+        variant="confirm"
+        title="Email Notification Guard"
+        description="You are moving this order to a status that was previously reached or is a backward step. Do you want to resend the status update email to the customer?"
+        footer={(
+          <div className="flex flex-col sm:flex-row gap-2 w-full">
             <Button
               variant="outline"
               onClick={() => {
@@ -806,9 +815,11 @@ export default function AdminOrdersPage() {
             >
               Update & Resend Email
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        )}
+      >
+        <div className="py-2" />
+      </Modal>
     </div>
   );
 }

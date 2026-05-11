@@ -5,7 +5,7 @@ import { Shield, ShieldAlert, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Modal } from '@/components/shared/molecules/modal';
 import { LocalStorage } from '@/mock-db/storage';
 import type { User, UserRole } from '@/types';
 import { toast } from 'sonner';
@@ -60,10 +60,6 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="vibe-heading text-2xl font-bold tracking-tight">Users</h1>
-        <p className="font-heading text-[10px] uppercase tracking-widest text-muted-foreground">Manage user accounts and permissions.</p>
-      </div>
 
       <div className="rounded-md border border-border bg-card">
         <Table>
@@ -126,34 +122,39 @@ export default function AdminUsersPage() {
       </div>
 
       {/* Role Change Confirmation Modal */}
-      <Dialog open={!!roleChangeInfo} onOpenChange={(open) => !open && setRoleChangeInfo(null)}>
-        <DialogContent className="glass border-border sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Confirm Role Change</DialogTitle>
-          </DialogHeader>
-          <p className="py-4 text-sm text-muted-foreground leading-relaxed">
-            Are you sure you want to change <span className="text-foreground font-medium">{roleChangeInfo?.name}&apos;s</span> role to <span className="text-brand-gold font-bold uppercase">{roleChangeInfo?.targetRole}</span>?
-          </p>
-          <DialogFooter>
+      <Modal 
+        isOpen={!!roleChangeInfo} 
+        onClose={() => setRoleChangeInfo(null)}
+        variant="confirm"
+        title="Confirm Role Change"
+        footer={(
+          <div className="flex gap-2 w-full justify-end">
             <Button variant="outline" onClick={() => setRoleChangeInfo(null)}>Cancel</Button>
             <Button className="bg-brand-gold hover:bg-brand-gold-light text-white" onClick={confirmRoleChange}>Confirm Change</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        )}
+      >
+        <p className="py-4 text-sm text-muted-foreground leading-relaxed text-center">
+          Are you sure you want to change <span className="text-foreground font-medium">{roleChangeInfo?.name}&apos;s</span> role to <span className="text-brand-gold font-bold uppercase">{roleChangeInfo?.targetRole}</span>?
+        </p>
+      </Modal>
 
       {/* Delete Confirmation Modal */}
-      <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-        <DialogContent className="glass border-border sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
-          </DialogHeader>
-          <p className="py-4 text-sm text-muted-foreground leading-relaxed">Are you sure you want to delete this user? This action cannot be undone.</p>
-          <DialogFooter>
+      <Modal 
+        isOpen={!!deleteId} 
+        onClose={() => setDeleteId(null)}
+        variant="confirm"
+        title="Confirm Deletion"
+        description="Are you sure you want to delete this user? This action cannot be undone."
+        footer={(
+          <div className="flex gap-2 w-full justify-end">
             <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
             <Button variant="destructive" onClick={confirmDelete}>Delete</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        )}
+      >
+        <div className="py-2" />
+      </Modal>
     </div>
   );
 }

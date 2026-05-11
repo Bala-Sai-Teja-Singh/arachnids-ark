@@ -7,7 +7,7 @@ import { Calendar, ArrowLeft, PlayCircle, Eye, Clock, MessageSquare, GraduationC
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { StatusBadge } from '@/components/shared/status-badge';
+import { StatusBadge } from '@/components/shared/molecules/status-badge';
 import { VideoPlayer } from '@/components/shared/video-player';
 import { LocalStorage } from '@/mock-db/storage';
 import { useAuthStore } from '@/store/auth-store';

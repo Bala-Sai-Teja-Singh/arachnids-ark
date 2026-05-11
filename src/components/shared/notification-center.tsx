@@ -8,12 +8,7 @@ import { useNotificationStore } from '@/store/notification-store';
 import { useAuthStore } from '@/store/auth-store';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
+import { Modal } from '@/components/shared/molecules/modal';
 import { formatDistanceToNow } from 'date-fns';
 
 export function NotificationCenter({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void }) {
@@ -37,37 +32,53 @@ export function NotificationCenter({ open, onOpenChange }: { open: boolean, onOp
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="bg-background border-l border-border sm:max-w-md p-0 overflow-hidden shadow-2xl">
-        <SheetHeader className="p-6 border-b border-border">
-          <div className="flex items-center justify-between pr-10">
-            <SheetTitle className="vibe-heading text-lg flex items-center gap-3">
-              <div className="relative">
-                <Bell className="h-5 w-5 text-brand-red" />
-                {unreadCount > 0 && (
-                  <Badge className="absolute -top-2 -right-2 bg-brand-red text-white border-2 border-background text-[8px] h-4 min-w-4 flex items-center justify-center p-0">
-                    {unreadCount}
-                  </Badge>
-                )}
-              </div>
-              Notifications
-            </SheetTitle>
-          </div>
-          <div className="flex gap-2 mt-2">
-            {notifications.length > 0 && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-[10px] uppercase tracking-widest h-8 px-0 hover:bg-transparent hover:text-brand-gold"
-                onClick={() => user && markAllAsRead(user.id)}
-              >
-                Mark all as read
-              </Button>
+    <Modal 
+      isOpen={open} 
+      onClose={() => onOpenChange(false)}
+      variant="side-drawer-right"
+      noPadding
+      title={(
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Bell className="h-5 w-5 text-brand-red" />
+            {unreadCount > 0 && (
+              <Badge className="absolute -top-2 -right-2 bg-brand-red text-white border-2 border-background text-[8px] h-4 min-w-4 flex items-center justify-center p-0">
+                {unreadCount}
+              </Badge>
             )}
           </div>
-        </SheetHeader>
+          <span className="vibe-heading text-lg">Notifications</span>
+        </div>
+      )}
+      footer={notifications.length > 0 ? (
+        <div className="w-full px-6 pb-6">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="vibe-button w-full text-red-400 hover:text-red-300 hover:bg-red-400/10 py-6"
+            onClick={() => user && clearAll(user.id)}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Clear all notifications
+          </Button>
+        </div>
+      ) : null}
+    >
+      <div className="h-full flex flex-col">
+        <div className="px-6 py-2">
+          {notifications.length > 0 && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-[10px] uppercase tracking-widest h-8 px-0 hover:bg-transparent hover:text-brand-gold"
+              onClick={() => user && markAllAsRead(user.id)}
+            >
+              Mark all as read
+            </Button>
+          )}
+        </div>
 
-        <div className="h-full overflow-y-auto pb-32">
+        <div className="flex-1 overflow-y-auto pb-4">
           {notifications.length === 0 ? (
             <div className="p-12 text-center mt-20">
               <div className="w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center mx-auto mb-4">
@@ -76,7 +87,7 @@ export function NotificationCenter({ open, onOpenChange }: { open: boolean, onOp
               <p className="text-sm text-muted-foreground font-heading uppercase tracking-widest">No notifications yet</p>
             </div>
           ) : (
-            <div className="divide-y divide-border">
+            <div className="divide-y divide-border/50">
               {notifications.map((notif) => (
                 <motion.div 
                   key={notif.id}
@@ -116,7 +127,10 @@ export function NotificationCenter({ open, onOpenChange }: { open: boolean, onOp
                   </div>
                   {!notif.read && (
                     <button 
-                      onClick={() => markAsRead(notif.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        markAsRead(notif.id);
+                      }}
                       className="absolute top-5 right-5 opacity-0 group-hover:opacity-100 transition-opacity bg-background border border-border p-1 rounded-md hover:text-brand-gold"
                       title="Mark as read"
                     >
@@ -128,21 +142,7 @@ export function NotificationCenter({ open, onOpenChange }: { open: boolean, onOp
             </div>
           )}
         </div>
-
-        {notifications.length > 0 && (
-          <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-border bg-background/80 backdrop-blur-md flex justify-center">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="vibe-button w-full text-red-400 hover:text-red-300 hover:bg-red-400/10 py-6"
-              onClick={() => user && clearAll(user.id)}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Clear all notifications
-            </Button>
-          </div>
-        )}
-      </SheetContent>
-    </Sheet>
+      </div>
+    </Modal>
   );
 }

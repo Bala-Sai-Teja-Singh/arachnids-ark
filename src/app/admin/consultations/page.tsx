@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react';
 import { Save, Trash2, Plus, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Input } from '@/components/shared/atoms/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Modal } from '@/components/shared/molecules/modal';
 import { LocalStorage } from '@/mock-db/storage';
 import type { ConsultationSettings, ConsultationPricing } from '@/types';
 import { toast } from 'sonner';
@@ -49,11 +49,7 @@ export default function AdminConsultationsSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Consultation Settings</h1>
-          <p className="text-muted-foreground">Manage consultation pricing and urgency multipliers.</p>
-        </div>
+      <div className="flex justify-end">
         <Button onClick={handleSave} className="bg-brand-gold hover:bg-brand-gold/90 text-white">
           <Save className="mr-2 h-4 w-4" /> Save Changes
         </Button>
@@ -173,18 +169,21 @@ export default function AdminConsultationsSettingsPage() {
       </div>
 
       {/* Delete Confirmation Modal */}
-      <Dialog open={deletePricingIdx !== null} onOpenChange={(open) => !open && setDeletePricingIdx(null)}>
-        <DialogContent className="glass border-border sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Delete Pricing Plan</DialogTitle>
-          </DialogHeader>
-          <p className="py-4 text-sm text-muted-foreground">Are you sure you want to delete this pricing plan? Users will no longer be able to select this duration.</p>
-          <DialogFooter>
+      <Modal 
+        isOpen={deletePricingIdx !== null} 
+        onClose={() => setDeletePricingIdx(null)}
+        variant="confirm"
+        title="Delete Pricing Plan"
+        description="Are you sure you want to delete this pricing plan? Users will no longer be able to select this duration."
+        footer={(
+          <div className="flex gap-2 w-full justify-end">
             <Button variant="outline" onClick={() => setDeletePricingIdx(null)}>Cancel</Button>
             <Button variant="destructive" onClick={confirmDeletePricing}>Delete</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        )}
+      >
+        <div className="py-2" />
+      </Modal>
     </div>
   );
 }

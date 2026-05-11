@@ -39,18 +39,12 @@ export default function CoursesPage() {
   }, []);
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-        <Badge variant="outline" className="border-brand-gold/30 text-brand-gold mb-4">
+    <div className="container mx-auto px-4 py-4">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+        <Badge variant="outline" className="border-brand-gold/30 text-brand-gold mb-2">
           <GraduationCap className="h-3 w-3 mr-2" />
           Expert Courses
         </Badge>
-        <h1 className="text-3xl font-bold mb-2">
-          Tarantula <span className="text-gradient">Courses</span>
-        </h1>
-        <p className="text-muted-foreground">
-          Master the art of tarantula keeping with our comprehensive courses
-        </p>
       </motion.div>
 
       {loading ? (

@@ -43,3 +43,28 @@ export const DASHBOARD_NAV_ITEMS = [
 
   { label: 'Profile', href: '/dashboard/profile', icon: Settings },
 ];
+export const PAGE_TITLES: Record<string, string> = {
+  '/admin': 'Dashboard Overview',
+  '/admin/products': 'Products Management',
+  '/admin/reviews': 'Customer Reviews',
+  '/admin/courses': 'Courses Management',
+  '/admin/orders': 'Orders Management',
+  '/admin/enrollments': 'Course Enrollments',
+  '/admin/bookings': 'Consultation Bookings',
+  '/admin/revenue': 'Revenue Analytics',
+  '/admin/care-guides': 'Care Guides Management',
+  '/admin/users': 'User Management',
+  '/admin/consultations': 'Consultation Settings',
+  '/admin/settings': 'System Settings',
+  '/dashboard/orders': 'My Orders',
+  '/dashboard/courses': 'My Courses',
+  '/dashboard/consultations': 'My Consultations',
+  '/dashboard/profile': 'My Profile',
+  '/liked': 'Favorite Items',
+  '/shop': 'Arachnids Shop',
+  '/courses': 'Explore Courses',
+  '/consultation': 'Book Consultation',
+  '/care-guides': 'Expert Care Guides',
+  '/cart': 'Your Shopping Cart',
+  '/checkout': 'Secure Checkout',
+};

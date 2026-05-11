@@ -6,11 +6,11 @@ import { motion } from 'framer-motion';
 import { GraduationCap, Upload, Check, Copy } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import { Input } from '@/components/shared/atoms/input';
 import { Label } from '@/components/ui/label';
-import { StatusBadge } from '@/components/shared/status-badge';
-import { EmptyState } from '@/components/shared/empty-state';
+import { StatusBadge } from '@/components/shared/molecules/status-badge';
+import { EmptyState } from '@/components/shared/molecules/empty-state';
+import { SectionHeader } from '@/components/shared/molecules/section-header';
 import { useAuthStore } from '@/store/auth-store';
 import { LocalStorage } from '@/mock-db/storage';
 import type { CourseEnrollment, SystemSettings } from '@/types';
@@ -51,10 +51,6 @@ export default function MyCoursesPage() {
 
   return (
     <div>
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="vibe-heading text-2xl font-bold mb-1">My Courses</h1>
-        <p className="font-heading text-[10px] uppercase tracking-widest text-muted-foreground mb-6">Track your course enrollments</p>
-      </motion.div>
 
       {enrollments.length === 0 ? (
         <EmptyState icon={GraduationCap} title="No enrollments yet" description="Browse our courses and start your learning journey." />

@@ -4,15 +4,15 @@ import { useEffect, useState } from 'react';
 import { Plus, Search, Edit, Trash2, BookOpen, FileText, Save, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Input } from '@/components/shared/atoms/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
+import { Modal } from '@/components/shared/molecules/modal';
 import { LocalStorage } from '@/mock-db/storage';
 import type { CareGuide } from '@/types';
+import { SectionHeader } from '@/components/shared/molecules/section-header';
 
 export default function AdminCareGuidesPage() {
   const [guides, setGuides] = useState<CareGuide[]>([]);
@@ -33,8 +33,8 @@ export default function AdminCareGuidesPage() {
     setGuides(LocalStorage.getAll<CareGuide>('care_guides'));
   }, []);
 
-  const filtered = guides.filter(g => 
-    g.title.toLowerCase().includes(search.toLowerCase()) || 
+  const filtered = guides.filter(g =>
+    g.title.toLowerCase().includes(search.toLowerCase()) ||
     g.category.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -70,7 +70,7 @@ export default function AdminCareGuidesPage() {
       LocalStorage.create('care_guides', newGuide);
       toast.success('Care guide added');
     }
-    
+
     setGuides(LocalStorage.getAll<CareGuide>('care_guides'));
     setIsModalOpen(false);
     setLoading(false);
@@ -87,25 +87,27 @@ export default function AdminCareGuidesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gradient-gold">Care Guides</h1>
-          <p className="text-muted-foreground">Manage free educational resources for your users.</p>
+      <SectionHeader
+        className="justify-end"
+        action={{
+          label: "Add Care Guide",
+          onClick: () => handleOpenEdit(null),
+          icon: Plus,
+          variant: 'primary'
+        }}
+      >
+        <div className="w-full sm:w-80">
+          <Input
+            placeholder="Search guides..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="bg-card border-border h-10"
+            startContent={<Search className="h-4 w-4 text-muted-foreground" />}
+            isClearable
+            onClear={() => setSearch('')}
+          />
         </div>
-        <Button className="bg-brand-red hover:bg-brand-red-light text-white" onClick={() => handleOpenEdit(null)}>
-          <Plus className="mr-2 h-4 w-4" /> Add Care Guide
-        </Button>
-      </div>
-
-      <div className="flex items-center gap-2 max-w-sm">
-        <Search className="h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search guides..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="bg-card border-border"
-        />
-      </div>
+      </SectionHeader>
 
       <div className="rounded-xl border border-border bg-card overflow-hidden">
         <Table>
@@ -163,12 +165,13 @@ export default function AdminCareGuidesPage() {
         </Table>
       </div>
 
-      {/* Edit/Add Sheet */}
-      <Sheet open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <SheetContent className="glass border-border sm:max-w-xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>{editingGuide ? 'Edit Care Guide' : 'Add Care Guide'}</SheetTitle>
-          </SheetHeader>
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        variant="extra-large"
+        title={editingGuide ? 'Edit Care Guide' : 'Add Care Guide'}
+      >
+        <div className="space-y-6">
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Title</Label>
@@ -228,30 +231,33 @@ export default function AdminCareGuidesPage() {
                 placeholder="# Introduction\n\nContent goes here..."
               />
             </div>
+            <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-border/50">
+              <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+              <Button onClick={handleSave} disabled={loading} className="bg-brand-red hover:bg-brand-red-light text-white px-8">
+                {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                Save Changes
+              </Button>
+            </div>
           </div>
-          <SheetFooter className="mt-8 border-t border-border pt-6">
-            <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={loading} className="bg-brand-red hover:bg-brand-red-light text-white px-8">
-              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-              Save Changes
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+        </div>
+      </Modal>
 
       {/* Delete Confirmation Modal */}
-      <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-        <DialogContent className="glass border-border sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
-          </DialogHeader>
-          <p className="py-4 text-sm text-muted-foreground">Are you sure you want to delete this care guide? This action cannot be undone.</p>
-          <DialogFooter>
+      <Modal
+        isOpen={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        variant="confirm"
+        title="Confirm Deletion"
+        description="Are you sure you want to delete this care guide? This action cannot be undone."
+        footer={(
+          <div className="flex gap-2 w-full justify-end">
             <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
             <Button variant="destructive" onClick={confirmDelete}>Delete</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        )}
+      >
+        <div className="py-2" />
+      </Modal>
     </div>
   );
 }

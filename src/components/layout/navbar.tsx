@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { Menu, Bell, LogOut, Shield, ClipboardList, Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
+import { Modal } from '@/components/shared/molecules/modal';
 import { ThemeToggle } from '@/components/theme-toggle';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -14,14 +14,19 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { USER_NAV_ITEMS, DASHBOARD_NAV_ITEMS, MOBILE_NAV_ITEMS } from '@/constants/navigation';
+import { USER_NAV_ITEMS, DASHBOARD_NAV_ITEMS, MOBILE_NAV_ITEMS, PAGE_TITLES } from '@/constants/navigation';
 import { useAuthStore } from '@/store/auth-store';
 import { useNotificationStore } from '@/store/notification-store';
 import { NotificationCenter } from '../shared/notification-center';
 import { CartDrawer } from '../shared/cart-drawer';
-import { UserSidebar } from './user-sidebar';
 
-export function Navbar({ isSidebarCollapsed = false }: { isSidebarCollapsed?: boolean }) {
+export function Navbar({ 
+  isSidebarCollapsed = false,
+  onMenuClick
+}: { 
+  isSidebarCollapsed?: boolean;
+  onMenuClick?: () => void;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -57,18 +62,14 @@ export function Navbar({ isSidebarCollapsed = false }: { isSidebarCollapsed?: bo
           {showSidebar ? (
             /* Mobile Menu Toggle - Left side for authenticated users */
             <div className="md:hidden">
-              <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-                <SheetTrigger
-                  render={
-                    <Button variant="ghost" size="icon" className="border border-border rounded-lg">
-                      <Menu className="h-5 w-5" />
-                    </Button>
-                  }
-                />
-                <SheetContent side="left" className="p-0 w-64 border-r border-border">
-                  <UserSidebar onItemClick={() => setIsMobileMenuOpen(false)} />
-                </SheetContent>
-              </Sheet>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="border border-border rounded-lg"
+                onClick={onMenuClick}
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
             </div>
           ) : (
             /* Logo - Left side for guests */
@@ -105,6 +106,13 @@ export function Navbar({ isSidebarCollapsed = false }: { isSidebarCollapsed?: bo
               })}
             </nav>
           )}
+
+          {/* Dynamic Page Title */}
+          <div className="hidden lg:flex items-center border-l border-border pl-4 ml-2 animate-in fade-in slide-in-from-left-4 duration-500">
+            <span className="text-sm font-black uppercase tracking-[0.2em] text-foreground/80">
+              {PAGE_TITLES[pathname] || ''}
+            </span>
+          </div>
         </div>
 
         {/* Right side utilities */}
@@ -174,36 +182,40 @@ export function Navbar({ isSidebarCollapsed = false }: { isSidebarCollapsed?: bo
           {/* Guest Mobile Menu Toggle */}
           {!isAuthenticated && !isLoading && (
             <div className="md:hidden">
-              <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-                <SheetTrigger
-                  render={
-                    <Button variant="ghost" size="icon" className="border border-border rounded-lg">
-                      <Menu className="h-5 w-5" />
-                    </Button>
-                  }
-                />
-                <SheetContent side="left" className="p-0 w-64 border-r border-border">
-                  <SheetTitle className="sr-only">Mobile Menu</SheetTitle>
-                  <div className="p-6 border-b border-border">
-                    <div className="vibe-heading text-lg font-bold">
-                      Arachnids<span className="text-gradient">Ark</span>
-                    </div>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="border border-border rounded-lg"
+                onClick={() => setIsMobileMenuOpen(true)}
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+
+              <Modal 
+                isOpen={isMobileMenuOpen} 
+                onClose={() => setIsMobileMenuOpen(false)}
+                variant="side-drawer-left"
+                noPadding
+                title={(
+                  <div className="vibe-heading text-lg font-bold">
+                    Arachnids<span className="text-gradient">Ark</span>
                   </div>
-                  <div className="p-4 space-y-1">
-                    {USER_NAV_ITEMS.map((item) => (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-accent/50 text-sm font-medium"
-                      >
-                        <item.icon className="h-4 w-4 text-brand-gold" />
-                        {item.label}
-                      </Link>
-                    ))}
-                  </div>
-                </SheetContent>
-              </Sheet>
+                )}
+              >
+                <div className="p-4 space-y-1">
+                  {USER_NAV_ITEMS.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-accent/50 text-sm font-medium"
+                    >
+                      <item.icon className="h-4 w-4 text-brand-gold" />
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              </Modal>
             </div>
           )}
         </div>

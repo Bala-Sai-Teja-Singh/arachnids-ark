@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Bell, Check, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { EmptyState } from '@/components/shared/empty-state';
+import { EmptyState } from '@/components/shared/molecules/empty-state';
 import { useAuthStore } from '@/store/auth-store';
 import { useNotificationStore } from '@/store/notification-store';
 

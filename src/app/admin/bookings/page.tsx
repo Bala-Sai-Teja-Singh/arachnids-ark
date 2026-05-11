@@ -6,8 +6,8 @@ import { Eye, Calendar, Clock, Check, Video, X, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import { Modal } from '@/components/shared/molecules/modal';
+import { Input } from '@/components/shared/atoms/input';
 import { Label } from '@/components/ui/label';
 import { LocalStorage } from '@/mock-db/storage';
 import { useNotificationStore } from '@/store/notification-store';
@@ -15,7 +15,8 @@ import type { ConsultationBooking, BookingStatus } from '@/types';
 import { formatPrice } from '@/constants/pricing';
 import { ALL_BOOKING_STATUSES, BOOKING_STATUS_CONFIG } from '@/constants/statuses';
 import { toast } from 'sonner';
-import { StatusBadge } from '@/components/shared/status-badge';
+import { StatusBadge } from '@/components/shared/molecules/status-badge';
+import { SectionHeader } from '@/components/shared/molecules/section-header';
 import { Badge } from '@/components/ui/badge';
 
 export default function AdminBookingsPage() {
@@ -343,18 +344,16 @@ export default function AdminBookingsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Consultation Bookings</h1>
-          <p className="text-muted-foreground">Manage expert consultation appointments and scheduling.</p>
-        </div>
-        <div className="relative w-full sm:w-96">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-4">
+        <div className="w-full sm:w-96">
           <Input 
             placeholder="Search by client name, email or phone..." 
-            className="pl-10 bg-card border-border"
+            className="bg-card border-border h-10"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            startContent={<Search className="h-4 w-4 text-muted-foreground" />}
+            isClearable
+            onClear={() => setSearchQuery('')}
           />
         </div>
       </div>
@@ -495,57 +494,14 @@ export default function AdminBookingsPage() {
       </div>
 
       {/* Add Call Slot Modal */}
-      <Dialog open={isSlotModalOpen} onOpenChange={setIsSlotModalOpen}>
-        <DialogContent className="glass border-border sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Schedule Call</DialogTitle>
-            <DialogDescription>
-              Add a specific call slot for the {selectedBooking?.items?.[activeItemIdx || 0]?.label} session.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Date</Label>
-                <Input type="date" value={slotDate} onChange={e => setSlotDate(e.target.value)} className="bg-background/50" />
-              </div>
-              <div className="space-y-2">
-                <Label>Time</Label>
-                <Input type="time" value={slotTime} onChange={e => setSlotTime(e.target.value)} className="bg-background/50" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Call Duration (minutes)</Label>
-              <Input
-                type="number"
-                value={newSlotDuration}
-                onChange={e => setNewSlotDuration(e.target.value)}
-                className="bg-background/50"
-                placeholder="e.g. 15"
-              />
-              <p className="text-[10px] text-muted-foreground">You can split a 30-min session into smaller calls (e.g. 15+15).</p>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-bold">Meeting Link <span className="text-red-500">*</span></Label>
-              <Input
-                placeholder="https://meet.google.com/..."
-                value={slotMeetingLink}
-                onChange={e => setSlotMeetingLink(e.target.value)}
-                className="bg-background/50"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-bold">Recording Link (Optional)</Label>
-              <Input
-                placeholder="https://drive.google.com/..."
-                value={slotRecordingLink}
-                onChange={e => setSlotRecordingLink(e.target.value)}
-                className="bg-background/50"
-              />
-            </div>
-          </div>
-          <DialogFooter>
+      <Modal 
+        isOpen={isSlotModalOpen} 
+        onClose={() => setIsSlotModalOpen(false)}
+        variant="confirm"
+        title="Schedule Call"
+        description={`Add a specific call slot for the ${selectedBooking?.items?.[activeItemIdx || 0]?.label} session.`}
+        footer={(
+          <div className="flex gap-2 w-full justify-end">
             <Button variant="outline" onClick={() => setIsSlotModalOpen(false)}>Cancel</Button>
             <Button 
               className="bg-brand-gold hover:bg-brand-gold/90 text-white" 
@@ -554,224 +510,264 @@ export default function AdminBookingsPage() {
             >
               <Check className="mr-2 h-4 w-4" /> Confirm Call
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        )}
+      >
+        <div className="space-y-4 py-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Date</Label>
+              <Input type="date" value={slotDate} onChange={e => setSlotDate(e.target.value)} className="bg-background/50" />
+            </div>
+            <div className="space-y-2">
+              <Label>Time</Label>
+              <Input type="time" value={slotTime} onChange={e => setSlotTime(e.target.value)} className="bg-background/50" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Call Duration (minutes)</Label>
+            <Input
+              type="number"
+              value={newSlotDuration}
+              onChange={e => setNewSlotDuration(e.target.value)}
+              className="bg-background/50"
+              placeholder="e.g. 15"
+            />
+            <p className="text-[10px] text-muted-foreground">You can split a 30-min session into smaller calls (e.g. 15+15).</p>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs font-bold">Meeting Link <span className="text-red-500">*</span></Label>
+            <Input
+              placeholder="https://meet.google.com/..."
+              value={slotMeetingLink}
+              onChange={e => setSlotMeetingLink(e.target.value)}
+              className="bg-background/50"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs font-bold">Recording Link (Optional)</Label>
+            <Input
+              placeholder="https://drive.google.com/..."
+              value={slotRecordingLink}
+              onChange={e => setSlotRecordingLink(e.target.value)}
+              className="bg-background/50"
+            />
+          </div>
+        </div>
+      </Modal>
 
       {/* Detail Modal */}
-      <Dialog open={isDetailOpen} onOpenChange={(open) => {
-        setIsDetailOpen(open);
-        if (!open) setSelectedBooking(null);
-      }}>
-        <DialogContent className="glass border-border sm:max-w-lg max-h-[90vh] overflow-y-auto custom-scrollbar">
-          <DialogHeader>
-            <DialogTitle>Booking Details</DialogTitle>
-            <DialogDescription>
-              Consultation request from {selectedBooking?.userName}
-            </DialogDescription>
-          </DialogHeader>
-          {selectedBooking && (
-            <div className="space-y-6 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Booking ID</p>
-                  <p className="text-sm font-mono">{selectedBooking.id.slice(0, 8)}</p>
-                </div>
-                <div className="space-y-1 text-right">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Date</p>
-                  <p className="text-sm">{new Date(selectedBooking.createdAt).toLocaleDateString()}</p>
-                </div>
-              </div>               <div className="space-y-4">
-                <h4 className="text-xs font-bold text-brand-gold uppercase tracking-widest flex items-center gap-2">
-                  Session Breakdowns
-                </h4>
-                <div className="space-y-3">
-                  {selectedBooking.items?.map((item, idx) => (
-                    <div key={idx} className="p-4 rounded-xl border border-border bg-background/30 space-y-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-bold text-sm">{item.label}</p>
-                          <p className="text-[10px] text-muted-foreground uppercase">{item.urgency} Urgency</p>
-                        </div>
-                        <div className="text-right space-y-1">
-                          <p className="text-xs font-bold text-brand-gold">{item.duration} mins total</p>
-                          <Select 
-                            value={item.status || 'payment_verified'} 
-                            onValueChange={(val) => handleUpdateItemStatus(idx, val as BookingStatus)}
-                          >
-                            <SelectTrigger className="h-6 text-[9px] w-[110px] bg-background/50 border-brand-gold/20">
-                              <SelectValue placeholder="Status" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-background border-border">
-                              {ALL_BOOKING_STATUSES.map(s => (
-                                <SelectItem key={s} value={s} className="text-[10px] capitalize">{BOOKING_STATUS_CONFIG[s].label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <p className="text-[10px] text-muted-foreground font-medium">Used: {item.minutesUsed || 0}m | Remaining: {item.duration - (item.minutesUsed || 0)}m</p>
-                        </div>
+      <Modal 
+        isOpen={isDetailOpen} 
+        onClose={() => {
+          setIsDetailOpen(false);
+          setSelectedBooking(null);
+        }}
+        variant="extra-large"
+        title="Booking Details"
+        description={`Consultation request from ${selectedBooking?.userName}`}
+      >
+        {selectedBooking && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-4 border-b border-border/50 pb-4">
+              <div className="space-y-1">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Booking ID</p>
+                <p className="text-sm font-mono">{selectedBooking.id.slice(0, 8)}</p>
+              </div>
+              <div className="space-y-1 text-right">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Date</p>
+                <p className="text-sm">{new Date(selectedBooking.createdAt).toLocaleDateString()}</p>
+              </div>
+            </div>
+            {/* Rest of detail content */}
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold text-brand-gold uppercase tracking-widest flex items-center gap-2">
+                Session Breakdowns
+              </h4>
+              <div className="space-y-3">
+                {selectedBooking.items?.map((item, idx) => (
+                  <div key={idx} className="p-4 rounded-xl border border-border bg-background/30 space-y-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-bold text-sm">{item.label}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase">{item.urgency} Urgency</p>
                       </div>
-
-                      {/* Scheduled Calls per breakdown */}
-                      <div className="space-y-2">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Scheduled Calls</p>
-                        <div className="space-y-1.5">
-                              {item.slots?.length ? item.slots.map(slot => (
-                                <div key={slot.id} className="space-y-4 p-4 rounded bg-brand-gold/5 border border-brand-gold/10">
-                                  <div className="flex items-center justify-between gap-2">
-                                    <div className="flex flex-wrap gap-2 flex-1">
-                                      <div className="space-y-1">
-                                        <Label className="text-[9px] uppercase font-bold text-muted-foreground">Date</Label>
-                                        <Input
-                                          type="date"
-                                          value={itemDates[slot.id] || ''}
-                                          onChange={e => setItemDates(prev => ({ ...prev, [slot.id]: e.target.value }))}
-                                          className="h-7 text-[10px] w-36 bg-background"
-                                        />
-                                      </div>
-                                      <div className="space-y-1">
-                                        <Label className="text-[9px] uppercase font-bold text-muted-foreground">Time</Label>
-                                        <Input
-                                          type="time"
-                                          value={itemTimes[slot.id] || ''}
-                                          onChange={e => setItemTimes(prev => ({ ...prev, [slot.id]: e.target.value }))}
-                                          className="h-7 text-[10px] w-28 bg-background"
-                                        />
-                                      </div>
-                                      <div className="space-y-1">
-                                        <Label className="text-[9px] uppercase font-bold text-muted-foreground">Duration</Label>
-                                        <Badge variant="outline" className="h-7 px-2 text-[10px] bg-background border-border">
-                                          {slot.duration}m
-                                        </Badge>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  <div className="grid grid-cols-1 gap-3 pt-2 border-t border-brand-gold/10">
-                                    <div className="flex items-center justify-between gap-4">
-                                      <div className="flex-1 space-y-1">
-                                        <Label className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">Meeting Link</Label>
-                                        <div className="flex items-center gap-2">
-                                          <Video className="h-3 w-3 text-brand-gold" />
-                                          <a 
-                                            href={slot.meetingLink} 
-                                            target="_blank" 
-                                            rel="noopener noreferrer"
-                                            className="text-[10px] truncate max-w-[150px] font-mono text-brand-gold hover:text-brand-gold-light hover:underline transition-colors"
-                                            title="Click to join call"
-                                          >
-                                            {slot.meetingLink}
-                                          </a>
-                                        </div>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        <div className="space-y-1">
-                                          <Label className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">Minutes</Label>
-                                          <Input
-                                            type="number"
-                                            min="0"
-                                            value={itemMinutes[slot.id] || '0'}
-                                            onChange={e => setItemMinutes(prev => ({ ...prev, [slot.id]: e.target.value }))}
-                                            className="h-7 w-16 bg-background text-[11px]"
-                                          />
-                                        </div>
-                                        <Button 
-                                          variant="ghost" 
-                                          size="icon" 
-                                          className="mt-4 h-7 w-7 text-muted-foreground hover:text-red-500 hover:bg-red-500/10"
-                                          onClick={() => handleDeleteSlot(idx, slot.id)}
-                                          title="Delete Call"
-                                        >
-                                          <X className="h-3.5 w-3.5" />
-                                        </Button>
-                                      </div>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1.5">
-                                  <Label className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">Recording Link</Label>
-                                  <div className="flex gap-1.5">
-                                    <div className="relative flex-1">
-                                      <Eye className="absolute left-2 top-2 h-2.5 w-2.5 text-muted-foreground" />
-                                      <Input
-                                        placeholder="https://drive.google.com/..."
-                                        value={itemRecordings[slot.id] || ''}
-                                        onChange={e => setItemRecordings(prev => ({ ...prev, [slot.id]: e.target.value }))}
-                                        className="h-7 pl-6 bg-background text-[9px]"
-                                      />
-                                    </div>
-                                    <Button
-                                      onClick={() => handleUpdateSlotDetails(idx, slot.id)}
-                                      size="sm"
-                                      className="h-7 bg-brand-gold hover:bg-brand-gold/90 text-white font-bold px-3 text-[9px] uppercase"
-                                    >
-                                      Update Details
-                                    </Button>
-                                </div>
-                              </div>
-                            </div>
-                          )) : (
-                            <p className="text-[10px] text-muted-foreground italic">No calls scheduled for this item.</p>
-                          )}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full h-7 text-[10px] uppercase font-bold border-brand-gold/20 text-brand-gold hover:bg-brand-gold hover:text-white"
-                            onClick={() => openSlotModalForItem(idx)}
-                          >
-                            + Schedule New Call
-                          </Button>
-                        </div>
+                      <div className="text-right space-y-1">
+                        <p className="text-xs font-bold text-brand-gold">{item.duration} mins total</p>
+                        <Select 
+                          value={item.status || 'payment_verified'} 
+                          onValueChange={(val) => handleUpdateItemStatus(idx, val as BookingStatus)}
+                        >
+                          <SelectTrigger className="h-6 text-[9px] w-[110px] bg-background/50 border-brand-gold/20">
+                            <SelectValue placeholder="Status" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-background border-border">
+                            {ALL_BOOKING_STATUSES.map(s => (
+                              <SelectItem key={s} value={s} className="text-[10px] capitalize">{BOOKING_STATUS_CONFIG[s].label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-[10px] text-muted-foreground font-medium">Used: {item.minutesUsed || 0}m | Remaining: {item.duration - (item.minutesUsed || 0)}m</p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
 
+                    {/* Scheduled Calls per breakdown */}
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Scheduled Calls</p>
+                      <div className="space-y-1.5">
+                            {item.slots?.length ? item.slots.map(slot => (
+                              <div key={slot.id} className="space-y-4 p-4 rounded bg-brand-gold/5 border border-brand-gold/10">
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex flex-wrap gap-2 flex-1">
+                                    <div className="space-y-1">
+                                      <Label className="text-[9px] uppercase font-bold text-muted-foreground">Date</Label>
+                                      <Input
+                                        type="date"
+                                        value={itemDates[slot.id] || ''}
+                                        onChange={e => setItemDates(prev => ({ ...prev, [slot.id]: e.target.value }))}
+                                        className="h-7 text-[10px] w-36 bg-background"
+                                      />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <Label className="text-[9px] uppercase font-bold text-muted-foreground">Time</Label>
+                                      <Input
+                                        type="time"
+                                        value={itemTimes[slot.id] || ''}
+                                        onChange={e => setItemTimes(prev => ({ ...prev, [slot.id]: e.target.value }))}
+                                        className="h-7 text-[10px] w-28 bg-background"
+                                      />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <Label className="text-[9px] uppercase font-bold text-muted-foreground">Duration</Label>
+                                      <Badge variant="outline" className="h-7 px-2 text-[10px] bg-background border-border">
+                                        {slot.duration}m
+                                      </Badge>
+                                    </div>
+                                  </div>
+                                </div>
 
-              {selectedBooking.query && (
-                <div className="space-y-2">
-                  <h4 className="text-xs font-bold text-brand-gold uppercase tracking-widest">User Query</h4>
-                  <div className="p-4 rounded-xl border border-border bg-background/30 italic text-sm text-muted-foreground leading-relaxed">
-                    "{selectedBooking.query}"
+                                <div className="grid grid-cols-1 gap-3 pt-2 border-t border-brand-gold/10">
+                                  <div className="flex items-center justify-between gap-4">
+                                    <div className="flex-1 space-y-1">
+                                      <Label className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">Meeting Link</Label>
+                                      <div className="flex items-center gap-2">
+                                        <Video className="h-3 w-3 text-brand-gold" />
+                                        <a 
+                                          href={slot.meetingLink} 
+                                          target="_blank" 
+                                          rel="noopener noreferrer"
+                                          className="text-[10px] truncate max-w-[150px] font-mono text-brand-gold hover:text-brand-gold-light hover:underline transition-colors"
+                                          title="Click to join call"
+                                        >
+                                          {slot.meetingLink}
+                                        </a>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <div className="space-y-1">
+                                        <Label className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">Minutes</Label>
+                                        <Input
+                                          type="number"
+                                          min="0"
+                                          value={itemMinutes[slot.id] || '0'}
+                                          onChange={e => setItemMinutes(prev => ({ ...prev, [slot.id]: e.target.value }))}
+                                          className="h-7 w-16 bg-background text-[11px]"
+                                        />
+                                      </div>
+                                      <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="mt-4 h-7 w-7 text-muted-foreground hover:text-red-500 hover:bg-red-500/10"
+                                        onClick={() => handleDeleteSlot(idx, slot.id)}
+                                        title="Delete Call"
+                                      >
+                                        <X className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                              </div>
+
+                              <div className="space-y-1.5">
+                                <Label className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">Recording Link</Label>
+                                <div className="flex gap-1.5">
+                                  <div className="relative flex-1">
+                                    <Eye className="absolute left-2 top-2 h-2.5 w-2.5 text-muted-foreground" />
+                                    <Input
+                                      placeholder="https://drive.google.com/..."
+                                      value={itemRecordings[slot.id] || ''}
+                                      onChange={e => setItemRecordings(prev => ({ ...prev, [slot.id]: e.target.value }))}
+                                      className="h-7 pl-6 bg-background text-[9px]"
+                                    />
+                                  </div>
+                                  <Button
+                                    onClick={() => handleUpdateSlotDetails(idx, slot.id)}
+                                    size="sm"
+                                    className="h-7 bg-brand-gold hover:bg-brand-gold/90 text-white font-bold px-3 text-[9px] uppercase"
+                                  >
+                                    Update Details
+                                  </Button>
+                              </div>
+                            </div>
+                          </div>
+                        )) : (
+                          <p className="text-[10px] text-muted-foreground italic">No calls scheduled for this item.</p>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full h-7 text-[10px] uppercase font-bold border-brand-gold/20 text-brand-gold hover:bg-brand-gold hover:text-white"
+                          onClick={() => openSlotModalForItem(idx)}
+                        >
+                          + Schedule New Call
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )}
+                ))}
+              </div>
+            </div>
 
-              <div className="flex items-center justify-between p-4 rounded-xl bg-brand-gold/5 border border-brand-gold/20">
-                <div className="text-sm">
-                  <span className="text-muted-foreground">Total Price</span>
-                </div>
-                <div className="text-xl font-bold text-brand-gold">
-                  {formatPrice(selectedBooking.totalPrice ?? 0)}
+            {selectedBooking.query && (
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-brand-gold uppercase tracking-widest">User Query</h4>
+                <div className="p-4 rounded-xl border border-border bg-background/30 italic text-sm text-muted-foreground leading-relaxed">
+                  "{selectedBooking.query}"
                 </div>
               </div>
+            )}
 
+            <div className="flex items-center justify-between p-4 rounded-xl bg-brand-gold/5 border border-brand-gold/20">
+              <div className="text-sm">
+                <span className="text-muted-foreground">Total Price</span>
+              </div>
+              <div className="text-xl font-bold text-brand-gold">
+                {formatPrice(selectedBooking.totalPrice ?? 0)}
+              </div>
             </div>
-          )}
-          <DialogFooter />
-        </DialogContent>
-      </Dialog>
-      {/* Cancellation Confirmation Modal */}
-      <Dialog open={!!deleteConfirmInfo} onOpenChange={(open) => !open && setDeleteConfirmInfo(null)}>
-        <DialogContent className="glass border-border sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Cancel Scheduled Call</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to cancel this call? This will notify the client via email.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-muted-foreground">
-              The session balance will be updated, and a cancellation notification will be sent immediately.
-            </p>
           </div>
-          <DialogFooter className="gap-2 sm:gap-0">
+        )}
+      </Modal>
+      {/* Cancellation Confirmation Modal */}
+      <Modal 
+        isOpen={!!deleteConfirmInfo} 
+        onClose={() => setDeleteConfirmInfo(null)}
+        variant="confirm"
+        title="Cancel Scheduled Call"
+        description="Are you sure you want to cancel this call? This will notify the client via email."
+        footer={(
+          <div className="flex gap-2 w-full justify-end">
             <Button variant="outline" onClick={() => setDeleteConfirmInfo(null)}>Keep Call</Button>
             <Button variant="destructive" onClick={executeDeleteSlot}>Confirm Cancellation</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        )}
+      >
+        <div className="py-2">
+          <p className="text-sm text-muted-foreground text-center">
+            The session balance will be updated, and a cancellation notification will be sent immediately.
+          </p>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -13,6 +13,9 @@ import {
 import { buttonVariants } from '@/components/ui/button';
 import Link from 'next/link';
 
+import { StatCard } from '@/components/shared/molecules/stat-card';
+import { SectionHeader } from '@/components/shared/molecules/section-header';
+
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState({
     users: 0, products: 0, courses: 0,
@@ -43,7 +46,6 @@ export default function AdminDashboardPage() {
       });
     }, 0);
 
-    // Mock revenue data for chart
     const data = [
       { name: 'Jan', total: Math.floor(Math.random() * 50000) + 10000 },
       { name: 'Feb', total: Math.floor(Math.random() * 50000) + 15000 },
@@ -51,7 +53,7 @@ export default function AdminDashboardPage() {
       { name: 'Apr', total: Math.floor(Math.random() * 50000) + 25000 },
       { name: 'May', total: Math.floor(Math.random() * 50000) + 30000 },
       { name: 'Jun', total: Math.floor(Math.random() * 50000) + 40000 },
-      { name: 'Jul', total: totalRevenue || 50000 }, // Current month
+      { name: 'Jul', total: totalRevenue || 50000 },
     ];
     setTimeout(() => {
       setRevenueData(data);
@@ -67,33 +69,22 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard Overview</h1>
-        <p className="text-muted-foreground">Monitor your business metrics and activity.</p>
-      </div>
+      <SectionHeader />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {statCards.map((stat, i) => {
-          const Icon = stat.icon;
-          return (
-            <motion.div key={stat.title} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
-              <Link href={stat.href}>
-                <Card className="border-border hover:border-brand-gold/50 transition-all cursor-pointer group">
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">{stat.title}</CardTitle>
-                    <Icon className={`h-4 w-4 ${stat.color}`} />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stat.value}</div>
-                    <p className="text-xs flex items-center gap-1 mt-1 text-green-400">
-                      <TrendingUp className="h-3 w-3" /> {stat.trend} from last month
-                    </p>
-                  </CardContent>
-                </Card>
-              </Link>
-            </motion.div>
-          );
-        })}
+        {statCards.map((stat, i) => (
+          <StatCard
+            key={stat.title}
+            title={stat.title}
+            value={stat.value}
+            icon={stat.icon}
+            iconColor={stat.color}
+            trend={stat.trend}
+            href={stat.href}
+            delay={i * 0.1}
+            description="from last month"
+          />
+        ))}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">

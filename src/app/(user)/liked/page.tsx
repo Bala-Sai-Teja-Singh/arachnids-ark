@@ -8,13 +8,13 @@ import { ShoppingCart, Bug, ArrowLeft, Trash2, GraduationCap, Clock, CheckCircle
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Modal } from '@/components/shared/molecules/modal';
 import { LocalStorage } from '@/mock-db/storage';
 import type { Product, Course, CourseEnrollment } from '@/types';
 import { formatPrice } from '@/constants/pricing';
 import { useCartStore } from '@/store/cart-store';
 import { toast } from 'sonner';
-import { EmptyState } from '@/components/shared/empty-state';
+import { EmptyState } from '@/components/shared/molecules/empty-state';
 import { useAuthStore } from '@/store/auth-store';
 import { useRouter } from 'next/navigation';
 import { useFavoriteStore } from '@/store/favorite-store';
@@ -299,48 +299,48 @@ export default function FavoritesPage() {
         </div>
       )}
 
-      {/* Quick Select Dialog */}
-      <Dialog open={!!quickSelectProduct} onOpenChange={(open) => !open && setQuickSelectProduct(null)}>
-        <DialogContent className="glass border-border sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle className="font-heading uppercase tracking-widest text-lg">Select Size</DialogTitle>
-          </DialogHeader>
-          {quickSelectProduct && (
-            <div className="py-4 space-y-4">
-              <div className="flex gap-4 items-center mb-4">
-                <div className="h-16 w-16 rounded-lg overflow-hidden border border-border">
-                  <img src={quickSelectProduct.images?.[0]} alt={quickSelectProduct.name} className="h-full w-full object-cover" />
-                </div>
-                <div>
-                  <h4 className="font-bold uppercase tracking-tight">{quickSelectProduct.name}</h4>
-                  <p className="text-xs text-muted-foreground italic">{quickSelectProduct.scientificName}</p>
-                </div>
+      {/* Quick Select Modal */}
+      <Modal 
+        isOpen={!!quickSelectProduct} 
+        onClose={() => setQuickSelectProduct(null)}
+        variant="small"
+        title="Select Size"
+        footer={(
+          <Button onClick={handleQuickAdd} className="w-full bg-brand-gold hover:bg-brand-gold/90 text-black font-bold h-12">
+            Add to Cart
+          </Button>
+        )}
+      >
+        {quickSelectProduct && (
+          <div className="space-y-4">
+            <div className="flex gap-4 items-center mb-4">
+              <div className="h-16 w-16 rounded-lg overflow-hidden border border-border">
+                <img src={quickSelectProduct.images?.[0]} alt={quickSelectProduct.name} className="h-full w-full object-cover" />
               </div>
-              <div className="grid grid-cols-1 gap-2">
-                {quickSelectProduct.sizes?.map((size, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setSelectedQuickSize(idx)}
-                    className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
-                      selectedQuickSize === idx 
-                        ? 'border-brand-gold bg-brand-gold/10 ring-1 ring-brand-gold' 
-                        : 'border-border bg-card/40 hover:bg-card/60'
-                    }`}
-                  >
-                    <span className="font-medium text-sm">{size.size}</span>
-                    <span className="font-bold text-brand-gold">{formatPrice(size.price)}</span>
-                  </button>
-                ))}
+              <div>
+                <h4 className="font-bold uppercase tracking-tight">{quickSelectProduct.name}</h4>
+                <p className="text-xs text-muted-foreground italic">{quickSelectProduct.scientificName}</p>
               </div>
             </div>
-          )}
-          <DialogFooter>
-            <Button onClick={handleQuickAdd} className="w-full bg-brand-gold hover:bg-brand-gold/90 text-black font-bold h-12">
-              Add to Cart
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <div className="grid grid-cols-1 gap-2">
+              {quickSelectProduct.sizes?.map((size, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setSelectedQuickSize(idx)}
+                  className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                    selectedQuickSize === idx 
+                      ? 'border-brand-gold bg-brand-gold/10 ring-1 ring-brand-gold' 
+                      : 'border-border bg-card/40 hover:bg-card/60'
+                  }`}
+                >
+                  <span className="font-medium text-sm">{size.size}</span>
+                  <span className="font-bold text-brand-gold">{formatPrice(size.price)}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

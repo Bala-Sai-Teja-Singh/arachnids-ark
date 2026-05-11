@@ -9,7 +9,7 @@ import { useCartStore } from '@/store/cart-store';
 import { useAuthStore } from '@/store/auth-store';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Input } from '@/components/shared/atoms/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
@@ -42,7 +42,7 @@ export default function CheckoutPage() {
   const updateItemSize = useCartStore(state => state.updateItemSize);
 
   useEffect(() => {
-    if (items.length === 0 && !isSubmitting) {
+    if (items.length === 0 && !isSubmitting && !isSuccess) {
       router.push('/shop');
     }
 
@@ -280,31 +280,25 @@ export default function CheckoutPage() {
                 </CardHeader>
                 <CardContent className="p-6 space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="name" className="text-sm font-medium">Full Name *</Label>
-                      <Input
-                        id="name"
-                        value={deliveryName}
-                        onChange={(e) => setDeliveryName(e.target.value)}
-                        placeholder="John Doe"
-                        className={errors.name ? 'border-red-500' : 'bg-background/50'}
-                      />
-                      {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone" className="text-sm font-medium">Phone Number *</Label>
-                      <div className="relative">
-                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="phone"
-                          value={deliveryPhone}
-                          onChange={(e) => setDeliveryPhone(e.target.value)}
-                          placeholder="9876543210"
-                          className={`pl-10 ${errors.phone ? 'border-red-500' : 'bg-background/50'}`}
-                        />
-                      </div>
-                      {errors.phone && <p className="text-xs text-red-500">{errors.phone}</p>}
-                    </div>
+                    <Input
+                      id="name"
+                      label="Full Name *"
+                      value={deliveryName}
+                      onChange={(e) => setDeliveryName(e.target.value)}
+                      placeholder="John Doe"
+                      errorMessage={errors.name}
+                      className="bg-background/50"
+                    />
+                    <Input
+                      id="phone"
+                      label="Phone Number *"
+                      value={deliveryPhone}
+                      onChange={(e) => setDeliveryPhone(e.target.value)}
+                      placeholder="9876543210"
+                      errorMessage={errors.phone}
+                      startContent={<Phone className="h-4 w-4 text-muted-foreground" />}
+                      className="bg-background/50"
+                    />
                   </div>
 
                   <div className="space-y-2">

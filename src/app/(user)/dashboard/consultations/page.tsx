@@ -5,8 +5,8 @@ import { motion } from 'framer-motion';
 import { Calendar, Eye } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
-import { StatusBadge } from '@/components/shared/status-badge';
-import { EmptyState } from '@/components/shared/empty-state';
+import { StatusBadge } from '@/components/shared/molecules/status-badge';
+import { EmptyState } from '@/components/shared/molecules/empty-state';
 import { useAuthStore } from '@/store/auth-store';
 import { LocalStorage } from '@/mock-db/storage';
 import type { ConsultationBooking } from '@/types';
@@ -29,10 +29,6 @@ export default function MyConsultationsPage() {
 
   return (
     <div className="container mx-auto">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="vibe-heading text-2xl font-bold mb-1">My Consultations</h1>
-        <p className="font-heading text-[10px] uppercase tracking-widest text-muted-foreground mb-6">Track your consultation bookings</p>
-      </motion.div>
 
       {loading ? (
         <div className="space-y-4">
@@ -43,10 +39,10 @@ export default function MyConsultationsPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4">
           {bookings.map((booking, i) => (
-            <motion.div 
-              key={booking.id} 
-              initial={{ opacity: 0, y: 10 }} 
-              animate={{ opacity: 1, y: 0 }} 
+            <motion.div
+              key={booking.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
             >
               <Link href={`/dashboard/consultations/${booking.id}`}>
@@ -75,8 +71,8 @@ export default function MyConsultationsPage() {
                           </p>
                         </div>
                         <div className="flex flex-col items-end">
-                           <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-0.5">Price</p>
-                           <p className="text-sm font-bold">{formatPrice(booking.totalPrice || 0)}</p>
+                          <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-0.5">Price</p>
+                          <p className="text-sm font-bold">{formatPrice(booking.totalPrice || 0)}</p>
                         </div>
                         <div className="h-10 w-10 rounded-full bg-brand-gold/5 flex items-center justify-center group-hover:bg-brand-gold group-hover:text-black transition-all">
                           <Eye className="h-5 w-5" />

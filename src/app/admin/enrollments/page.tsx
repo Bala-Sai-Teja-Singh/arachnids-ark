@@ -7,12 +7,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LocalStorage } from '@/mock-db/storage';
 import { useNotificationStore } from '@/store/notification-store';
-import { Input } from '@/components/ui/input';
+import { Input } from '@/components/shared/atoms/input';
 import type { CourseEnrollment, EnrollmentStatus, Course } from '@/types';
 import { formatPrice } from '@/constants/pricing';
 import { ALL_ENROLLMENT_STATUSES, ENROLLMENT_STATUS_CONFIG } from '@/constants/statuses';
 import { toast } from 'sonner';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Modal } from '@/components/shared/molecules/modal';
 import { User, Mail, Calendar, CreditCard, BookOpen, Clock, Smartphone, MapPin } from 'lucide-react';
 
 export default function AdminEnrollmentsPage() {
@@ -67,18 +67,16 @@ export default function AdminEnrollmentsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gradient">Course Enrollments</h1>
-          <p className="text-muted-foreground text-sm">Manage hobbyist enrollments and course access.</p>
-        </div>
-        <div className="relative w-full sm:w-96">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-4">
+        <div className="w-full sm:w-96">
           <Input 
             placeholder="Search by hobbyist name, email or phone..." 
-            className="pl-10 bg-card border-border"
+            className="bg-card border-border h-10"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            startContent={<Search className="h-4 w-4 text-muted-foreground" />}
+            isClearable
+            onClear={() => setSearchQuery('')}
           />
         </div>
       </div>
@@ -231,103 +229,100 @@ export default function AdminEnrollmentsPage() {
         </div>
       </div>
 
-      {/* Detail Dialog */}
-      <Dialog open={!!selectedEnrollment} onOpenChange={(open) => !open && setSelectedEnrollment(null)}>
-        <DialogContent className="glass border-border sm:max-w-lg overflow-y-auto max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle className="text-gradient">Enrollment Details</DialogTitle>
-            <DialogDescription>
-              Course access request for {selectedEnrollment?.courseTitle}
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedEnrollment && (
-            <div className="space-y-6 py-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Enrollment ID</p>
-                  <p className="text-sm font-mono">{selectedEnrollment.id.slice(0, 8)}</p>
-                </div>
-                <div className="space-y-1 sm:text-right">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Date</p>
-                  <p className="text-sm">{new Date(selectedEnrollment.createdAt).toLocaleDateString()}</p>
-                </div>
+      {/* Detail Modal */}
+      <Modal 
+        isOpen={!!selectedEnrollment} 
+        onClose={() => setSelectedEnrollment(null)}
+        variant="extra-large"
+        title="Enrollment Details"
+        description={`Course access request for ${selectedEnrollment?.courseTitle}`}
+      >
+        {selectedEnrollment && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-b border-border/50 pb-4">
+              <div className="space-y-1">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Enrollment ID</p>
+                <p className="text-sm font-mono">{selectedEnrollment.id.slice(0, 8)}</p>
               </div>
+              <div className="space-y-1 sm:text-right">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Date</p>
+                <p className="text-sm">{new Date(selectedEnrollment.createdAt).toLocaleDateString()}</p>
+              </div>
+            </div>
 
-              <div className="space-y-3">
-                <h4 className="text-xs font-bold text-brand-gold uppercase tracking-widest flex items-center gap-2">
-                  <User className="h-3 w-3" /> Hobbyist Information
-                </h4>
-                <div className="p-4 rounded-xl border border-border bg-background/30 space-y-3">
-                  <div className="flex items-start gap-3">
-                    <User className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Full Name</p>
-                      <p className="text-sm font-medium">{selectedEnrollment.userName}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Email Address</p>
-                      <p className="text-sm font-medium">{selectedEnrollment.userEmail}</p>
-                    </div>
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold text-brand-gold uppercase tracking-widest flex items-center gap-2">
+                <User className="h-3 w-3" /> Hobbyist Information
+              </h4>
+              <div className="p-4 rounded-xl border border-border bg-background/30 space-y-3">
+                <div className="flex items-start gap-3">
+                  <User className="h-4 w-4 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Full Name</p>
+                    <p className="text-sm font-medium">{selectedEnrollment.userName}</p>
                   </div>
                 </div>
-              </div>
-
-              {selectedEnrollment.paymentScreenshot && (
-                <div className="space-y-2">
-                  <h4 className="text-xs font-bold text-brand-gold uppercase tracking-widest flex items-center gap-2">
-                    <CreditCard className="h-3 w-3" /> Payment Verification
-                  </h4>
-                  <div className="relative group rounded-xl overflow-hidden border border-border aspect-video bg-muted">
-                    <img
-                      src={selectedEnrollment.paymentScreenshot}
-                      alt="Payment Screenshot"
-                      className="w-full h-full object-contain"
-                    />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <Button variant="outline" size="sm" className="bg-white/10 backdrop-blur-md border-white/20 text-white" onClick={() => window.open(selectedEnrollment.paymentScreenshot, '_blank')}>
-                        View Full Image
-                      </Button>
-                    </div>
+                <div className="flex items-start gap-3">
+                  <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Email Address</p>
+                    <p className="text-sm font-medium">{selectedEnrollment.userEmail}</p>
                   </div>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between p-4 rounded-xl bg-brand-gold/5 border border-brand-gold/20">
-                <div className="text-sm">
-                  <span className="text-muted-foreground">Course Fee</span>
-                </div>
-                <div className="text-xl font-bold text-brand-gold">
-                  {formatPrice(selectedEnrollment.totalPrice)}
-                </div>
-              </div>
-
-              <div className="space-y-3 pt-2">
-                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Update Access Status</p>
-                <div className="flex gap-2">
-                  <Select
-                    value={selectedEnrollment.status}
-                    onValueChange={(val) => val && updateStatus(selectedEnrollment.id, val as EnrollmentStatus, selectedEnrollment.userId, selectedEnrollment.courseId)}
-                  >
-                    <SelectTrigger className="flex-1 border-border bg-background/50">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background border-border">
-                      {ALL_ENROLLMENT_STATUSES.map(s => (
-                        <SelectItem key={s} value={s} className="capitalize">{ENROLLMENT_STATUS_CONFIG[s].label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button className="bg-brand-red text-white" onClick={() => setSelectedEnrollment(null)}>Done</Button>
                 </div>
               </div>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+
+            {selectedEnrollment.paymentScreenshot && (
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-brand-gold uppercase tracking-widest flex items-center gap-2">
+                  <CreditCard className="h-3 w-3" /> Payment Verification
+                </h4>
+                <div className="relative group rounded-xl overflow-hidden border border-border aspect-video bg-muted">
+                  <img
+                    src={selectedEnrollment.paymentScreenshot}
+                    alt="Payment Screenshot"
+                    className="w-full h-full object-contain"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Button variant="outline" size="sm" className="bg-white/10 backdrop-blur-md border-white/20 text-white" onClick={() => window.open(selectedEnrollment.paymentScreenshot, '_blank')}>
+                      View Full Image
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between p-4 rounded-xl bg-brand-gold/5 border border-brand-gold/20">
+              <div className="text-sm">
+                <span className="text-muted-foreground">Course Fee</span>
+              </div>
+              <div className="text-xl font-bold text-brand-gold">
+                {formatPrice(selectedEnrollment.totalPrice)}
+              </div>
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Update Access Status</p>
+              <div className="flex gap-2">
+                <Select
+                  value={selectedEnrollment.status}
+                  onValueChange={(val) => val && updateStatus(selectedEnrollment.id, val as EnrollmentStatus, selectedEnrollment.userId, selectedEnrollment.courseId)}
+                >
+                  <SelectTrigger className="flex-1 border-border bg-background/50">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border-border">
+                    {ALL_ENROLLMENT_STATUSES.map(s => (
+                      <SelectItem key={s} value={s} className="capitalize">{ENROLLMENT_STATUS_CONFIG[s].label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button className="bg-brand-red text-white" onClick={() => setSelectedEnrollment(null)}>Done</Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

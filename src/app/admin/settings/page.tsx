@@ -1,9 +1,10 @@
 'use client';
 
-import { Save, Loader2, Plus, Trash2, CheckCircle2 } from 'lucide-react';
+import { Save, Loader2, Plus, Trash2, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Modal } from '@/components/shared/molecules/modal';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Input } from '@/components/shared/atoms/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
@@ -15,6 +16,7 @@ import { SystemSettings, UPIId } from '@/types';
 export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(false);
   const [settings, setSettings] = useState<SystemSettings | null>(null);
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
 
   useEffect(() => {
     const data = LocalStorage.getAll<SystemSettings>('system_settings');
@@ -152,11 +154,7 @@ export default function AdminSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">System Settings</h1>
-          <p className="text-muted-foreground">Manage global application configurations.</p>
-        </div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-4">
         <Button onClick={handleSave} disabled={loading} className="bg-brand-red hover:bg-brand-red-light text-white">
           {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : <><Save className="mr-2 h-4 w-4" /> Save Settings</>}
         </Button>
@@ -309,42 +307,44 @@ export default function AdminSettingsPage() {
 
                 <div className="space-y-3">
                   {settings.shippingSettings?.rules.map((rule) => (
-                    <div key={rule.id} className="flex flex-col sm:flex-row items-end gap-3 p-3 rounded-xl bg-background/30 border border-border">
-                      <div className="flex-1 space-y-1">
+                    <div key={rule.id} className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3 p-4 rounded-xl bg-background/30 border border-border">
+                      <div className="flex-1 space-y-1 w-full">
                         <Label className="text-[10px]">Min Qty</Label>
                         <Input 
                           type="number"
                           value={rule.minQuantity || ''} 
                           onChange={(e) => updateShippingRule(rule.id, { minQuantity: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 })}
-                          className="bg-background/50 h-8 text-xs" 
+                          className="bg-background/50 h-10 sm:h-8 text-xs w-full" 
                         />
                       </div>
-                      <div className="flex-1 space-y-1">
+                      <div className="flex-1 space-y-1 w-full">
                         <Label className="text-[10px]">Max Qty</Label>
                         <Input 
                           type="number"
                           value={rule.maxQuantity || ''} 
                           onChange={(e) => updateShippingRule(rule.id, { maxQuantity: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 })}
-                          className="bg-background/50 h-8 text-xs" 
+                          className="bg-background/50 h-10 sm:h-8 text-xs w-full" 
                         />
                       </div>
-                      <div className="flex-1 space-y-1">
+                      <div className="flex-1 space-y-1 w-full">
                         <Label className="text-[10px]">Charge (₹)</Label>
                         <Input 
                           type="number"
                           value={rule.charge || ''} 
                           onChange={(e) => updateShippingRule(rule.id, { charge: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 })}
-                          className="bg-background/50 h-8 text-xs font-bold" 
+                          className="bg-background/50 h-10 sm:h-8 text-xs font-bold w-full" 
                         />
                       </div>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-400/5"
-                        onClick={() => removeShippingRule(rule.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex justify-end pt-2 sm:pt-0">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-400/5"
+                          onClick={() => removeShippingRule(rule.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                   {(!settings.shippingSettings?.rules || settings.shippingSettings.rules.length === 0) && (
@@ -414,12 +414,7 @@ export default function AdminSettingsPage() {
               <div className="space-y-2">
                 <p className="text-sm font-medium">Reset Database</p>
                 <p className="text-xs text-muted-foreground">This will wipe all data and re-seed the initial mock database. This cannot be undone.</p>
-                <Button variant="destructive" className="w-full mt-2" onClick={() => {
-                  if(confirm('Are you absolutely sure? This will delete all user data.')) {
-                    LocalStorage.reset();
-                    window.location.reload();
-                  }
-                }}>
+                <Button variant="destructive" className="w-full mt-2" onClick={() => setIsResetModalOpen(true)}>
                   Factory Reset
                 </Button>
               </div>
@@ -427,6 +422,31 @@ export default function AdminSettingsPage() {
           </Card>
         </div>
       </div>
+
+      {/* Factory Reset Confirmation Modal */}
+      <Modal 
+        isOpen={isResetModalOpen} 
+        onClose={() => setIsResetModalOpen(false)}
+        variant="confirm"
+        title="Factory Reset"
+        description="Are you absolutely sure? This will delete all user data, orders, and products, then re-seed the initial database. This action cannot be undone."
+        footer={(
+          <div className="flex gap-2 w-full justify-end">
+            <Button variant="outline" onClick={() => setIsResetModalOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => {
+              LocalStorage.reset();
+              window.location.reload();
+            }}>
+              Confirm Reset
+            </Button>
+          </div>
+        )}
+      >
+        <div className="flex flex-col items-center justify-center py-4 text-red-400">
+          <AlertTriangle className="h-12 w-12 mb-2 animate-pulse" />
+          <p className="text-xs font-bold uppercase tracking-widest text-center">Permanent Data Loss</p>
+        </div>
+      </Modal>
     </div>
   );
 }

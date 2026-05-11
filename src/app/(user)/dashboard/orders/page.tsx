@@ -7,11 +7,11 @@ import { ClipboardList, Upload, Package, ChevronDown, ChevronUp, Check, Copy, Tr
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import { Input } from '@/components/shared/atoms/input';
 import { Label } from '@/components/ui/label';
-import { StatusBadge } from '@/components/shared/status-badge';
-import { EmptyState } from '@/components/shared/empty-state';
+import { StatusBadge } from '@/components/shared/molecules/status-badge';
+import { SectionHeader } from '@/components/shared/molecules/section-header';
+import { EmptyState } from '@/components/shared/molecules/empty-state';
 import { useAuthStore } from '@/store/auth-store';
 import { LocalStorage } from '@/mock-db/storage';
 import type { Order, SystemSettings } from '@/types';
@@ -19,6 +19,7 @@ import { formatPrice } from '@/constants/pricing';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 
 export default function MyOrdersPage() {
   const { user } = useAuthStore();
@@ -63,22 +64,29 @@ export default function MyOrdersPage() {
 
   const toggleExpand = (id: string) => {
     const newExpanded = new Set(expandedOrders);
-    if (newExpanded.has(id)) {
+    const isExpanding = !newExpanded.has(id);
+
+    if (!isExpanding) {
       newExpanded.delete(id);
     } else {
       newExpanded.add(id);
     }
     setExpandedOrders(newExpanded);
+
+    if (isExpanding) {
+      setTimeout(() => {
+        const el = document.getElementById(`order-${id}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 350); // Delay to allow the expand animation to complete
+    }
   };
 
 
 
   return (
     <div>
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="vibe-heading text-2xl font-bold mb-1">My Orders</h1>
-        <p className="font-heading text-[10px] uppercase tracking-widest text-muted-foreground mb-6">Track your order status and details</p>
-      </motion.div>
 
       {orders.length === 0 ? (
         <EmptyState icon={ClipboardList} title="No orders yet" description="Browse our shop and start adding exotic species to your cart!" />
@@ -97,10 +105,13 @@ export default function MyOrdersPage() {
                 <Card className="border-border bg-card/40 backdrop-blur-sm overflow-hidden">
                   <CardContent className="p-0">
                     {/* Order Header */}
-                    <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div 
+                      className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer hover:bg-white/5 transition-colors group"
+                      onClick={() => toggleExpand(order.id)}
+                    >
                       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                         <div className="flex items-center gap-4">
-                          <div className="h-10 w-10 rounded-lg bg-brand-red/10 flex items-center justify-center">
+                          <div className="h-10 w-10 rounded-lg bg-brand-red/10 flex items-center justify-center group-hover:scale-110 transition-transform">
                             <Package className="h-5 w-5 text-brand-red" />
                           </div>
                           <div>
@@ -115,20 +126,17 @@ export default function MyOrdersPage() {
                         )}
                       </div>
 
-                      <div className="flex items-center gap-3">
-                        <div className="text-right mr-2">
-                          <p className="text-xs text-muted-foreground uppercase tracking-widest leading-none mb-1">Total Amount</p>
-                          <p className="text-lg font-bold text-brand-gold leading-none">{formatPrice(order.totalPrice)}</p>
+                      <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto border-t border-border/10 sm:border-0 pt-4 sm:pt-0">
+                        <div className="text-left sm:text-right mr-2">
+                          <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-widest leading-none mb-1">Total Amount</p>
+                          <p className="text-base sm:text-lg font-bold text-brand-gold leading-none">{formatPrice(order.totalPrice)}</p>
                         </div>
-                        <StatusBadge status={order.status} />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => toggleExpand(order.id)}
-                          className="text-muted-foreground"
-                        >
-                          {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <StatusBadge status={order.status} />
+                          <div className="p-2 text-muted-foreground group-hover:text-brand-gold transition-colors">
+                            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                          </div>
+                        </div>
                       </div>
                     </div>
 

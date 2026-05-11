@@ -4,50 +4,89 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Eye, EyeOff, User, Mail, Phone, Lock } from 'lucide-react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { useAuthStore } from '@/store/auth-store';
 import { toast } from 'sonner';
-import { useTheme } from 'next-themes';
-import { useEffect } from 'react';
+import { z } from 'zod';
+import { FormBuilder, type FormFieldConfig } from '@/components/shared/organisms/form-builder';
+
+const signupSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters'),
+  email: z.string().email('Invalid email address'),
+  phone: z.string().optional().refine((val) => !val || /^\d{10}$/.test(val.replace(/\D/g, '')), {
+    message: 'Mobile number must be exactly 10 digits',
+  }),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  confirmPassword: z.string()
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
+});
+
+type SignupFormValues = z.infer<typeof signupSchema>;
 
 export default function SignupPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect');
   const { signup, isLoading } = useAuthStore();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [phone, setPhone] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const fields: FormFieldConfig[] = [
+    {
+      name: 'name',
+      label: 'Full Name',
+      type: 'text',
+      placeholder: 'John Doe',
+      leftIcon: <User className="h-4 w-4" />,
+      required: true,
+      gridSpan: 'col-span-2'
+    },
+    {
+      name: 'email',
+      label: 'Email Address',
+      type: 'email',
+      placeholder: 'you@example.com',
+      leftIcon: <Mail className="h-4 w-4" />,
+      required: true,
+      gridSpan: 'col-span-2'
+    },
+    {
+      name: 'phone',
+      label: 'Mobile Number',
+      type: 'tel',
+      placeholder: '10-digit number',
+      leftIcon: <Phone className="h-4 w-4" />,
+      gridSpan: 'col-span-2'
+    },
+    {
+      name: 'password',
+      label: 'Password',
+      type: showPassword ? 'text' : 'password',
+      placeholder: 'Min 6 characters',
+      leftIcon: <Lock className="h-4 w-4" />,
+      rightIcon: (
+        <button type="button" onClick={() => setShowPassword(!showPassword)} className="hover:text-brand-gold transition-colors">
+          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+      ),
+      required: true,
+      gridSpan: 'col-span-2'
+    },
+    {
+      name: 'confirmPassword',
+      label: 'Confirm Password',
+      type: 'password',
+      placeholder: 'Repeat your password',
+      leftIcon: <Lock className="h-4 w-4" />,
+      required: true,
+      gridSpan: 'col-span-2'
+    }
+  ];
 
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password !== confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
-    }
-    if (password.length < 6) {
-      toast.error('Password must be at least 6 characters');
-      return;
-    }
-    if (phone && !/^\d{10}$/.test(phone.replace(/\s/g, ''))) {
-      toast.error('Mobile number must be exactly 10 digits');
-      return;
-    }
-    const result = await signup(name, email, password, phone);
+  const onSubmit = async (values: SignupFormValues) => {
+    const result = await signup(values.name, values.email, values.password, values.phone || '');
     if (result.success) {
       toast.success('Account created successfully!');
       if (redirect) {
@@ -79,47 +118,25 @@ export default function SignupPage() {
             </div>
           </Link>
           <h1 className="vibe-heading text-2xl font-bold">Create Account</h1>
-          <p className="font-heading text-[10px] uppercase tracking-widest text-muted-foreground mt-1">Join the ArachnidsArk community</p>
+          <p className="font-heading text-[10px] uppercase tracking-widest text-muted-foreground mt-1 tracking-[0.2em]">Join the ArachnidsArk community</p>
         </div>
 
-        <Card className="vibe-card border-border bg-card/40 backdrop-blur-xl">
-          <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4 p-8">
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name <span className="text-red-500">*</span></Label>
-                <Input id="name" placeholder="John Doe" value={name} onChange={(e) => setName(e.target.value)} required className="bg-background/50" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
-                <Input id="email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="bg-background/50" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Mobile Number (Optional)</Label>
-                <Input id="phone" placeholder="10-digit number" value={phone} onChange={(e) => setPhone(e.target.value)} className="bg-background/50" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password <span className="text-red-500">*</span></Label>
-                <div className="relative">
-                  <Input id="password" type={showPassword ? 'text' : 'password'} placeholder="Min 6 characters" value={password} onChange={(e) => setPassword(e.target.value)} required className="bg-background/50 pr-10" />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirm">Confirm Password <span className="text-red-500">*</span></Label>
-                <Input id="confirm" type="password" placeholder="Confirm password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className="bg-background/50" />
-              </div>
-            </CardContent>
-            <CardFooter className="flex flex-col gap-4 px-8 pb-8 pt-0">
-              <Button type="submit" disabled={isLoading} className="vibe-button w-full bg-brand-red hover:bg-brand-red-light text-white py-6">
-                {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating account...</> : 'Create Account'}
-              </Button>
-              <p className="text-sm text-muted-foreground text-center">
-                Already have an account? <Link href={`/login${redirect ? `?redirect=${redirect}` : ''}`} className="text-brand-gold hover:underline">Sign in</Link>
-              </p>
-            </CardFooter>
-          </form>
+        <Card className="vibe-card border-border bg-card/40 backdrop-blur-xl overflow-hidden">
+          <CardContent className="p-8">
+            <FormBuilder
+              schema={signupSchema}
+              fields={fields}
+              onSubmit={onSubmit}
+              isSubmitting={isLoading}
+              submitLabel="Create Account"
+              className="space-y-6"
+            />
+          </CardContent>
+          <CardFooter className="px-8 pb-8 pt-0 flex justify-center">
+            <p className="text-sm text-muted-foreground">
+              Already have an account? <Link href={`/login${redirect ? `?redirect=${redirect}` : ''}`} className="text-brand-gold hover:underline font-bold transition-all hover:tracking-wide">Sign in</Link>
+            </p>
+          </CardFooter>
         </Card>
       </motion.div>
     </div>

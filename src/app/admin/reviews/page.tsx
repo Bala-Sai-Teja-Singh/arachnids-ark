@@ -9,12 +9,20 @@ import {
 import { useReviewStore } from '@/store/review-store';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Input } from '@/components/shared/atoms/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Modal } from '@/components/shared/molecules/modal';
+import { TabMolecule, type TabOption } from '@/components/shared/molecules/tabs';
 import { toast } from 'sonner';
 import type { ReviewStatus } from '@/types';
+
+const REVIEW_CATEGORIES: TabOption[] = [
+  { value: 'all', label: 'All' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'rejected', label: 'Rejected' },
+];
 
 export default function AdminReviewsPage() {
   const { reviews, loadReviews, updateReviewStatus, deleteReview, isLoading } = useReviewStore();
@@ -68,41 +76,27 @@ export default function AdminReviewsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <MessageSquare className="h-6 w-6 text-brand-red" />
-            Review Management
-          </h1>
-          <p className="text-muted-foreground text-sm">Approve or reject customer reviews</p>
-        </div>
-      </div>
 
       <Card className="border-border bg-card/50">
         <CardContent className="p-4 flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="flex-1">
             <Input
               placeholder="Search by user or content..."
-              className="pl-10 bg-background/50"
+              className="bg-background/50"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              startContent={<Search className="h-4 w-4 text-muted-foreground" />}
+              isClearable
+              onClear={() => setSearch('')}
             />
           </div>
           <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <div className="flex gap-1 bg-background/50 p-1 rounded-lg border border-border">
-              {(['all', 'pending', 'approved', 'rejected'] as const).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className={`px-3 py-1 text-xs rounded-md capitalize transition-colors ${filter === f ? 'bg-brand-red text-white' : 'hover:bg-accent'
-                    }`}
-                >
-                  {f}
-                </button>
-              ))}
-            </div>
+
+            <TabMolecule
+              options={REVIEW_CATEGORIES}
+              value={filter}
+              onValueChange={(val) => setFilter(val as any)}
+            />
           </div>
         </CardContent>
       </Card>
@@ -217,36 +211,38 @@ export default function AdminReviewsPage() {
 
 
       {/* Delete Confirmation */}
-      <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-        <DialogContent className="glass border-border sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Delete Review</DialogTitle>
-          </DialogHeader>
-          <p className="py-4 text-sm text-muted-foreground text-center">
-            Are you sure you want to delete this review? This action cannot be undone.
-          </p>
-          <DialogFooter className="gap-2 sm:gap-0">
+      <Modal
+        isOpen={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        variant="confirm"
+        title="Delete Review"
+        description="Are you sure you want to delete this review? This action cannot be undone."
+        footer={(
+          <div className="flex gap-2 w-full justify-end">
             <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
             <Button variant="destructive" onClick={confirmDelete}>Delete</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        )}
+      >
+        <div className="py-2" />
+      </Modal>
 
       {/* Reject Confirmation */}
-      <Dialog open={!!rejectId} onOpenChange={(open) => !open && setRejectId(null)}>
-        <DialogContent className="glass border-border sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Reject Review</DialogTitle>
-          </DialogHeader>
-          <p className="py-4 text-sm text-muted-foreground text-center">
-            Are you sure you want to reject this review? It will be hidden from the public shop.
-          </p>
-          <DialogFooter className="gap-2 sm:gap-0">
+      <Modal
+        isOpen={!!rejectId}
+        onClose={() => setRejectId(null)}
+        variant="confirm"
+        title="Reject Review"
+        description="Are you sure you want to reject this review? It will be hidden from the public shop."
+        footer={(
+          <div className="flex gap-2 w-full justify-end">
             <Button variant="outline" onClick={() => setRejectId(null)}>Cancel</Button>
             <Button className="bg-red-500 text-white hover:bg-red-600" onClick={confirmReject}>Reject</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        )}
+      >
+        <div className="py-2" />
+      </Modal>
     </div>
   );
 }

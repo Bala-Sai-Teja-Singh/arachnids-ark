@@ -169,6 +169,28 @@
 }
 
 /* Animations */
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+@keyframes slide-out-right {
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
+}
+@keyframes slide-in-left {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+@keyframes slide-out-left {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
+}
+
+.animate-slide-in-right { animation: slide-in-right 0.3s ease-out; }
+.animate-slide-out-right { animation: slide-out-right 0.3s ease-in; }
+.animate-slide-in-left { animation: slide-in-left 0.3s ease-out; }
+.animate-slide-out-left { animation: slide-out-left 0.3s ease-in; }
+
 @keyframes float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-10px); }
@@ -213,11 +235,15 @@
   background-color: var(--background);
   border: 1px solid var(--border);
   box-shadow: 0 10px 30px -10px rgba(0,0,0,0.1);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 .dark .glass {
-  background-color: var(--background);
-  border: 1px solid var(--border);
+  background-color: rgba(15, 15, 15, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 /* Text gradient */

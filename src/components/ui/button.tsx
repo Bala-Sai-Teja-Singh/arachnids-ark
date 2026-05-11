@@ -40,18 +40,34 @@ const buttonVariants = cva(
   }
 )
 
+import { Loader2 } from "lucide-react"
+
+export interface ButtonProps extends ButtonPrimitive.Props, VariantProps<typeof buttonVariants> {
+  loading?: boolean
+}
+
 function Button({
   className,
   variant = "default",
   size = "default",
+  loading,
+  children,
   ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+}: ButtonProps) {
   return (
     <ButtonPrimitive
       data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
+      className={cn(buttonVariants({ variant, size, className }), loading && "relative !text-transparent pointer-events-none")}
+      disabled={loading || props.disabled}
       {...props}
-    />
+    >
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center text-current">
+          <Loader2 className="h-4 w-4 animate-spin" />
+        </div>
+      )}
+      {children}
+    </ButtonPrimitive>
   )
 }
 

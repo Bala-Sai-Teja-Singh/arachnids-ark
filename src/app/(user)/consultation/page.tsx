@@ -113,9 +113,10 @@ export default function ConsultationPage() {
 
   // Removed availableSlots memo as users no longer pick slots
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (redirect = true) => {
     if (cart.length === 0) return;
 
+    setSubmitting(true);
     cart.forEach(item => {
       addItem(null, 'consultation', {
         ...item,
@@ -124,29 +125,28 @@ export default function ConsultationPage() {
     });
 
     toast.success('Consultation items added to cart!');
-    router.push('/checkout');
+    
+    if (redirect) {
+      router.push('/checkout');
+    } else {
+      setSubmitting(false);
+      setStep(1);
+      setCart([]);
+      setQuery('');
+      // Open cart drawer if possible? Or just notify.
+      // Since CartDrawer is global, it will reflect the change.
+    }
   };
 
   if (!settings) return <div className="container mx-auto px-4 py-8"><div className="h-96 animate-pulse bg-muted rounded-xl" /></div>;
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-        <Badge variant="outline" className="border-brand-gold/30 text-brand-gold mb-4">
+    <div className="container mx-auto px-4 py-4 max-w-4xl">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+        <Badge variant="outline" className="border-brand-gold/30 text-brand-gold mb-2">
           <Calendar className="h-3 w-3 mr-2" />
           Book Consultation
         </Badge>
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">
-              Expert <span className="text-gradient">Consultation</span>
-            </h1>
-            <p className="text-muted-foreground">
-              Get personalized guidance from experienced arachnid specialists
-            </p>
-          </div>
-
-        </div>
       </motion.div>
 
       {/* Talktime Explanation */}
@@ -405,15 +405,22 @@ export default function ConsultationPage() {
               </CardContent>
             </Card>
 
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={() => setStep(1)} className="flex-1">Back</Button>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <Button variant="outline" onClick={() => setStep(1)} className="w-full">Back</Button>
               <Button
-                onClick={handleSubmit}
+                variant="outline"
+                onClick={() => handleSubmit(false)}
                 disabled={submitting}
-                className="flex-1 bg-brand-red hover:bg-brand-red-light text-white"
-                size="lg"
+                className="w-full border-brand-gold text-brand-gold hover:bg-brand-gold/10"
               >
-                {submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Booking...</> : 'Confirm Booking'}
+                <ShoppingBag className="mr-2 h-4 w-4" /> Add to Cart
+              </Button>
+              <Button
+                onClick={() => handleSubmit(true)}
+                disabled={submitting}
+                className="w-full bg-brand-red hover:bg-brand-red-light text-white"
+              >
+                {submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</> : 'Checkout Now'}
               </Button>
             </div>
           </motion.div>

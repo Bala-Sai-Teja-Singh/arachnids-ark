@@ -4,12 +4,20 @@ import { useEffect, useState } from 'react';
 import { DollarSign, ShoppingBag, GraduationCap, Calendar, ArrowUpRight, TrendingUp, Search, Filter, Download } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Input } from '@/components/ui/input';
+import { Input } from '@/components/shared/atoms/input';
 import { Button } from '@/components/ui/button';
 import { LocalStorage } from '@/mock-db/storage';
 import { formatPrice } from '@/constants/pricing';
 import type { Order, CourseEnrollment, ConsultationBooking } from '@/types';
 import { Badge } from '@/components/ui/badge';
+import { TabMolecule, type TabOption } from '@/components/shared/molecules/tabs';
+
+const REVENUE_CATEGORIES: TabOption[] = [
+  { value: 'all', label: 'All', icon: DollarSign },
+  { value: 'product', label: 'Products', icon: ShoppingBag },
+  { value: 'course', label: 'Courses', icon: GraduationCap },
+  { value: 'consultation', label: 'Consultations', icon: Calendar },
+];
 
 interface RevenueItem {
   id: string;
@@ -169,11 +177,7 @@ export default function AdminRevenuePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gradient">Financial Overview</h1>
-          <p className="text-muted-foreground text-sm">Detailed breakdown of all revenue sources.</p>
-        </div>
+      <div className="flex flex-col md:flex-row md:items-center justify-end gap-4">
         <Button variant="outline" className="gap-2 border-border bg-card/50">
           <Download className="h-4 w-4" /> Export Report
         </Button>
@@ -234,26 +238,12 @@ export default function AdminRevenuePage() {
             onChange={e => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="flex flex-wrap gap-2">
-          {(['all', 'product', 'course', 'consultation'] as const).map((type) => (
-            <Button
-              key={type}
-              variant={filterType === type ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilterType(type)}
-              className={`capitalize text-[10px] uppercase tracking-widest h-9 px-3 sm:px-4 ${
-                filterType === type ? 'bg-brand-gold text-black hover:bg-brand-gold/90' : 'border-border'
-              }`}
-            >
-              {type === 'all' ? 'All' : type === 'consultation' ? (
-                <>
-                  <span className="hidden sm:inline">Consultations</span>
-                  <span className="sm:hidden">Consults</span>
-                </>
-              ) : `${type}s`}
-            </Button>
-          ))}
-        </div>
+        <TabMolecule
+          options={REVENUE_CATEGORIES}
+          value={filterType}
+          onValueChange={(val) => setFilterType(val as any)}
+          className="w-full sm:w-auto"
+        />
       </div>
 
       <div className="rounded-xl border border-border bg-card overflow-hidden">

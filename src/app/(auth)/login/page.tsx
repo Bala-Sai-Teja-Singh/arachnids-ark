@@ -4,38 +4,61 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Bug, Eye, EyeOff, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { useAuthStore } from '@/store/auth-store';
 import { toast } from 'sonner';
-import { useTheme } from 'next-themes';
-import { useEffect } from 'react';
+import { z } from 'zod';
+import { FormBuilder, type FormFieldConfig } from '@/components/shared/organisms/form-builder';
+
+const loginSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect');
   const { login, isLoading } = useAuthStore();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const fields: FormFieldConfig[] = [
+    {
+      name: 'email',
+      label: 'Email',
+      type: 'email',
+      placeholder: 'your@email.com',
+      leftIcon: <Mail className="h-4 w-4" />,
+      required: true,
+      gridSpan: 'col-span-2'
+    },
+    {
+      name: 'password',
+      label: 'Password',
+      type: showPassword ? 'text' : 'password',
+      placeholder: 'Enter your password',
+      leftIcon: <Lock className="h-4 w-4" />,
+      rightIcon: (
+        <button 
+          type="button" 
+          onClick={() => setShowPassword(!showPassword)}
+          className="hover:text-brand-gold transition-colors focus:outline-none"
+        >
+          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+      ),
+      required: true,
+      gridSpan: 'col-span-2'
+    }
+  ];
 
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const result = await login(email, password);
+  const onSubmit = async (values: LoginFormValues) => {
+    const result = await login(values.email, values.password);
     if (result.success) {
       toast.success('Welcome back!');
-      // Check role for redirect
       const user = useAuthStore.getState().user;
       if (redirect) {
         router.push(redirect);
@@ -69,62 +92,26 @@ export default function LoginPage() {
             </div>
           </Link>
           <h1 className="vibe-heading text-2xl font-bold">Welcome Back</h1>
-          <p className="font-heading text-[10px] uppercase tracking-widest text-muted-foreground mt-1">Sign in to your account</p>
+          <p className="font-heading text-[10px] uppercase tracking-widest text-muted-foreground mt-1 tracking-[0.2em]">Sign in to your account</p>
         </div>
 
-        <Card className="vibe-card border-border bg-card/40 backdrop-blur-xl">
-          <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4 p-8">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="harrysweettt@gmail.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="bg-background/50"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="bg-background/50 pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="flex flex-col gap-4 px-8 pb-8 pt-0">
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="vibe-button w-full bg-brand-red hover:bg-brand-red-light text-white py-6"
-              >
-                {isLoading ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Signing in...</>
-                ) : 'Sign In'}
-              </Button>
-              <p className="text-sm text-muted-foreground text-center">
-                Don&apos;t have an account?{' '}
-                <Link href="/signup" className="text-brand-gold hover:underline">Sign up</Link>
-              </p>
-            </CardFooter>
-          </form>
+        <Card className="vibe-card border-border bg-card/40 backdrop-blur-xl overflow-hidden">
+          <CardContent className="p-8">
+            <FormBuilder
+              schema={loginSchema}
+              fields={fields}
+              onSubmit={onSubmit}
+              isSubmitting={isLoading}
+              submitLabel="Sign In"
+              className="space-y-6"
+            />
+          </CardContent>
+          <CardFooter className="px-8 pb-8 pt-0 flex justify-center">
+            <p className="text-sm text-muted-foreground">
+              Don&apos;t have an account?{' '}
+              <Link href="/signup" className="text-brand-gold hover:underline font-bold transition-all hover:tracking-wide">Sign up</Link>
+            </p>
+          </CardFooter>
         </Card>
       </motion.div>
     </div>
