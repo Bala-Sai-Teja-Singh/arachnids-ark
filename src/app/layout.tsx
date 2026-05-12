@@ -1,9 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Outfit, Syne } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { AppProvider } from "@/providers/app-provider";
-import { Toaster } from "sonner";
+import { ResponsiveToaster } from "@/components/shared/responsive-toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 const outfit = Outfit({
@@ -17,6 +17,12 @@ const syne = Syne({
   subsets: ["latin"],
   display: "swap",
 });
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5, // Allow some zoom for accessibility but prevents auto-zoom when combined with 16px font
+};
 
 export const metadata: Metadata = {
   title: "ArachnidsArk | Premium Tarantula Collection & Care",
@@ -55,20 +61,7 @@ export default function RootLayout({
           <TooltipProvider>
             <AppProvider>
               {children}
-              <Toaster
-                position="top-right"
-                richColors
-                closeButton
-                theme="system"
-                toastOptions={{
-                  style: {
-                    background: 'var(--card)',
-                    border: '1px solid var(--border)',
-                    color: 'var(--foreground)',
-                    opacity: 1,
-                  },
-                }}
-              />
+              <ResponsiveToaster />
             </AppProvider>
           </TooltipProvider>
         </ThemeProvider>

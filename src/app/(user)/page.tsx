@@ -217,7 +217,7 @@ function FeaturedTarantulas() {
   };
 
   return (
-    <section className="py-20 relative">
+    <section className="py-12 md:py-20 relative">
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-brand-red/[0.02] to-transparent" />
       <div className="container mx-auto px-4 relative">
         <motion.div
@@ -386,7 +386,7 @@ function FeaturedCourses() {
   }, []);
 
   return (
-    <section className="py-20 bg-card/30">
+    <section className="py-12 md:py-20 bg-card/30">
       <div className="container mx-auto px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -470,7 +470,7 @@ function CareGuidesPreview() {
   }, []);
 
   return (
-    <section className="py-20">
+    <section className="py-12 md:py-20">
       <div className="container mx-auto px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -518,7 +518,7 @@ function CareGuidesPreview() {
 // ========== CONSULTATION CTA ==========
 function ConsultationCTA() {
   return (
-    <section className="py-20 relative overflow-hidden">
+    <section className="py-12 md:py-20 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-r from-brand-red/10 via-background to-brand-gold/10" />
       <div className="absolute inset-0" style={{
         backgroundImage: 'radial-gradient(circle at 30% 50%, rgba(139, 26, 26, 0.1) 0%, transparent 50%)',
@@ -573,7 +573,7 @@ function Testimonials() {
   ];
 
   return (
-    <section className="py-20 bg-card/30">
+    <section className="py-12 md:py-20 bg-card/30">
       <div className="container mx-auto px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -641,7 +641,7 @@ function FAQSection() {
   ];
 
   return (
-    <section id="faq" className="py-20">
+    <section id="faq" className="py-12 md:py-20">
       <div className="container mx-auto px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

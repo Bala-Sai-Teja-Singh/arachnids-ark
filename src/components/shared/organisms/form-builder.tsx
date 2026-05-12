@@ -44,6 +44,8 @@ export interface FormBuilderProps<T extends FieldValues> {
   gridClassName?: string;
   /** Optional children (e.g., secondary buttons, links) */
   children?: React.ReactNode;
+  /** Alignment for the submit button */
+  submitAlignment?: 'left' | 'center' | 'right';
 }
 
 /**
@@ -59,7 +61,8 @@ export function FormBuilder<T extends FieldValues>({
   isSubmitting = false,
   className,
   gridClassName,
-  children
+  children,
+  submitAlignment = 'left'
 }: FormBuilderProps<T>) {
   const methods = useForm<T>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -107,7 +110,11 @@ export function FormBuilder<T extends FieldValues>({
         )}
 
         {/* Form Actions */}
-        <div className="flex items-center gap-4 pt-6 border-t border-border/50">
+        <div className={cn(
+          "flex items-center gap-4 pt-6 border-t border-border/50",
+          submitAlignment === 'center' && "justify-center",
+          submitAlignment === 'right' && "justify-end"
+        )}>
           <Button 
             type="submit" 
             isLoading={isSubmitting}

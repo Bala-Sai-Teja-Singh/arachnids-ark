@@ -156,7 +156,7 @@ export function Navbar({
                     </button>
                   }
                 />
-                <DropdownMenuContent align="end" className="w-64 glass border-border mt-2 p-2">
+                <DropdownMenuContent align="end" className="w-64 bg-card border-border shadow-xl mt-2 p-2 animate-in fade-in zoom-in-95 duration-200">
                   <div className="px-3 py-3 border-b border-border/50 mb-2 flex items-center justify-between">
                     <div>
                       <p className="text-sm font-bold truncate text-foreground">{user.name}</p>
@@ -167,7 +167,10 @@ export function Navbar({
                     </div>
                   </div>
 
-                  <DropdownMenuItem onClick={() => router.push('/dashboard/profile')} className="gap-2 cursor-pointer focus:bg-brand-red/10 focus:text-brand-red rounded-lg py-2">
+                  <DropdownMenuItem 
+                    onClick={() => router.push(user.role === 'admin' ? '/admin/profile' : '/dashboard/profile')} 
+                    className="gap-2 cursor-pointer focus:bg-brand-red/10 focus:text-brand-red rounded-lg py-2"
+                  >
                     <Settings className="h-4 w-4" /> Profile Settings
                   </DropdownMenuItem>
                   {user.role === 'admin' && (

@@ -13,12 +13,14 @@ interface AuthState {
   signup: (name: string, email: string, password: string, phone?: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   updateProfile: (updates: Partial<SafeUser>) => void;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
   hasRole: (role: UserRole) => boolean;
 }
 
 function toSafeUser(user: User): SafeUser {
-  const { password: _, ...safeUser } = user;
-  return safeUser;
+  const safeUser = { ...user };
+  delete (safeUser as any).password;
+  return safeUser as SafeUser;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -82,6 +84,29 @@ export const useAuthStore = create<AuthState>()(
         set({ user: updated });
         // Also update in storage
         LocalStorage.update<User>('users', user.id, updates as Partial<User>);
+      },
+
+      changePassword: async (currentPassword: string, newPassword: string) => {
+        set({ isLoading: true });
+        await new Promise(r => setTimeout(r, 800));
+
+        const { user } = get();
+        if (!user) {
+          set({ isLoading: false });
+          return { success: false, error: 'Not authenticated' };
+        }
+
+        const users = LocalStorage.getAll<User>('users');
+        const dbUser = users.find(u => u.id === user.id);
+
+        if (!dbUser || dbUser.password !== currentPassword) {
+          set({ isLoading: false });
+          return { success: false, error: 'Incorrect current password' };
+        }
+
+        LocalStorage.update<User>('users', user.id, { password: newPassword });
+        set({ isLoading: false });
+        return { success: true };
       },
 
       hasRole: (role: UserRole) => {

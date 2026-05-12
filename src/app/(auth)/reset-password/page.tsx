@@ -9,11 +9,14 @@ import { Button } from '@/components/shared/atoms/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/shared/atoms/input';
 import { toast } from 'sonner';
+import { LocalStorage } from '@/mock-db/storage';
+import type { User } from '@/types';
 
 export default function ResetPasswordPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get('token');
+  const email = searchParams.get('email');
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -21,11 +24,11 @@ export default function ResetPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (!token) {
-      toast.error('Invalid or missing reset token');
+    if (!token || !email) {
+      toast.error('Invalid or missing reset token/email');
       router.push('/login');
     }
-  }, [token, router]);
+  }, [token, email, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,18 +40,23 @@ export default function ResetPasswordPage() {
     setIsLoading(true);
 
     try {
-      const res = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, password }),
-      });
+      // Simulate API call delay
+      await new Promise(r => setTimeout(r, 800));
 
-      if (!res.ok) throw new Error('Failed to reset password');
+      const users = LocalStorage.getAll<User>('users');
+      const user = users.find(u => u.email === email);
+
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      // Update password in mock DB
+      LocalStorage.update<User>('users', user.id, { password });
       
       toast.success('Password reset successfully! Please login with your new password.');
       router.push('/login');
-    } catch (error) {
-      toast.error('Something went wrong. The link may have expired.');
+    } catch (error: any) {
+      toast.error(error.message || 'Something went wrong. The link may have expired.');
     } finally {
       setIsLoading(false);
     }

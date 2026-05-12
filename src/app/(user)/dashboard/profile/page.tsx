@@ -4,7 +4,7 @@ import { useAuthStore } from '@/store/auth-store';
 import { ProfileTemplate } from '@/components/shared/templates/profile-template';
 
 export default function ProfilePage() {
-  const { user, updateProfile } = useAuthStore();
+  const { user, updateProfile, changePassword } = useAuthStore();
 
   if (!user) return null;
 
@@ -12,6 +12,7 @@ export default function ProfilePage() {
     <ProfileTemplate 
       user={user} 
       updateProfile={updateProfile}
+      changePassword={changePassword}
     />
   );
 }

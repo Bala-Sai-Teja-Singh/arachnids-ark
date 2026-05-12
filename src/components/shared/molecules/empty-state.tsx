@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import { motion } from 'framer-motion';
 import { LucideIcon, SearchX } from 'lucide-react';
 import { Button } from '@/components/shared/atoms/button';
 import { cn } from '@/lib/utils';
@@ -55,10 +54,14 @@ export function EmptyState({
             action
           ) : (
             <Button 
-              onClick={(action as any).onClick} 
+              onClick={() => {
+                if (typeof action === 'object' && action !== null && 'onClick' in action) {
+                  (action as { onClick: () => void }).onClick();
+                }
+              }} 
               className="bg-brand-red hover:bg-brand-red/90 text-white font-bold uppercase tracking-widest text-[11px] h-11 px-8 rounded-full shadow-lg shadow-brand-red/20"
             >
-              {(action as any).label}
+              {typeof action === 'object' && action !== null && 'label' in action ? (action as { label: string }).label : ''}
             </Button>
           )}
         </>

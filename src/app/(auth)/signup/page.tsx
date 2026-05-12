@@ -128,6 +128,7 @@ export default function SignupPage() {
               fields={fields}
               onSubmit={onSubmit}
               isSubmitting={isLoading}
+              submitAlignment="center"
               submitLabel="Create Account"
               className="space-y-6"
             />

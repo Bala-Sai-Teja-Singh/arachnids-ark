@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     // 3. Store the token with an expiry date in the database
     
     const resetToken = Math.random().toString(36).substring(2, 15);
-    const resetLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
+    const resetLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
 
     // Send email using Resend
     const { data, error } = await resend.emails.send({

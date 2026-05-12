@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, Camera, Mail, UserCircle, Phone, Shield, Loader2 } from 'lucide-react';
+import { User, Camera, Mail, UserCircle, Phone, Shield, Loader2, Lock, ShieldCheck } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
@@ -31,6 +31,7 @@ interface ProfileTemplateProps {
     role?: string;
   };
   updateProfile: (data: Partial<{ name: string; email: string; phone: string; avatar: string }>) => void;
+  changePassword?: (current: string, newPass: string) => Promise<{ success: boolean; error?: string }>;
   title?: string;
   description?: string;
   isAdmin?: boolean;
@@ -39,6 +40,7 @@ interface ProfileTemplateProps {
 export function ProfileTemplate({ 
   user, 
   updateProfile, 
+  changePassword,
   title = "Profile Settings", 
   description = "Standardize your personal presence across the platform",
   isAdmin = false 
@@ -46,6 +48,8 @@ export function ProfileTemplate({
   const [avatar, setAvatar] = useState(user?.avatar || '');
   const [uploading, setUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' });
 
   const fields: FormFieldConfig[] = [
     {
@@ -116,6 +120,32 @@ export function ProfileTemplate({
     };
     reader.readAsDataURL(file);
   };
+  
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!changePassword) return;
+    
+    if (passwords.new !== passwords.confirm) {
+      toast.error('New passwords do not match');
+      return;
+    }
+    
+    if (passwords.new.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+    
+    setIsChangingPassword(true);
+    const result = await changePassword(passwords.current, passwords.new);
+    
+    if (result.success) {
+      toast.success('Password changed successfully');
+      setPasswords({ current: '', new: '', confirm: '' });
+    } else {
+      toast.error(result.error || 'Failed to change password');
+    }
+    setIsChangingPassword(false);
+  };
 
   return (
     <div className="max-w-2xl mx-auto space-y-8 py-4 px-4">
@@ -129,8 +159,9 @@ export function ProfileTemplate({
           <CardHeader className="bg-muted/20 border-b border-border/50">
             <CardTitle className="text-lg flex items-center gap-3 font-bold uppercase tracking-widest text-brand-gold">
               {isAdmin ? <Shield className="h-5 w-5" /> : <User className="h-5 w-5" />} 
-              Account Details
+              {title}
             </CardTitle>
+            {description && <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1 opacity-70">{description}</p>}
           </CardHeader>
           <CardContent className="p-6 md:p-8 space-y-8">
             
@@ -186,11 +217,92 @@ export function ProfileTemplate({
           </CardContent>
         </Card>
       </motion.div>
+
+      {changePassword && (
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ delay: 0.2 }}
+        >
+          <Card className="glass border-border overflow-hidden">
+            <CardHeader className="bg-muted/20 border-b border-border/50">
+              <CardTitle className="text-lg flex items-center gap-3 font-bold uppercase tracking-widest text-brand-gold">
+                <ShieldCheck className="h-5 w-5" /> 
+                Security & Password
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 md:p-8">
+              <form onSubmit={handlePasswordChange} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2 col-span-2 md:col-span-1">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Current Password</label>
+                    <div className="relative group/input">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within/input:text-brand-gold transition-colors" />
+                      <input
+                        type="password"
+                        placeholder="••••••••"
+                        className="w-full pl-10 h-12 bg-muted/30 border border-border/50 focus:border-brand-gold/50 transition-all rounded-xl outline-none text-sm"
+                        value={passwords.current}
+                        onChange={(e) => setPasswords({...passwords, current: e.target.value})}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="hidden md:block" /> {/* Spacer */}
+                  
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">New Password</label>
+                    <div className="relative group/input">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within/input:text-brand-gold transition-colors" />
+                      <input
+                        type="password"
+                        placeholder="••••••••"
+                        className="w-full pl-10 h-12 bg-muted/30 border border-border/50 focus:border-brand-gold/50 transition-all rounded-xl outline-none text-sm"
+                        value={passwords.new}
+                        onChange={(e) => setPasswords({...passwords, new: e.target.value})}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Confirm New Password</label>
+                    <div className="relative group/input">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within/input:text-brand-gold transition-colors" />
+                      <input
+                        type="password"
+                        placeholder="••••••••"
+                        className="w-full pl-10 h-12 bg-muted/30 border border-border/50 focus:border-brand-gold/50 transition-all rounded-xl outline-none text-sm"
+                        value={passwords.confirm}
+                        onChange={(e) => setPasswords({...passwords, confirm: e.target.value})}
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-4">
+                  <button
+                    type="submit"
+                    disabled={isChangingPassword}
+                    className="h-12 px-8 bg-brand-gold hover:bg-brand-gold-light text-black font-bold uppercase tracking-widest rounded-xl transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isChangingPassword ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      'Update Password'
+                    )}
+                  </button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
     </div>
   );
 }
 
 // Internal cn helper for the template
-function cn(...inputs: any[]) {
+function cn(...inputs: (string | boolean | undefined | null)[]) {
   return inputs.filter(Boolean).join(' ');
 }

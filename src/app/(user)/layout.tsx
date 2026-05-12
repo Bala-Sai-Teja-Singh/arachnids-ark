@@ -127,7 +127,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
         />
 
         <main ref={mainRef} className="flex-1 md:overflow-y-auto pb-20 md:pb-0">
-          <div className="flex-1 w-full min-h-full">
+          <div className="w-full">
             {children}
           </div>
           {!isDashboard && <Footer />}

@@ -102,15 +102,21 @@ export default function LoginPage() {
               fields={fields}
               onSubmit={onSubmit}
               isSubmitting={isLoading}
+              submitAlignment="center"
               submitLabel="Sign In"
               className="space-y-6"
             />
           </CardContent>
           <CardFooter className="px-8 pb-8 pt-0 flex justify-center">
-            <p className="text-sm text-muted-foreground">
-              Don&apos;t have an account?{' '}
-              <Link href="/signup" className="text-brand-gold hover:underline font-bold transition-all hover:tracking-wide">Sign up</Link>
-            </p>
+            <div className="flex flex-col items-center gap-4">
+              <p className="text-sm text-muted-foreground">
+                Don&apos;t have an account?{' '}
+                <Link href="/signup" className="text-brand-gold hover:underline font-bold transition-all hover:tracking-wide">Sign up</Link>
+              </p>
+              <Link href="/forgot-password" className="text-xs text-muted-foreground hover:text-brand-gold transition-colors font-medium">
+                Forgot password?
+              </Link>
+            </div>
           </CardFooter>
         </Card>
       </motion.div>

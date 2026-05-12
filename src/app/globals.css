@@ -87,6 +87,20 @@
   --brand-charcoal: #2f2f2f;
   --brand-red-light: #a52a2a;
   --brand-gold-light: #daa520;
+
+  /* Toast Colors */
+  --toast-success-bg: #ecfdf5;
+  --toast-success-text: #059669;
+  --toast-success-border: #d1fae5;
+  --toast-error-bg: #fff1f2;
+  --toast-error-text: #e11d48;
+  --toast-error-border: #ffe4e6;
+  --toast-info-bg: #f0f9ff;
+  --toast-info-text: #0284c7;
+  --toast-info-border: #e0f2fe;
+  --toast-warning-bg: #fffbeb;
+  --toast-warning-text: #d97706;
+  --toast-warning-border: #fef3c7;
 }
 
 .dark {
@@ -121,6 +135,20 @@
   --brand-charcoal: #050505;
   --brand-red-light: #e63939;
   --brand-gold-light: #f3d081;
+
+  /* Toast Colors Dark */
+  --toast-success-bg: rgba(16, 185, 129, 0.15);
+  --toast-success-text: #34d399;
+  --toast-success-border: rgba(16, 185, 129, 0.2);
+  --toast-error-bg: rgba(244, 63, 94, 0.15);
+  --toast-error-text: #fb7185;
+  --toast-error-border: rgba(244, 63, 94, 0.2);
+  --toast-info-bg: rgba(14, 165, 233, 0.15);
+  --toast-info-text: #38bdf8;
+  --toast-info-border: rgba(14, 165, 233, 0.2);
+  --toast-warning-bg: rgba(245, 158, 11, 0.15);
+  --toast-warning-text: #fbbf24;
+  --toast-warning-border: rgba(245, 158, 11, 0.2);
 }
 
 /* Organic web pattern */
@@ -149,6 +177,28 @@
   }
   html {
     @apply scroll-smooth h-full;
+  }
+  /* Prevent auto-zoom on mobile inputs */
+  @media (max-width: 768px) {
+    input, select, textarea, [data-slot="input"], .select__input, .select__value-container, .select__single-value, .select__placeholder {
+      font-size: 16px !important;
+    }
+  }
+
+  /* Sonner Theme Overrides */
+  [data-sonner-toast] {
+    --success-bg: var(--toast-success-bg) !important;
+    --success-text: var(--toast-success-text) !important;
+    --success-border: var(--toast-success-border) !important;
+    --error-bg: var(--toast-error-bg) !important;
+    --error-text: var(--toast-error-text) !important;
+    --error-border: var(--toast-error-border) !important;
+    --info-bg: var(--toast-info-bg) !important;
+    --info-text: var(--toast-info-text) !important;
+    --info-border: var(--toast-info-border) !important;
+    --warning-bg: var(--toast-warning-bg) !important;
+    --warning-text: var(--toast-warning-text) !important;
+    --warning-border: var(--toast-warning-border) !important;
   }
 }
 
@@ -230,9 +280,8 @@
   animation: gradient-shift 8s ease infinite;
 }
 
-/* Glass effect */
 .glass {
-  background-color: var(--background);
+  background-color: rgba(255, 255, 255, 0.95);
   border: 1px solid var(--border);
   box-shadow: 0 10px 30px -10px rgba(0,0,0,0.1);
   backdrop-filter: blur(16px);
@@ -240,7 +289,7 @@
 }
 
 .dark .glass {
-  background-color: rgba(15, 15, 15, 0.7);
+  background-color: rgba(10, 10, 10, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);

@@ -47,7 +47,7 @@ export interface HeaderProps {
   className?: string;
 }
 
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { PAGE_TITLES } from '@/constants/navigation';
 
 export function Header({
@@ -63,7 +63,16 @@ export function Header({
   className
 }: HeaderProps) {
   const pathname = usePathname();
+  const router = useRouter();
   
+  const handleProfileClick = () => {
+    // Check if we are in admin area or if user is admin
+    if (pathname.startsWith('/admin')) {
+      router.push('/admin/profile');
+    } else {
+      router.push('/dashboard/profile');
+    }
+  };
   // Resolve title from pathname if not provided
   const resolvedTitle = providedTitle || (
     <div className="flex items-center gap-2">
@@ -153,7 +162,7 @@ export function Header({
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="cursor-pointer">
+              <DropdownMenuItem onClick={handleProfileClick} className="cursor-pointer">
                 <User className="mr-2 h-4 w-4" />
                 <span>My Profile</span>
               </DropdownMenuItem>

@@ -52,7 +52,7 @@ export interface ModalProps {
   tertiaryButtonVariant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
 
   size?: 'small' | 'confirm' | 'default' | 'large' | 'extra-large' | 'full' | 'half-screen' | 'side-left' | 'side-right' | 'side-drawer-left' | 'side-drawer-right' | 'side-drawer' | 'large-screen' | 'extra-large-screen' | 'second-modal' | 'full-screen';
-  variant?: any; // For backward compatibility
+  variant?: string; // For backward compatibility
   align?: 'left' | 'center' | 'right';
   centerAlign?: boolean;
   showScroll?: boolean;
@@ -123,11 +123,8 @@ const Modal = React.forwardRef<
       size: providedSize = 'confirm',
       variant: providedVariant,
       align = 'left',
-      centerAlign = false,
       showScroll = true,
       secondModalWidth,
-      contentClassName = '',
-
       enableBackdropClose = true,
       enableEscapeClose = true,
       onBeforeClose,
@@ -160,7 +157,7 @@ const Modal = React.forwardRef<
     }, [providedOnOpenChange, providedOnClose]);
 
     // Map variant to size for backward compatibility
-    const size = (providedVariant || providedSize) as any;
+    const size = (providedVariant || providedSize || 'confirm') as NonNullable<ModalProps['size']>;
 
     const [hasEverOpened, setHasEverOpened] = useState(open);
     const [isVisible, setIsVisible] = useState(open);
@@ -192,7 +189,7 @@ const Modal = React.forwardRef<
 
     const handleClose = useCallback(
       (source: 'backdrop' | 'escape' | 'close-button' | 'force') => {
-        if (source !== 'force' && onBeforeClose && !onBeforeClose(source as any)) return;
+        if (source !== 'force' && onBeforeClose && !onBeforeClose(source)) return;
         if (!open) return;
         onOpenChange(false);
       },
@@ -228,7 +225,7 @@ const Modal = React.forwardRef<
       };
       document.addEventListener('keydown', onKeyDown);
       return () => document.removeEventListener('keydown', onKeyDown);
-    }, [open, enableEscapeClose, autoFocusPrimaryButton, onPrimaryAction, handleClose]);
+    }, [open, finalEnableEscapeClose, autoFocusPrimaryButton, onPrimaryAction, handleClose]);
 
     // Second-modal width logic
     const [calculatedSecondModalWidth, setCalculatedSecondModalWidth] = useState<string | null>('45vw');
@@ -322,7 +319,10 @@ const Modal = React.forwardRef<
         {isSideDrawer && (
           <div
             ref={(node) => {
-              if (ref) { if (typeof ref === 'function') ref(node); else (ref as any).current = node; }
+              if (ref) { 
+                if (typeof ref === 'function') ref(node); 
+                else if (ref && 'current' in ref) (ref as React.MutableRefObject<HTMLDivElement | null>).current = node; 
+              }
               contentRef.current = node as HTMLDivElement | null;
             }}
             className={cn('fixed top-0 h-full flex flex-col', widthClass, baseContent, size.includes('left') ? 'left-0' : 'right-0')}
