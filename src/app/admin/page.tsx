@@ -10,89 +10,86 @@ import type { User, Product, Course, Order, CourseEnrollment, ConsultationBookin
 import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area
 } from 'recharts';
-import { buttonVariants } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import Link from 'next/link';
 
 import { StatCard } from '@/components/shared/molecules/stat-card';
 import { SectionHeader } from '@/components/shared/molecules/section-header';
 
 export default function AdminDashboardPage() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState({
     users: 0, products: 0, courses: 0,
     totalRevenue: 0, activeOrders: 0, activeConsultations: 0
   });
   const [revenueData, setRevenueData] = useState<{ name: string, total: number }[]>([]);
 
+  const fetchStats = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/admin/dashboard/stats');
+      const data = await response.json();
+
+      if (data.error) throw new Error(data.error);
+
+      setStats({
+        users: data.userCount,
+        products: data.productCount,
+        courses: data.courseCount,
+        totalRevenue: data.totalRevenue,
+        activeOrders: data.activeOrders,
+        activeConsultations: data.activeConsultations
+      });
+      setRevenueData(data.revenueChartData);
+    } catch (err: any) {
+      console.error('Failed to fetch dashboard stats:', err);
+      setError(err.message || 'Failed to connect to the analytical engine.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    (async () => {
-      const users = await Db.getAll<User>('users');
-      const products = await Db.getAll<Product>('products');
-      const courses = await Db.getAll<Course>('courses');
-      const orders = await Db.getAll<Order>('orders');
-      const enrollments = await Db.getAll<CourseEnrollment>('enrollments');
-      const bookings = await Db.getAll<ConsultationBooking>('bookings');
-  
-      const validOrderStatuses = ['payment_uploaded', 'verified', 'completed', 'payment_verified', 'order_shipped', 'order_completed'];
-      const validEnrollmentStatuses = ['payment_uploaded', 'verified', 'completed', 'enrolled'];
-      const validBookingStatuses = ['payment_uploaded', 'verified', 'completed', 'payment_verified', 'scheduled'];
-
-      const totalRevenue =
-        orders.filter(o => validOrderStatuses.includes(o.status)).reduce((acc, curr) => acc + curr.totalPrice, 0) +
-        enrollments.filter(e => validEnrollmentStatuses.includes(e.status)).reduce((acc, curr) => acc + curr.totalPrice, 0) +
-        bookings.filter(b => validBookingStatuses.includes(b.status)).reduce((acc, curr) => acc + (curr?.totalPrice || 0), 0);
-  
-      const activeOrders = orders.filter(o => !['completed', 'cancelled', 'rejected', 'order_completed', 'order_cancelled'].includes(o.status)).length;
-      const activeConsultations = bookings.filter(b => !['completed', 'cancelled', 'rejected'].includes(b.status)).length;
-  
-      const last7Months = Array.from({ length: 7 }).map((_, i) => {
-        const d = new Date();
-        d.setMonth(d.getMonth() - i);
-        return {
-          month: d.getMonth(),
-          year: d.getFullYear(),
-          name: d.toLocaleString('default', { month: 'short' }),
-          total: 0
-        };
-      }).reverse();
-
-      const monthMap = new Map();
-      last7Months.forEach((m, index) => {
-        monthMap.set(`${m.year}-${m.month}`, index);
-      });
-
-      orders.forEach(o => {
-        if (validOrderStatuses.includes(o.status) && o.createdAt) {
-          const d = new Date(o.createdAt);
-          const key = `${d.getFullYear()}-${d.getMonth()}`;
-          if (monthMap.has(key)) last7Months[monthMap.get(key)].total += (o.totalPrice || 0);
-        }
-      });
-
-      enrollments.forEach(e => {
-        if (validEnrollmentStatuses.includes(e.status) && e.createdAt) {
-          const d = new Date(e.createdAt);
-          const key = `${d.getFullYear()}-${d.getMonth()}`;
-          if (monthMap.has(key)) last7Months[monthMap.get(key)].total += (e.totalPrice || 0);
-        }
-      });
-
-      bookings.forEach(b => {
-        if (validBookingStatuses.includes(b.status) && b.createdAt) {
-          const d = new Date(b.createdAt);
-          const key = `${d.getFullYear()}-${d.getMonth()}`;
-          if (monthMap.has(key)) last7Months[monthMap.get(key)].total += (b.totalPrice || 0);
-        }
-      });
-
-      setTimeout(() => {
-        setStats({
-          users: users.length, products: products.length, courses: courses.length,
-          totalRevenue, activeOrders, activeConsultations
-        });
-        setRevenueData(last7Months);
-      }, 0);
-    })();
+    fetchStats();
   }, []);
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          className="h-10 w-10 border-4 border-brand-gold/20 border-t-brand-gold rounded-full"
+        />
+        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground animate-pulse">
+          Calibrating Dashboard...
+        </p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 px-4 text-center">
+        <div className="h-16 w-16 rounded-full bg-red-500/10 flex items-center justify-center">
+          <Bug className="h-8 w-8 text-red-500" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-xl font-black uppercase tracking-tighter">Telemetery Interrupted</h2>
+          <p className="text-sm text-muted-foreground max-w-xs mx-auto">{error}</p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={fetchStats}
+          className="border-red-500/20 hover:bg-red-500/5 text-red-500 font-bold uppercase text-[10px] tracking-widest"
+        >
+          Attempt Re-calibration
+        </Button>
+      </div>
+    );
+  }
 
   const statCards = [
     { title: 'Total Revenue', value: formatPrice(stats.totalRevenue), icon: DollarSign, color: 'text-brand-gold', trend: '+12.5%', href: '/admin/revenue' },

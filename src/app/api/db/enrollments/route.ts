@@ -1,6 +1,7 @@
 import { connectDB } from '@/lib/mongoose';
 import { EnrollmentModel } from '@/models';
 import { type NextRequest } from 'next/server';
+import { syncRevenue } from '@/lib/revenue-sync';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,6 +30,20 @@ export async function POST(request: NextRequest) {
     await connectDB();
     const body = await request.json();
     const enrollment = await EnrollmentModel.create({ _id: body.id, ...body });
+    
+    // Sync revenue
+    await syncRevenue(
+      enrollment._id, 
+      'enrollment', 
+      enrollment.totalPrice, 
+      enrollment.status, 
+      enrollment.createdAt, 
+      enrollment.userName, 
+      enrollment.userEmail, 
+      enrollment.courseTitle,
+      enrollment.orderId
+    );
+
     return Response.json(enrollment.toJSON(), { status: 201 });
   } catch (error: any) {
     return Response.json({ error: error.message }, { status: 500 });

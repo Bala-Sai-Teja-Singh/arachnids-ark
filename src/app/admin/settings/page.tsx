@@ -1,6 +1,6 @@
 'use client';
 
-import { Save, Loader2, Plus, Trash2, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Save, Loader2, Plus, Trash2, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/shared/molecules/modal';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,7 +18,6 @@ import { useRouter } from 'next/navigation';
 export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(false);
   const [settings, setSettings] = useState<SystemSettings | null>(null);
-  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -462,48 +461,8 @@ export default function AdminSettingsPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-border bg-card border-red-500/20">
-            <CardHeader>
-              <CardTitle className="text-red-400">Danger Zone</CardTitle>
-              <CardDescription>Destructive administrative actions.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Reset Database</p>
-                <p className="text-xs text-muted-foreground">This will wipe all data and re-seed the initial mock database. This cannot be undone.</p>
-                <Button variant="destructive" className="w-full mt-2" onClick={() => setIsResetModalOpen(true)}>
-                  Factory Reset
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
-
-      {/* Factory Reset Confirmation Modal */}
-      <Modal 
-        isOpen={isResetModalOpen} 
-        onClose={() => setIsResetModalOpen(false)}
-        variant="confirm"
-        title="Factory Reset"
-        description="Are you absolutely sure? This will delete all user data, orders, and products, then re-seed the initial database. This action cannot be undone."
-        footer={(
-          <div className="flex gap-2 w-full justify-end">
-            <Button variant="outline" onClick={() => setIsResetModalOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={async () => {
-              toast.info('Factory reset is not available in production mode.');
-              setIsResetModalOpen(false);
-            }}>
-              Confirm Reset
-            </Button>
-          </div>
-        )}
-      >
-        <div className="flex flex-col items-center justify-center py-4 text-red-400">
-          <AlertTriangle className="h-12 w-12 mb-2 animate-pulse" />
-          <p className="text-xs font-bold uppercase tracking-widest text-center">Permanent Data Loss</p>
-        </div>
-      </Modal>
     </div>
   );
 }

@@ -46,126 +46,62 @@ export default function AdminRevenuePage() {
   });
 
   useEffect(() => {
-      (async () => {
-      const orders = await Db.getAll<Order>('orders');
-      const enrollments = await Db.getAll<CourseEnrollment>('enrollments');
-      const bookings = await Db.getAll<ConsultationBooking>('bookings');
-  
-      const completedOrders: RevenueItem[] = orders
-        .filter(o => ['payment_verified', 'order_shipped', 'order_completed'].includes(o.status))
-        .flatMap(o => {
-          const itemsByType = o.items.reduce((acc, item) => {
-            if (!acc[item.type]) acc[item.type] = [];
-            acc[item.type].push(item);
-            return acc;
-          }, {} as Record<string, typeof o.items>);
-  
-          const rows: RevenueItem[] = [];
-  
-          // 1. Group products into one row
-          if (itemsByType['product']) {
-            const products = itemsByType['product'];
-            const totalQty = products.reduce((acc, i) => acc + (i.quantity || 1), 0);
-            const totalAmount = products.reduce((acc, i) => acc + (i.price * (i.quantity || 1)), 0);
-            
-            rows.push({
-              id: `${o.id}-products`,
-              type: 'product',
-              name: products.length === 1 && products[0].quantity === 1 
-                ? products[0].name 
-                : `${totalQty} Items (${products.length} Species)`,
-              userName: o.userName,
-              userEmail: o.userEmail,
-              userPhone: o.deliveryPhone,
-              amount: totalAmount + (o.shippingCharge || 0), // Add shipping to product row
-              date: o.createdAt,
-              status: o.status
-            });
-          }
-  
-          // 2. Individual rows for courses and consultations
-          ['course', 'consultation'].forEach(type => {
-            if (itemsByType[type]) {
-              itemsByType[type].forEach((item, idx) => {
-                rows.push({
-                  id: `${o.id}-${type}-${idx}`,
-                  type: type as any,
-                  name: item.name + (item.quantity > 1 ? ` (x${item.quantity})` : ''),
-                  userName: o.userName,
-                  userEmail: o.userEmail,
-                  userPhone: o.deliveryPhone,
-                  amount: item.price * (item.quantity || 1),
-                  date: o.createdAt,
-                  status: o.status
-                });
-              });
-            }
-          });
-  
-          return rows;
-        });
-  
-      const completedEnrollments: RevenueItem[] = enrollments
-        .filter(e => e.status === 'enrolled' && !e.orderId)
-        .map(e => ({
-          id: e.id,
-          type: 'course',
-          name: e.courseTitle,
-          userName: e.userName,
-          userEmail: e.userEmail,
-          userPhone: (e as any).userPhone,
-          amount: e.totalPrice,
-          date: e.createdAt,
-          status: e.status
-        }));
-  
-      const completedBookings: RevenueItem[] = bookings
-        .filter(b => ['payment_verified', 'scheduled', 'completed'].includes(b.status) && !b.orderId)
-        .map(b => {
-          let name = `${b.duration} min Consultation`;
-          if (b.items && b.items.length > 0) {
-            if (b.items.length === 1) {
-              name = b.items[0].label;
-            } else {
-              const totalMins = b.items.reduce((acc, curr) => acc + (curr.duration * (curr.quantity || 1)), 0);
-              name = `${b.items.length} Sessions (${totalMins} mins)`;
-            }
-          }
-          
-          return {
-            id: b.id,
-            type: 'consultation',
-            name,
-            userName: b.userName,
-            userEmail: b.userEmail,
-            userPhone: (b as any).userPhone,
-            amount: b.totalPrice || 0,
-            date: b.createdAt,
-            status: b.status
-          };
-        });
-  
-      const allItems = [...completedOrders, ...completedEnrollments, ...completedBookings].sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-      );
-  
+    (async () => {
+      // We are directly fetching the aggregated revenues table which already filters by active revenues
+      const revenues = await Db.getAll<{
+        id: string;
+        sourceType: string;
+        amount: number;
+        status: string;
+        sourceCreatedAt: string;
+        customerName: string;
+        customerEmail: string;
+        itemName: string;
+        orderId?: string;
+      }>('revenues');
+
+      const validOrderStatuses = ['payment_uploaded', 'verified', 'completed', 'payment_verified', 'order_shipped', 'order_completed'];
+      const validEnrollmentStatuses = ['payment_uploaded', 'verified', 'completed', 'enrolled'];
+      const validBookingStatuses = ['payment_uploaded', 'verified', 'completed', 'payment_verified', 'scheduled'];
+
+      const isValidRevenue = (type: string, status: string) => {
+        if (type === 'order') return validOrderStatuses.includes(status);
+        if (type === 'enrollment') return validEnrollmentStatuses.includes(status);
+        if (type === 'booking') return validBookingStatuses.includes(status);
+        return false;
+      };
+
+      // Only count if it's a top-level revenue (not a child of another order)
+      const validRevenues = revenues.filter(r => isValidRevenue(r.sourceType, r.status) && !r.orderId);
+
+      const allItems: RevenueItem[] = validRevenues.map(r => ({
+        id: r.id,
+        type: r.sourceType === 'booking' ? 'consultation' : r.sourceType as any,
+        name: r.itemName,
+        userName: r.customerName,
+        userEmail: r.customerEmail,
+        amount: r.amount,
+        date: r.sourceCreatedAt,
+        status: r.status,
+      })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
       setRevenueItems(allItems);
       setFilteredItems(allItems);
-  
+
       setTotals({
         total: allItems.reduce((acc, curr) => acc + curr.amount, 0),
-        products: completedOrders.reduce((acc, curr) => acc + curr.amount, 0),
-        courses: completedEnrollments.reduce((acc, curr) => acc + curr.amount, 0),
-        consultations: completedBookings.reduce((acc, curr) => acc + curr.amount, 0),
+        products: allItems.filter(i => i.type === 'product').reduce((acc, curr) => acc + curr.amount, 0),
+        courses: allItems.filter(i => i.type === 'course').reduce((acc, curr) => acc + curr.amount, 0),
+        consultations: allItems.filter(i => i.type === 'consultation').reduce((acc, curr) => acc + curr.amount, 0),
       });
-      })();
+    })();
   }, []);
 
   useEffect(() => {
     let result = revenueItems;
     if (searchTerm) {
       const query = searchTerm.toLowerCase();
-      result = result.filter(item => 
+      result = result.filter(item =>
         item.name.toLowerCase().includes(query) ||
         item.userName.toLowerCase().includes(query) ||
         item.userEmail.toLowerCase().includes(query) ||
@@ -181,30 +117,30 @@ export default function AdminRevenuePage() {
 
   const exportToPDF = () => {
     const doc = new jsPDF();
-    
+
     // Header
     doc.setFontSize(22);
     doc.setTextColor(184, 134, 11); // Brand gold
     doc.text('Revenue Report', 14, 22);
-    
+
     doc.setFontSize(10);
     doc.setTextColor(100);
     doc.text('ArachnidsArk Administration Dashboard', 14, 30);
-    
+
     doc.setFontSize(11);
     doc.setTextColor(0);
     doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 40);
     doc.text(`Category: ${filterType === 'all' ? 'All Categories' : filterType.charAt(0).toUpperCase() + filterType.slice(1)}`, 14, 46);
-    
+
     // Stats Summary
     doc.setFillColor(245, 245, 245);
     doc.rect(14, 52, 182, 20, 'F');
-    
+
     doc.setFontSize(10);
     doc.setTextColor(100);
     doc.text('Total Transactions:', 20, 60);
     doc.text('Total Revenue:', 110, 60);
-    
+
     doc.setFontSize(12);
     doc.setTextColor(0);
     doc.setFont('helvetica', 'bold');
@@ -224,13 +160,13 @@ export default function AdminRevenuePage() {
       head: [['Date', 'Description', 'Category', 'Customer', 'Amount']],
       body: tableData,
       theme: 'grid',
-      headStyles: { 
+      headStyles: {
         fillColor: [184, 134, 11],
         textColor: [255, 255, 255],
         fontSize: 10,
         fontStyle: 'bold'
       },
-      styles: { 
+      styles: {
         fontSize: 9,
         cellPadding: 3
       },
@@ -297,8 +233,8 @@ export default function AdminRevenuePage() {
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative w-full sm:w-96">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input 
-            placeholder="Search by client name, email or phone..." 
+          <Input
+            placeholder="Search by client name, email or phone..."
             className="pl-10 bg-card/50 border-border"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
@@ -310,8 +246,8 @@ export default function AdminRevenuePage() {
           onValueChange={(val) => setFilterType(val as any)}
           className="w-full sm:w-auto"
         />
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           className="gap-2 border-border bg-brand-gold/10 hover:bg-brand-gold/20 text-brand-gold ml-auto"
           onClick={exportToPDF}
         >
@@ -334,12 +270,11 @@ export default function AdminRevenuePage() {
           {
             header: 'Category',
             cell: (item) => (
-              <Badge variant="outline" className={`text-[10px] uppercase tracking-widest border-0 ${
-                item.type === 'product' ? 'bg-brand-red/10 text-brand-red' :
-                item.type === 'course' ? 'bg-brand-gold/10 text-brand-gold' :
-                item.type === 'consultation' ? 'bg-green-500/10 text-green-400' :
-                'bg-blue-500/10 text-blue-400'
-              }`}>
+              <Badge variant="outline" className={`text-[10px] uppercase tracking-widest border-0 ${item.type === 'product' ? 'bg-brand-red/10 text-brand-red' :
+                  item.type === 'course' ? 'bg-brand-gold/10 text-brand-gold' :
+                    item.type === 'consultation' ? 'bg-green-500/10 text-green-400' :
+                      'bg-blue-500/10 text-blue-400'
+                }`}>
                 {item.type}
               </Badge>
             )
@@ -370,12 +305,11 @@ export default function AdminRevenuePage() {
                 <h3 className="font-bold text-sm">{item.name}</h3>
                 <p className="text-[10px] text-muted-foreground font-mono">#{item.id.slice(0, 8)}</p>
               </div>
-              <Badge variant="outline" className={`text-[10px] uppercase tracking-widest border-0 ${
-                item.type === 'product' ? 'bg-brand-red/10 text-brand-red' :
-                item.type === 'course' ? 'bg-brand-gold/10 text-brand-gold' :
-                item.type === 'consultation' ? 'bg-green-500/10 text-green-400' :
-                'bg-blue-500/10 text-blue-400'
-              }`}>
+              <Badge variant="outline" className={`text-[10px] uppercase tracking-widest border-0 ${item.type === 'product' ? 'bg-brand-red/10 text-brand-red' :
+                  item.type === 'course' ? 'bg-brand-gold/10 text-brand-gold' :
+                    item.type === 'consultation' ? 'bg-green-500/10 text-green-400' :
+                      'bg-blue-500/10 text-blue-400'
+                }`}>
                 {item.type}
               </Badge>
             </div>

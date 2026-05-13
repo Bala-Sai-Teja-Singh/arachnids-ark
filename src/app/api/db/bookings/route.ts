@@ -1,6 +1,7 @@
 import { connectDB } from '@/lib/mongoose';
 import { BookingModel } from '@/models';
 import { type NextRequest } from 'next/server';
+import { syncRevenue } from '@/lib/revenue-sync';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,6 +27,24 @@ export async function POST(request: NextRequest) {
     await connectDB();
     const body = await request.json();
     const booking = await BookingModel.create({ _id: body.id, ...body });
+    
+    // Sync revenue
+    const itemName = booking.items && booking.items.length > 0 
+      ? (booking.items.length === 1 ? booking.items[0].label : `${booking.items.length} Sessions`) 
+      : `${booking.duration} min Consultation`;
+      
+    await syncRevenue(
+      booking._id, 
+      'booking', 
+      booking.totalPrice || 0, 
+      booking.status, 
+      booking.createdAt, 
+      booking.userName, 
+      booking.userEmail, 
+      itemName,
+      booking.orderId
+    );
+
     return Response.json(booking.toJSON(), { status: 201 });
   } catch (error: any) {
     return Response.json({ error: error.message }, { status: 500 });

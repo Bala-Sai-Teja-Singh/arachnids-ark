@@ -302,6 +302,24 @@ export default function AdminOrdersPage() {
     toast.success('Order cancelled and customer notified');
   };
 
+  const handleDeleteOrder = async () => {
+    if (!selectedOrder) return;
+    if (!window.confirm(`Are you sure you want to PERMANENTLY DELETE order #${selectedOrder.id.split('-')[0]}? This cannot be undone.`)) return;
+
+    try {
+      const res = await Db.delete('orders', selectedOrder.id);
+      if (res) {
+        toast.success('Order permanently deleted');
+        setOrders(prev => prev.filter(o => o.id !== selectedOrder.id));
+        setSelectedOrder(null);
+      } else {
+        toast.error('Failed to delete order');
+      }
+    } catch (err) {
+      toast.error('Failed to delete order');
+    }
+  };
+
   const sendEmailNotification = async (order: Order, type: string) => {
     fetch(`/api/emails/${type}`, {
       method: 'POST',
@@ -744,6 +762,21 @@ export default function AdminOrdersPage() {
                           <p className="text-[10px] text-muted-foreground italic">"{(selectedOrder!.cancellationReason || 'No reason specified')}"</p>
                         </div>
                       )}
+                    </div>
+                    
+                    {/* Delete Action */}
+                    <div className="pt-4 mt-2">
+                      <Button
+                        variant="ghost"
+                        onClick={handleDeleteOrder}
+                        className="w-full justify-start gap-3 text-red-700 hover:text-white hover:bg-red-600 h-12 rounded-xl border border-red-500/20"
+                      >
+                        <Trash2 className="h-5 w-5" />
+                        <div className="text-left">
+                          <p className="text-[10px] font-bold uppercase tracking-widest">Delete Order</p>
+                          <p className="text-[8px] opacity-70">Permanently removes record from database</p>
+                        </div>
+                      </Button>
                     </div>
                   </div>
                 </div>
