@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+
+export const dynamic = 'force-dynamic';
 import { Users, ShoppingBag, GraduationCap, Calendar, DollarSign, ArrowUpRight, TrendingUp, Bug } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Db } from '@/lib/db';

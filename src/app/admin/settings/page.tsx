@@ -2,6 +2,8 @@
 
 import { Save, Loader2, Plus, Trash2, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+
+export const dynamic = 'force-dynamic';
 import { Modal } from '@/components/shared/molecules/modal';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/shared/atoms/input';
@@ -251,53 +253,6 @@ export default function AdminSettingsPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-border bg-card">
-            <CardHeader>
-              <CardTitle>Email Notifications</CardTitle>
-              <CardDescription>Configure automated email settings (mocked for now).</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Order Confirmations</Label>
-                  <p className="text-sm text-muted-foreground">Send email when a new order request is placed.</p>
-                </div>
-                <Switch 
-                  checked={settings.emailNotifications.orderConfirmations} 
-                  onCheckedChange={(checked) => setSettings({
-                    ...settings,
-                    emailNotifications: { ...settings.emailNotifications, orderConfirmations: checked }
-                  })}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Payment Verification</Label>
-                  <p className="text-sm text-muted-foreground">Send email when payment is verified.</p>
-                </div>
-                <Switch 
-                  checked={settings.emailNotifications.paymentVerification} 
-                  onCheckedChange={(checked) => setSettings({
-                    ...settings,
-                    emailNotifications: { ...settings.emailNotifications, paymentVerification: checked }
-                  })}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Consultation Reminders</Label>
-                  <p className="text-sm text-muted-foreground">Send reminder 24h before consultation.</p>
-                </div>
-                <Switch 
-                  checked={settings.emailNotifications.consultationReminders} 
-                  onCheckedChange={(checked) => setSettings({
-                    ...settings,
-                    emailNotifications: { ...settings.emailNotifications, consultationReminders: checked }
-                  })}
-                />
-              </div>
-            </CardContent>
-          </Card>
 
           <Card className="border-border bg-card">
             <CardHeader>
@@ -378,6 +333,54 @@ export default function AdminSettingsPage() {
         </div>
 
         <div className="space-y-6">
+          <Card className="border-border bg-card">
+            <CardHeader>
+              <CardTitle>Email Notifications</CardTitle>
+              <CardDescription>Configure automated email settings (mocked for now).</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Order Confirmations</Label>
+                  <p className="text-sm text-muted-foreground">Send email when a new order request is placed.</p>
+                </div>
+                <Switch 
+                  checked={settings.emailNotifications.orderConfirmations} 
+                  onCheckedChange={(checked) => setSettings({
+                    ...settings,
+                    emailNotifications: { ...settings.emailNotifications, orderConfirmations: checked }
+                  })}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Payment Verification</Label>
+                  <p className="text-sm text-muted-foreground">Send email when payment is verified.</p>
+                </div>
+                <Switch 
+                  checked={settings.emailNotifications.paymentVerification} 
+                  onCheckedChange={(checked) => setSettings({
+                    ...settings,
+                    emailNotifications: { ...settings.emailNotifications, paymentVerification: checked }
+                  })}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Consultation Reminders</Label>
+                  <p className="text-sm text-muted-foreground">Send reminder 24h before consultation.</p>
+                </div>
+                <Switch 
+                  checked={settings.emailNotifications.consultationReminders} 
+                  onCheckedChange={(checked) => setSettings({
+                    ...settings,
+                    emailNotifications: { ...settings.emailNotifications, consultationReminders: checked }
+                  })}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
           <Card className="border-border bg-card">
             <CardHeader>
               <CardTitle>Store Status</CardTitle>
