@@ -32,34 +32,66 @@ export default function AdminDashboardPage() {
       const enrollments = await Db.getAll<CourseEnrollment>('enrollments');
       const bookings = await Db.getAll<ConsultationBooking>('bookings');
   
+      const validOrderStatuses = ['payment_uploaded', 'verified', 'completed', 'payment_verified', 'order_shipped', 'order_completed'];
+      const validEnrollmentStatuses = ['payment_uploaded', 'verified', 'completed', 'enrolled'];
+      const validBookingStatuses = ['payment_uploaded', 'verified', 'completed', 'payment_verified', 'scheduled'];
+
       const totalRevenue =
-        orders.filter(o => ['payment_uploaded', 'verified', 'completed'].includes(o.status)).reduce((acc, curr) => acc + curr.totalPrice, 0) +
-        enrollments.filter(e => ['payment_uploaded', 'verified', 'completed'].includes(e.status)).reduce((acc, curr) => acc + curr.totalPrice, 0) +
-        bookings.filter(b => ['payment_uploaded', 'verified', 'completed'].includes(b.status)).reduce((acc, curr) => acc + (curr?.totalPrice || 0), 0);
+        orders.filter(o => validOrderStatuses.includes(o.status)).reduce((acc, curr) => acc + curr.totalPrice, 0) +
+        enrollments.filter(e => validEnrollmentStatuses.includes(e.status)).reduce((acc, curr) => acc + curr.totalPrice, 0) +
+        bookings.filter(b => validBookingStatuses.includes(b.status)).reduce((acc, curr) => acc + (curr?.totalPrice || 0), 0);
   
-      const activeOrders = orders.filter(o => !['completed', 'cancelled', 'rejected'].includes(o.status)).length;
+      const activeOrders = orders.filter(o => !['completed', 'cancelled', 'rejected', 'order_completed', 'order_cancelled'].includes(o.status)).length;
       const activeConsultations = bookings.filter(b => !['completed', 'cancelled', 'rejected'].includes(b.status)).length;
   
+      const last7Months = Array.from({ length: 7 }).map((_, i) => {
+        const d = new Date();
+        d.setMonth(d.getMonth() - i);
+        return {
+          month: d.getMonth(),
+          year: d.getFullYear(),
+          name: d.toLocaleString('default', { month: 'short' }),
+          total: 0
+        };
+      }).reverse();
+
+      const monthMap = new Map();
+      last7Months.forEach((m, index) => {
+        monthMap.set(`${m.year}-${m.month}`, index);
+      });
+
+      orders.forEach(o => {
+        if (validOrderStatuses.includes(o.status) && o.createdAt) {
+          const d = new Date(o.createdAt);
+          const key = `${d.getFullYear()}-${d.getMonth()}`;
+          if (monthMap.has(key)) last7Months[monthMap.get(key)].total += (o.totalPrice || 0);
+        }
+      });
+
+      enrollments.forEach(e => {
+        if (validEnrollmentStatuses.includes(e.status) && e.createdAt) {
+          const d = new Date(e.createdAt);
+          const key = `${d.getFullYear()}-${d.getMonth()}`;
+          if (monthMap.has(key)) last7Months[monthMap.get(key)].total += (e.totalPrice || 0);
+        }
+      });
+
+      bookings.forEach(b => {
+        if (validBookingStatuses.includes(b.status) && b.createdAt) {
+          const d = new Date(b.createdAt);
+          const key = `${d.getFullYear()}-${d.getMonth()}`;
+          if (monthMap.has(key)) last7Months[monthMap.get(key)].total += (b.totalPrice || 0);
+        }
+      });
+
       setTimeout(() => {
         setStats({
           users: users.length, products: products.length, courses: courses.length,
           totalRevenue, activeOrders, activeConsultations
         });
+        setRevenueData(last7Months);
       }, 0);
     })();
-
-    const data = [
-      { name: 'Jan', total: Math.floor(Math.random() * 50000) + 10000 },
-      { name: 'Feb', total: Math.floor(Math.random() * 50000) + 15000 },
-      { name: 'Mar', total: Math.floor(Math.random() * 50000) + 20000 },
-      { name: 'Apr', total: Math.floor(Math.random() * 50000) + 25000 },
-      { name: 'May', total: Math.floor(Math.random() * 50000) + 30000 },
-      { name: 'Jun', total: Math.floor(Math.random() * 50000) + 40000 },
-      { name: 'Jul', total: 50000 },
-    ];
-    setTimeout(() => {
-      setRevenueData(data);
-    }, 0);
   }, []);
 
   const statCards = [

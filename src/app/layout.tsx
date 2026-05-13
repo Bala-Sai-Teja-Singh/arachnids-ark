@@ -6,6 +6,10 @@ import { AppProvider } from "@/providers/app-provider";
 import { ResponsiveToaster } from "@/components/shared/responsive-toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
+import { connectDB } from "@/lib/mongoose";
+import { SystemSettingsModel } from "@/models";
+import { ModuleProvider } from "@/providers/module-provider";
+
 const outfit = Outfit({
   variable: "--font-outfit",
   subsets: ["latin"],
@@ -38,11 +42,23 @@ export const metadata: Metadata = {
   manifest: "/site.webmanifest",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  let initialModules = undefined;
+  try {
+    await connectDB();
+    const settings = await SystemSettingsModel.findById('default').lean();
+    if (settings && settings.modules) {
+      // @ts-ignore
+      initialModules = settings.modules;
+    }
+  } catch (error) {
+    console.error("Failed to fetch system settings in layout:", error);
+  }
+
   return (
     <html
       lang="en"
@@ -59,10 +75,12 @@ export default function RootLayout({
       <body className="antialiased">
         <ThemeProvider>
           <TooltipProvider>
-            <AppProvider>
-              {children}
-              <ResponsiveToaster />
-            </AppProvider>
+            <ModuleProvider initialModules={initialModules}>
+              <AppProvider>
+                {children}
+                <ResponsiveToaster />
+              </AppProvider>
+            </ModuleProvider>
           </TooltipProvider>
         </ThemeProvider>
       </body>

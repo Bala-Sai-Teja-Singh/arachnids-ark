@@ -13,10 +13,13 @@ import { useState, useEffect } from 'react';
 import { Db } from '@/lib/db';
 import { SystemSettings, UPIId } from '@/types';
 
+import { useRouter } from 'next/navigation';
+
 export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(false);
   const [settings, setSettings] = useState<SystemSettings | null>(null);
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     (async () => {
@@ -71,6 +74,7 @@ export default function AdminSettingsPage() {
     await new Promise(r => setTimeout(r, 800));
     toast.success('System settings saved successfully');
     setLoading(false);
+    router.refresh();
   };
 
   const addUPIId = () => {

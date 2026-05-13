@@ -1,26 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { DbClient } from '@/lib/db-client';
+import { useCallback } from 'react';
 import { useAuthStore } from '@/store/auth-store';
-import { SystemSettings } from '@/types';
+import { useGlobalModules } from '@/providers/module-provider';
 
 export function useModules() {
   const { user } = useAuthStore();
-  const [modules, setModules] = useState({
-    showCourses: true,
-    showProducts: true,
-    showConsultations: true,
-  });
-
-  useEffect(() => {
-    (async () => {
-      const data = await DbClient.getSettings<SystemSettings>('system_settings');
-      if (data && data.modules) {
-        setModules(data.modules);
-      }
-    })();
-  }, []);
+  const modules = useGlobalModules();
 
   const isVisible = useCallback((moduleName?: string) => {
     // Admins see everything
