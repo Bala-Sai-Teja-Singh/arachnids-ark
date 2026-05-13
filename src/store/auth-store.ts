@@ -15,6 +15,7 @@ interface AuthState {
   updateProfile: (updates: Partial<SafeUser>) => void;
   changePassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
   hasRole: (role: UserRole) => boolean;
+  checkEmailAvailability: (email: string) => Promise<{ available: boolean }>;
 }
 
 function toSafeUser(user: User): SafeUser {
@@ -112,6 +113,12 @@ export const useAuthStore = create<AuthState>()(
       hasRole: (role: UserRole) => {
         const { user } = get();
         return user?.role === role;
+      },
+
+      checkEmailAvailability: async (email: string) => {
+        const users = LocalStorage.getAll<User>('users');
+        const exists = users.some(u => u.email.toLowerCase() === email.toLowerCase());
+        return { available: !exists };
       },
     }),
     {

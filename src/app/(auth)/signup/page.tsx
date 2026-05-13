@@ -6,6 +6,9 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, User, Mail, Phone, Lock } from 'lucide-react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -30,8 +33,13 @@ export default function SignupPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect');
-  const { signup, isLoading, isAuthenticated, user } = useAuthStore();
+  const { signup, checkEmailAvailability, isLoading, isAuthenticated, user } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
+  const [step, setStep] = useState<1 | 2>(1);
+  const [pendingData, setPendingData] = useState<SignupFormValues | null>(null);
+  const [otpValue, setOtpValue] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [countdown, setCountdown] = useState(0);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -42,6 +50,13 @@ export default function SignupPage() {
       }
     }
   }, [isAuthenticated, user, router]);
+
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown]);
 
   const fields: FormFieldConfig[] = [
     {
@@ -95,17 +110,89 @@ export default function SignupPage() {
     }
   ];
 
-  const onSubmit = async (values: SignupFormValues) => {
-    const result = await signup(values.name, values.email, values.password, values.phone || '');
-    if (result.success) {
-      toast.success('Account created successfully!');
-      if (redirect) {
-        router.push(redirect);
+  const onSendOTP = async (values: SignupFormValues) => {
+    // 1. Check uniqueness
+    const { available } = await checkEmailAvailability(values.email);
+    if (!available) {
+      toast.error('This email is already registered. Please login or use a different email.');
+      return;
+    }
+
+    // 2. Send OTP
+    setIsVerifying(true);
+    try {
+      const res = await fetch('/api/auth/otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: values.email, name: values.name, action: 'send' })
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        setPendingData(values);
+        setStep(2);
+        setCountdown(60);
+        toast.success(`Verification code sent to ${values.email}`);
       } else {
-        router.push('/');
+        toast.error(data.error || 'Failed to send verification code');
       }
-    } else {
-      toast.error(result.error || 'Signup failed');
+    } catch (err) {
+      toast.error('Connection error while sending OTP');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const onVerifyAndSignup = async () => {
+    if (otpValue.length !== 6) {
+      toast.error('Please enter a valid 6-digit code');
+      return;
+    }
+
+    if (!pendingData) return;
+
+    setIsVerifying(true);
+    try {
+      // 1. Verify OTP
+      const res = await fetch('/api/auth/otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: pendingData.email, 
+          otp: otpValue, 
+          action: 'verify' 
+        })
+      });
+      const data = await res.json();
+
+      if (!data.success) {
+        toast.error(data.error || 'Invalid verification code');
+        setIsVerifying(false);
+        return;
+      }
+
+      // 2. Proceed with Signup
+      const result = await signup(
+        pendingData.name, 
+        pendingData.email, 
+        pendingData.password, 
+        pendingData.phone || ''
+      );
+
+      if (result.success) {
+        toast.success('Email verified! Account created successfully.');
+        if (redirect) {
+          router.push(redirect);
+        } else {
+          router.push('/');
+        }
+      } else {
+        toast.error(result.error || 'Signup failed after verification');
+      }
+    } catch (err) {
+      toast.error('Verification failed. Please try again.');
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -127,21 +214,68 @@ export default function SignupPage() {
               <img src="/logo.png" alt="ArachnidsArk" className="w-full h-auto object-contain" />
             </div>
           </Link>
-          <h1 className="vibe-heading text-2xl font-bold">Create Account</h1>
-          <p className="font-heading text-[10px] uppercase tracking-widest text-muted-foreground mt-1 tracking-[0.2em]">Join the ArachnidsArk community</p>
+          <h1 className="vibe-heading text-2xl font-bold">
+            {step === 1 ? 'Create Account' : 'Verify Email'}
+          </h1>
+          <p className="font-heading text-[10px] uppercase tracking-widest text-muted-foreground mt-1 tracking-[0.2em]">
+            {step === 1 ? 'Join the ArachnidsArk community' : `Code sent to ${pendingData?.email}`}
+          </p>
         </div>
 
         <Card className="vibe-card border-border bg-card/40 backdrop-blur-xl overflow-hidden">
           <CardContent className="p-8">
-            <FormBuilder
-              schema={signupSchema}
-              fields={fields}
-              onSubmit={onSubmit}
-              isSubmitting={isLoading}
-              submitAlignment="center"
-              submitLabel="Create Account"
-              className="space-y-6"
-            />
+            {step === 1 ? (
+              <FormBuilder
+                schema={signupSchema}
+                fields={fields}
+                onSubmit={onSendOTP}
+                isSubmitting={isVerifying || isLoading}
+                submitAlignment="center"
+                submitLabel="Send Verification Code"
+                className="space-y-6"
+              />
+            ) : (
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <Label className="text-center block text-muted-foreground">Enter 6-digit code</Label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={otpValue}
+                    onChange={(e) => setOtpValue(e.target.value.replace(/\D/g, ''))}
+                    placeholder="000000"
+                    className="w-full bg-background/50 border-2 border-border focus:border-brand-gold text-center text-3xl font-mono tracking-[10px] py-4 rounded-xl outline-none transition-all"
+                  />
+                </div>
+                
+                <Button 
+                  onClick={onVerifyAndSignup}
+                  disabled={otpValue.length !== 6 || isVerifying}
+                  className="w-full bg-brand-red hover:bg-brand-red-light text-white font-bold h-12"
+                >
+                  {isVerifying ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Verifying...</>
+                  ) : 'Verify & Create Account'}
+                </Button>
+
+                <div className="text-center">
+                  <button 
+                    onClick={() => countdown === 0 && pendingData && onSendOTP(pendingData)}
+                    disabled={countdown > 0}
+                    className={`text-xs ${countdown > 0 ? 'text-muted-foreground' : 'text-brand-gold hover:underline underline-offset-4'}`}
+                  >
+                    {countdown > 0 ? `Resend code in ${countdown}s` : 'Resend Code'}
+                  </button>
+                </div>
+
+                <button 
+                  onClick={() => setStep(1)}
+                  className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors mt-2"
+                >
+                  Change Email Address
+                </button>
+              </div>
+            )}
           </CardContent>
           <CardFooter className="px-8 pb-8 pt-0 flex justify-center">
             <p className="text-sm text-muted-foreground">
