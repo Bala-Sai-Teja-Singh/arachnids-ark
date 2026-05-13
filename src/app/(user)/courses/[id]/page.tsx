@@ -17,6 +17,7 @@ import { useCartStore } from '@/store/cart-store';
 import { useFavoriteStore } from '@/store/favorite-store';
 import { v4 as uuidv4 } from 'uuid';
 import Link from 'next/link';
+import { useModules } from '@/hooks/use-modules';
 import { Separator } from '@/components/ui/separator';
 import type { Course, CourseEnrollment, Order } from '@/types';
 import { toast } from 'sonner';
@@ -26,6 +27,7 @@ import { VideoPlayer } from '@/components/shared/video-player';
 export default function CourseDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { isVisible } = useModules();
   const { user, isAuthenticated } = useAuthStore();
   const { addNotification } = useNotificationStore();
   const { toggleLike, isLiked } = useFavoriteStore();
@@ -46,10 +48,14 @@ export default function CourseDetailPage() {
 
     if (user && c) {
       const orders = LocalStorage.getAll<Order>('orders');
-      const purchased = orders.some(
+      const enrollments = LocalStorage.getAll<CourseEnrollment>('enrollments');
+      
+      const isEnrolled = enrollments.some(e => e.userId === user.id && e.courseId === c.id && e.status === 'enrolled');
+      const hasPaidOrder = orders.some(
         (ord) => ord.userId === user.id && ord.items.some((item) => item.id === c.id && item.type === 'course') && ['payment_verified', 'order_shipped', 'order_completed'].includes(ord.status)
       );
-      setHasPurchased(purchased);
+      
+      setHasPurchased(isEnrolled || hasPaidOrder);
     }
   }, [params.id, user, loadReviews]);
 
@@ -59,7 +65,7 @@ export default function CourseDetailPage() {
     return (
       <div className="container mx-auto px-4 py-20 text-center">
         <h2 className="text-2xl font-bold mb-4">Course Not Found</h2>
-        <Link href="/courses"><Button>Back to Courses</Button></Link>
+        {isVisible('courses') && <Link href="/courses"><Button>Back to Courses</Button></Link>}
       </div>
     );
   }
@@ -67,9 +73,11 @@ export default function CourseDetailPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-        <Button variant="ghost" onClick={() => router.back()} className="mb-6 text-muted-foreground">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Courses
-        </Button>
+        {isVisible('courses') && (
+          <Button variant="ghost" onClick={() => router.back()} className="mb-6 text-muted-foreground">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Courses
+          </Button>
+        )}
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -115,7 +123,11 @@ export default function CourseDetailPage() {
             <h2 className="text-xl font-bold mb-4">Course Video</h2>
             {hasPurchased && course.videoUrl ? (
               <div className="rounded-xl overflow-hidden border border-border bg-black shadow-2xl">
-                <VideoPlayer src={course.videoUrl} title={course.title} />
+                <VideoPlayer 
+                  src={course.videoUrl} 
+                  title={course.title} 
+                  userIdentifier={user ? `${user.email} | ${user.phone || 'No Phone'}` : undefined}
+                />
               </div>
             ) : (
               <Card className="border-border bg-accent/5 overflow-hidden group">

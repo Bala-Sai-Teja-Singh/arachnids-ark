@@ -100,7 +100,7 @@ export default function CoursesPage() {
                     <p className="text-sm text-muted-foreground line-clamp-2">{course.contentPreview}</p>
                     <div className="flex items-center justify-between pt-3 border-t border-border">
                       <span className="text-xl font-bold text-brand-gold">{formatPrice(course.price)}</span>
-                      {user && enrollments.some(e => e.courseId === course.id && e.status === 'enrolled') ? (
+                      {user && enrollments.some(e => e.courseId === course.id && e.userId === user.id && e.status === 'enrolled') ? (
                         <span className="text-xs text-green-400 font-medium flex items-center gap-1">
                           <CheckCircle className="h-3 w-3" /> Enrolled
                         </span>

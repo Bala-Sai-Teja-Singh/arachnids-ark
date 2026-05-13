@@ -158,7 +158,10 @@ export default function MyOrdersPage() {
                                     )}
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-bold uppercase truncate">{item.name}</p>
+                                    <div className="flex items-center gap-2">
+                                      <p className="text-xs font-bold uppercase truncate">{item.name}</p>
+                                      {item.status && <StatusBadge status={item.status} className="scale-[0.6] origin-left shrink-0" />}
+                                    </div>
                                     <p className="text-[10px] text-muted-foreground">
                                       {item.type === 'product' ? (item.metadata?.size || 'N/A') : item.type} × {item.quantity}
                                     </p>

@@ -11,6 +11,7 @@ import { ADMIN_NAV_ITEMS } from '@/constants/navigation';
 import { Modal } from '@/components/shared/molecules/modal';
 import { useNotificationStore } from '@/store/notification-store';
 import { NotificationCenter } from '@/components/shared/notification-center';
+import { useModules } from '@/hooks/use-modules';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -20,25 +21,32 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const { unreadCount, loadNotifications } = useNotificationStore();
+  const { isVisible } = useModules();
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
     if (user) {
       loadNotifications(user.id);
     }
   }, [user, loadNotifications]);
 
+  // Only evaluate access once mounting and loading are complete
+  const [hasAccess, setHasAccess] = useState<boolean | null>(null);
+
   useEffect(() => {
     if (mounted && !isLoading) {
       if (!isAuthenticated) {
         router.replace('/login');
-      } else if (user?.role !== 'admin') {
-        router.replace('/dashboard');
+      } else {
+        setHasAccess(user?.role === 'admin');
       }
     }
-  }, [mounted, isAuthenticated, user, isLoading, router]);
+  }, [mounted, isLoading, isAuthenticated, user, router]);
 
-  if (!mounted || isLoading || !isAuthenticated || user?.role !== 'admin') {
+  if (!mounted || isLoading || (isAuthenticated && hasAccess === null)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-brand-red" />
@@ -46,10 +54,40 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
+  // Strict Role Check for Admin Routes
+  if (isAuthenticated && hasAccess === false) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 text-center">
+        <div className="h-20 w-20 rounded-full bg-red-500/10 flex items-center justify-center mb-6">
+          <LayoutDashboard className="h-10 w-10 text-red-500" />
+        </div>
+        <h1 className="text-2xl font-bold mb-2 italic uppercase tracking-tighter">Page Not Available</h1>
+        <p className="text-muted-foreground mb-8 max-w-md text-sm">
+          You do not have the required administrative permissions to access this area.
+          Access to these resources is strictly restricted.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <button
+            onClick={() => router.push('/shop')}
+            className="px-8 h-12 rounded-xl bg-brand-red text-white font-bold uppercase tracking-widest text-[10px] hover:bg-brand-red/90 transition-all shadow-lg shadow-brand-red/20"
+          >
+            Back to Shop
+          </button>
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="px-8 h-12 rounded-xl border border-border text-foreground font-bold uppercase tracking-widest text-[10px] hover:bg-muted transition-all"
+          >
+            Home
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const sidebarSections: SidebarSection[] = [
     {
       label: "Management",
-      items: ADMIN_NAV_ITEMS.map(item => ({
+      items: ADMIN_NAV_ITEMS.filter(item => isVisible(item.module)).map(item => ({
         ...item
       }))
     }
@@ -112,9 +150,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           showMobileMenu
           onMenuClick={() => setIsMobileOpen(true)}
           user={{
-            name: user.name,
-            email: user.email,
-            image: user.avatar
+            name: user?.name || "",
+            email: user?.email || "",
+            image: user?.avatar || ""
           }}
           onLogout={handleLogout}
           onNotificationClick={() => setShowNotifications(true)}
@@ -122,7 +160,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         />
         <NotificationCenter open={showNotifications} onOpenChange={setShowNotifications} />
 
-        <main className="flex-1 md:overflow-y-auto p-4 md:p-8 custom-scrollbar">
+        <main className="flex-1 md:overflow-y-auto p-4 md:p-8 py-4 custom-scrollbar">
           <div className="max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
             {children}
           </div>

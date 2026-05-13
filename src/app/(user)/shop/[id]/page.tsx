@@ -20,6 +20,7 @@ import { formatPrice } from '@/constants/pricing';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 import Link from 'next/link';
+import { useModules } from '@/hooks/use-modules';
 import { useReviewStore } from '@/store/review-store';
 import { useCartStore } from '@/store/cart-store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -41,6 +42,7 @@ const temperamentColors: Record<string, string> = {
 export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { isVisible } = useModules();
   const { user, isAuthenticated } = useAuthStore();
   const { addNotification } = useNotificationStore();
   const [product, setProduct] = useState<Product | null>(null);
@@ -191,7 +193,7 @@ export default function ProductDetailPage() {
     return (
       <div className="container mx-auto px-4 py-20 text-center">
         <h2 className="text-2xl font-bold mb-4">Product Not Found</h2>
-        <Link href="/shop"><Button>Back to Shop</Button></Link>
+        {isVisible('products') && <Link href="/shop"><Button>Back to Shop</Button></Link>}
       </div>
     );
   }
@@ -200,9 +202,11 @@ export default function ProductDetailPage() {
     <div className="container mx-auto px-4 py-8">
       {/* Back button */}
       <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-        <Button variant="ghost" onClick={() => router.back()} className="mb-6 text-muted-foreground">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Shop
-        </Button>
+        {isVisible('products') && (
+          <Button variant="ghost" onClick={() => router.back()} className="mb-6 text-muted-foreground">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Shop
+          </Button>
+        )}
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

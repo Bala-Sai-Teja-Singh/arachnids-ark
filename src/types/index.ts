@@ -142,6 +142,7 @@ export interface OrderItem {
   quantity: number;
   price: number;
   type: 'product' | 'course' | 'consultation';
+  status?: OrderStatus;
   metadata?: {
     size?: string;
     urgency?: string;
@@ -171,6 +172,11 @@ export interface SystemSettings {
   storeStatus: {
     maintenanceMode: boolean;
     acceptingConsultations: boolean;
+  };
+  modules: {
+    showCourses: boolean;
+    showProducts: boolean;
+    showConsultations: boolean;
   };
   shippingSettings: {
     rules: ShippingRule[];

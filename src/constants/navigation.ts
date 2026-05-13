@@ -5,41 +5,41 @@ import {
 
 export const USER_NAV_ITEMS = [
   { label: 'Home', href: '/', icon: Home },
-  { label: 'Shop', href: '/shop', icon: ShoppingBag },
-  { label: 'Courses', href: '/courses', icon: GraduationCap },
-  { label: 'Consultation', href: '/consultation', icon: Calendar },
+  { label: 'Shop', href: '/shop', icon: ShoppingBag, module: 'products' },
+  { label: 'Courses', href: '/courses', icon: GraduationCap, module: 'courses' },
+  { label: 'Consultation', href: '/consultation', icon: Calendar, module: 'consultations' },
   { label: 'Care Guides', href: '/care-guides', icon: BookOpen },
 ];
 
 export const MOBILE_NAV_ITEMS = [
   { label: 'Home', href: '/', icon: Home },
-  { label: 'Shop', href: '/shop', icon: ShoppingBag },
-  { label: 'Courses', href: '/courses', icon: GraduationCap },
-  { label: 'Consult', href: '/consultation', icon: Calendar },
-  { label: 'My Orders', href: '/dashboard/orders', icon: ClipboardList },
+  { label: 'Shop', href: '/shop', icon: ShoppingBag, module: 'products' },
+  { label: 'Courses', href: '/courses', icon: GraduationCap, module: 'courses' },
+  { label: 'Consult', href: '/consultation', icon: Calendar, module: 'consultations' },
+  { label: 'My Orders', href: '/dashboard/orders', icon: ClipboardList, module: 'products' },
 ];
 
 export const ADMIN_NAV_ITEMS = [
   { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-  { label: 'Products', href: '/admin/products', icon: Package },
-  { label: 'Reviews', href: '/admin/reviews', icon: MessageSquare },
-  { label: 'Courses', href: '/admin/courses', icon: GraduationCap },
-  { label: 'Orders', href: '/admin/orders', icon: ClipboardList },
-  { label: 'Enrollments', href: '/admin/enrollments', icon: BookOpen },
-  { label: 'Bookings', href: '/admin/bookings', icon: Calendar },
+  { label: 'Products', href: '/admin/products', icon: Package, module: 'products' },
+  { label: 'Reviews', href: '/admin/reviews', icon: MessageSquare, module: 'products' },
+  { label: 'Courses', href: '/admin/courses', icon: GraduationCap, module: 'courses' },
+  { label: 'Orders', href: '/admin/orders', icon: ClipboardList, module: 'products' },
+  { label: 'Enrollments', href: '/admin/enrollments', icon: BookOpen, module: 'courses' },
+  { label: 'Bookings', href: '/admin/bookings', icon: Calendar, module: 'consultations' },
   { label: 'Revenue', href: '/admin/revenue', icon: DollarSign },
   { label: 'Care Guides', href: '/admin/care-guides', icon: BookOpen },
   { label: 'Users', href: '/admin/users', icon: Users },
-  { label: 'Consultation Settings', href: '/admin/consultations', icon: Calendar },
+  { label: 'Consultation Settings', href: '/admin/consultations', icon: Calendar, module: 'consultations' },
   { label: 'Settings', href: '/admin/settings', icon: Settings },
 ];
 
 export const DASHBOARD_NAV_ITEMS = [
-  { label: 'My Orders', href: '/dashboard/orders', icon: ClipboardList },
-  { label: 'My Courses', href: '/dashboard/courses', icon: GraduationCap },
-  { label: 'My Consultations', href: '/dashboard/consultations', icon: Calendar },
+  { label: 'My Orders', href: '/dashboard/orders', icon: ClipboardList, module: 'products' },
+  { label: 'My Courses', href: '/dashboard/courses', icon: GraduationCap, module: 'courses' },
+  { label: 'My Consultations', href: '/dashboard/consultations', icon: Calendar, module: 'consultations' },
 
-  { label: 'Favorites', href: '/liked', icon: Heart },
+  { label: 'Favorites', href: '/liked', icon: Heart, module: 'products' },
 
   { label: 'Profile', href: '/dashboard/profile', icon: Settings },
 ];

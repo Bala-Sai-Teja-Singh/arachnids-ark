@@ -18,6 +18,7 @@ import { EmptyState } from '@/components/shared/molecules/empty-state';
 import { useAuthStore } from '@/store/auth-store';
 import { useRouter } from 'next/navigation';
 import { useFavoriteStore } from '@/store/favorite-store';
+import { useModules } from '@/hooks/use-modules';
 
 const careLevelColors: Record<string, string> = {
   beginner: 'bg-green-500 text-black hover:bg-green-400',
@@ -33,10 +34,11 @@ export default function FavoritesPage() {
   const [loading, setLoading] = useState(true);
   const [quickSelectProduct, setQuickSelectProduct] = useState<Product | null>(null);
   const [selectedQuickSize, setSelectedQuickSize] = useState<number>(0);
-  
+
   const addItem = useCartStore((state) => state.addItem);
   const { isAuthenticated, user } = useAuthStore();
   const { likedIds, toggleLike } = useFavoriteStore();
+  const { isVisible } = useModules();
   const router = useRouter();
 
   useEffect(() => {
@@ -73,7 +75,7 @@ export default function FavoritesPage() {
   const handleAddToCart = (e: React.MouseEvent, product: Product) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (product.sizes && product.sizes.length > 0) {
       if (product.sizes.length === 1) {
         const size = product.sizes[0];
@@ -112,13 +114,7 @@ export default function FavoritesPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-12 min-h-screen">
-      <div className="mb-6">
-        <Link href="/shop" className="text-xs text-muted-foreground hover:text-brand-gold flex items-center gap-2 transition-colors">
-          <ArrowLeft className="h-3 w-3" /> Back to Shop
-        </Link>
-      </div>
-
+    <div className="container mx-auto min-h-screen">
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -126,27 +122,31 @@ export default function FavoritesPage() {
           ))}
         </div>
       ) : totalFavorites === 0 ? (
-        <EmptyState 
-          title="No favorites yet" 
+        <EmptyState
+          title="No favorites yet"
           description="Start browsing the shop and courses to save items you love!"
           action={
             <div className="flex gap-4">
-              <Link href="/shop">
-                <Button className="bg-brand-red hover:bg-brand-red/90 text-white font-bold px-8">
-                  Browse Shop
-                </Button>
-              </Link>
-              <Link href="/courses">
-                <Button variant="outline" className="border-border px-8">
-                  View Courses
-                </Button>
-              </Link>
+              {isVisible('products') && (
+                <Link href="/shop">
+                  <Button className="bg-brand-red hover:bg-brand-red/90 text-white font-bold px-8">
+                    Browse Shop
+                  </Button>
+                </Link>
+              )}
+              {isVisible('courses') && (
+                <Link href="/courses">
+                  <Button variant="outline" className="border-border px-8">
+                    View Courses
+                  </Button>
+                </Link>
+              )}
             </div>
           }
         />
       ) : (
         <div className="space-y-12">
-          {likedProducts.length > 0 && (
+          {likedProducts.length > 0 && isVisible('products') && (
             <section>
               <h2 className="text-xl font-bold mb-6 flex items-center gap-2 uppercase tracking-widest text-brand-gold">
                 <Bug className="h-5 w-5" /> Favorite Species
@@ -172,7 +172,7 @@ export default function FavoritesPage() {
                             <Bug className="h-16 w-16 text-muted-foreground/20" />
                           </div>
                         )}
-                        
+
                         <Badge className={`absolute top-3 right-3 z-10 border border-white/20 shadow-xl capitalize px-3 py-1 text-[10px] font-bold ${careLevelColors[product.careLevel]}`}>
                           {product.careLevel}
                         </Badge>
@@ -292,8 +292,8 @@ export default function FavoritesPage() {
       )}
 
       {/* Quick Select Modal */}
-      <Modal 
-        isOpen={!!quickSelectProduct} 
+      <Modal
+        isOpen={!!quickSelectProduct}
         onClose={() => setQuickSelectProduct(null)}
         variant="small"
         title="Select Size"
@@ -319,11 +319,10 @@ export default function FavoritesPage() {
                 <button
                   key={idx}
                   onClick={() => setSelectedQuickSize(idx)}
-                  className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
-                    selectedQuickSize === idx 
-                      ? 'border-brand-gold bg-brand-gold/10 ring-1 ring-brand-gold' 
-                      : 'border-border bg-card/40 hover:bg-card/60'
-                  }`}
+                  className={`flex items-center justify-between p-3 rounded-xl border transition-all ${selectedQuickSize === idx
+                    ? 'border-brand-gold bg-brand-gold/10 ring-1 ring-brand-gold'
+                    : 'border-border bg-card/40 hover:bg-card/60'
+                    }`}
                 >
                   <span className="font-medium text-sm">{size.size}</span>
                   <span className="font-bold text-brand-gold">{formatPrice(size.price)}</span>

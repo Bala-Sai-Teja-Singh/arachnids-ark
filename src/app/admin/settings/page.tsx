@@ -52,6 +52,11 @@ export default function AdminSettingsPage() {
           maintenanceMode: false,
           acceptingConsultations: true,
         },
+        modules: {
+          showCourses: true,
+          showProducts: true,
+          showConsultations: true,
+        },
         shippingSettings: defaultShipping,
       };
       setSettings(defaultSettings);
@@ -399,6 +404,54 @@ export default function AdminSettingsPage() {
                   onCheckedChange={(checked) => setSettings({
                     ...settings,
                     storeStatus: { ...settings.storeStatus, acceptingConsultations: checked }
+                  })}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border bg-card">
+            <CardHeader>
+              <CardTitle>Module Visibility</CardTitle>
+              <CardDescription>Enable or disable entire modules on the platform.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Products & Shop</Label>
+                  <p className="text-sm text-muted-foreground">Show shop and product collection.</p>
+                </div>
+                <Switch 
+                  checked={settings.modules?.showProducts ?? true} 
+                  onCheckedChange={(checked) => setSettings({
+                    ...settings,
+                    modules: { ...(settings.modules || { showCourses: true, showProducts: true, showConsultations: true }), showProducts: checked }
+                  })}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Courses</Label>
+                  <p className="text-sm text-muted-foreground">Show expert courses module.</p>
+                </div>
+                <Switch 
+                  checked={settings.modules?.showCourses ?? true} 
+                  onCheckedChange={(checked) => setSettings({
+                    ...settings,
+                    modules: { ...(settings.modules || { showCourses: true, showProducts: true, showConsultations: true }), showCourses: checked }
+                  })}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Consultations</Label>
+                  <p className="text-sm text-muted-foreground">Show booking and consultation system.</p>
+                </div>
+                <Switch 
+                  checked={settings.modules?.showConsultations ?? true} 
+                  onCheckedChange={(checked) => setSettings({
+                    ...settings,
+                    modules: { ...(settings.modules || { showCourses: true, showProducts: true, showConsultations: true }), showConsultations: checked }
                   })}
                 />
               </div>

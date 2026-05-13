@@ -19,6 +19,7 @@ import { useAuthStore } from '@/store/auth-store';
 import { useNotificationStore } from '@/store/notification-store';
 import { NotificationCenter } from '../shared/notification-center';
 import { CartDrawer } from '../shared/cart-drawer';
+import { useModules } from '@/hooks/use-modules';
 
 export function Navbar({ 
   isSidebarCollapsed = false,
@@ -34,6 +35,7 @@ export function Navbar({
   const { unreadCount, loadNotifications } = useNotificationStore();
   const [showNotifications, setShowNotifications] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const { isVisible } = useModules();
 
   useEffect(() => {
     setMounted(true);
@@ -83,7 +85,7 @@ export function Navbar({
           {/* Desktop Navigation for Guests */}
           {!isAuthenticated && !isLoading && (
             <nav className="hidden md:flex items-center gap-1">
-              {USER_NAV_ITEMS.map((item) => {
+              {USER_NAV_ITEMS.filter(item => isVisible(item.module)).map((item) => {
                 const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
                 return (
                   <Link
@@ -219,7 +221,7 @@ export function Navbar({
                     <span className="text-xs font-heading uppercase tracking-widest text-muted-foreground">Appearance</span>
                     <ThemeToggle />
                   </div>
-                  {USER_NAV_ITEMS.map((item) => (
+                  {USER_NAV_ITEMS.filter(item => isVisible(item.module)).map((item) => (
                     <Link
                       key={item.href}
                       href={item.href}

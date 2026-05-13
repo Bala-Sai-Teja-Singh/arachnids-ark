@@ -13,7 +13,7 @@ import { EmptyState } from '@/components/shared/molecules/empty-state';
 import { SectionHeader } from '@/components/shared/molecules/section-header';
 import { useAuthStore } from '@/store/auth-store';
 import { LocalStorage } from '@/mock-db/storage';
-import type { CourseEnrollment, SystemSettings } from '@/types';
+import type { CourseEnrollment, Order, OrderStatus, SystemSettings } from '@/types';
 import { formatPrice } from '@/constants/pricing';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -30,6 +30,43 @@ export default function MyCoursesPage() {
 
   useEffect(() => {
     if (!user) return;
+
+    // --- SELF-HEALING SYNC LOGIC ---
+    // Check for paid orders that might have missed the enrollment trigger
+    const orders = LocalStorage.getAll<Order>('orders');
+    const existingEnrollments = LocalStorage.getAll<CourseEnrollment>('enrollments');
+    const paidStatuses: OrderStatus[] = ['payment_verified', 'order_shipped', 'order_completed'];
+
+    let syncNeeded = false;
+    orders.filter(o => o.userId === user.id && paidStatuses.includes(o.status)).forEach(order => {
+      order.items.forEach(item => {
+        if (item.type === 'course') {
+          const alreadyEnrolled = existingEnrollments.some(e => e.userId === user.id && e.courseId === item.id);
+          if (!alreadyEnrolled) {
+            LocalStorage.create<CourseEnrollment>('enrollments', {
+              id: `enr-${Date.now()}-${item.id}`,
+              userId: user.id,
+              userName: user.name,
+              userEmail: user.email,
+              courseId: item.id,
+              courseTitle: item.name,
+              status: 'enrolled',
+              totalPrice: item.price,
+              orderId: order.id,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            } as CourseEnrollment);
+            syncNeeded = true;
+          }
+        }
+      });
+    });
+
+    if (syncNeeded) {
+      toast.success('Course list synchronized!');
+    }
+    // --- END SYNC LOGIC ---
+
     const data = LocalStorage.getAll<CourseEnrollment>('enrollments')
       .filter(e => e.userId === user.id)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());

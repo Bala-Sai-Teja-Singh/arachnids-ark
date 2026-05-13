@@ -4,14 +4,16 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { MOBILE_NAV_ITEMS } from '@/constants/navigation';
+import { useModules } from '@/hooks/use-modules';
 
 export function MobileNav() {
   const pathname = usePathname();
+  const { isVisible } = useModules();
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border">
       <div className="flex items-center justify-around h-16 px-2">
-        {MOBILE_NAV_ITEMS.map((item) => {
+        {MOBILE_NAV_ITEMS.filter(item => isVisible(item.module)).map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
           return (

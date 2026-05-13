@@ -2,10 +2,13 @@ import { useTheme } from 'next-themes';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Mail, MapPin, Phone, Link as LinkIcon, Globe, MessageCircle } from 'lucide-react';
+import { useModules } from '@/hooks/use-modules';
 
 export function Footer() {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+
+  const { isVisible } = useModules();
 
   useEffect(() => {
     setMounted(true);
@@ -43,12 +46,12 @@ export function Footer() {
             <h4 className="font-semibold mb-4 text-brand-gold text-sm uppercase tracking-wider">Quick Links</h4>
             <ul className="space-y-2.5">
               {[
-                { label: 'Shop Exotics', href: '/shop' },
+                { label: 'Shop Exotics', href: '/shop', module: 'products' },
                 { label: 'About Us', href: '/#about' },
                 { label: 'Care Guides', href: '/care-guides' },
-                { label: 'Courses', href: '/courses' },
-                { label: 'Consultation', href: '/consultation' },
-              ].map(link => (
+                { label: 'Courses', href: '/courses', module: 'courses' },
+                { label: 'Consultation', href: '/consultation', module: 'consultations' },
+              ].filter(link => isVisible(link.module)).map(link => (
                 <li key={link.href}>
                   <Link href={link.href} className="text-sm text-muted-foreground hover:text-brand-gold transition-colors">
                     {link.label}

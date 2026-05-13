@@ -201,7 +201,7 @@ const COURSES: Course[] = [
     price: 999,
     thumbnail: '/images/curlyHair.webp',
     contentPreview: 'This comprehensive course covers everything from choosing your first species to creating the perfect habitat.',
-    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ', // Placeholder
+    videoUrl: 'https://youtu.be/7wnove7K-ZQ?si=gPLVPawhqNNSpU30',
     difficulty: 'beginner',
     duration: '4 hours',
     featured: true,
@@ -216,7 +216,7 @@ const COURSES: Course[] = [
     price: 1999,
     thumbnail: '/images/brazilianBlack-1.webp',
     contentPreview: 'Take your tarantula keeping to the next level with professional-grade husbandry techniques.',
-    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ', // Placeholder
+    videoUrl: 'https://youtu.be/7wnove7K-ZQ?si=gPLVPawhqNNSpU30',
     difficulty: 'advanced',
     duration: '8 hours',
     featured: true,
@@ -320,6 +320,11 @@ export function seedDatabase(): void {
     storeStatus: {
       maintenanceMode: false,
       acceptingConsultations: true,
+    },
+    modules: {
+      showCourses: true,
+      showProducts: true,
+      showConsultations: true,
     },
     shippingSettings: {
       rules: [

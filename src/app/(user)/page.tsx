@@ -15,6 +15,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/auth-store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useModules } from '@/hooks/use-modules';
 
 const fadeIn = {
   hidden: { opacity: 0, y: 30 },
@@ -30,6 +31,7 @@ const stagger = {
 
 // ========== HERO SECTION ==========
 function HeroSection() {
+  const { isVisible } = useModules();
   return (
     <section className="relative min-h-[90vh] flex items-center overflow-hidden bg-web-pattern">
       {/* Background */}
@@ -69,17 +71,21 @@ function HeroSection() {
             </motion.p>
 
             <motion.div variants={fadeIn} custom={3} className="flex flex-wrap gap-4">
-              <Link href="/shop">
-                <Button size="lg" className="vibe-button bg-brand-red hover:bg-brand-red-light text-white group px-8 py-7">
-                  Explore Collection
-                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </Link>
-              <Link href="/courses">
-                <Button size="lg" variant="outline" className="vibe-button border-brand-gold/30 text-brand-gold hover:bg-brand-gold/10 px-8 py-7">
-                  Browse Courses
-                </Button>
-              </Link>
+              {isVisible('products') && (
+                <Link href="/shop">
+                  <Button size="lg" className="vibe-button bg-brand-red hover:bg-brand-red-light text-white group px-8 py-7">
+                    Explore Collection
+                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </Button>
+                </Link>
+              )}
+              {isVisible('courses') && (
+                <Link href="/courses">
+                  <Button size="lg" variant="outline" className="vibe-button border-brand-gold/30 text-brand-gold hover:bg-brand-gold/10 px-8 py-7">
+                    Browse Courses
+                  </Button>
+                </Link>
+              )}
             </motion.div>
 
             {/* Stats */}
@@ -152,6 +158,7 @@ function FeaturedTarantulas() {
   const [likedIds, setLikedIds] = useState<string[]>([]);
   const { isAuthenticated } = useAuthStore();
   const router = useRouter();
+  const { isVisible } = useModules();
 
   useEffect(() => {
     const all = LocalStorage.getAll<Product>('products');
@@ -219,6 +226,7 @@ function FeaturedTarantulas() {
   return (
     <section className="py-12 md:py-20 relative">
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-brand-red/[0.02] to-transparent" />
+      {!isVisible('products') ? null : (
       <div className="container mx-auto px-4 relative">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -372,6 +380,7 @@ function FeaturedTarantulas() {
           </Link>
         </div>
       </div>
+      )}
     </section>
   );
 }
@@ -379,6 +388,7 @@ function FeaturedTarantulas() {
 // ========== FEATURED COURSES ==========
 function FeaturedCourses() {
   const [courses, setCourses] = useState<Course[]>([]);
+  const { isVisible } = useModules();
 
   useEffect(() => {
     const all = LocalStorage.getAll<Course>('courses');
@@ -387,6 +397,7 @@ function FeaturedCourses() {
 
   return (
     <section className="py-12 md:py-20 bg-card/30">
+      {!isVisible('courses') ? null : (
       <div className="container mx-auto px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -457,6 +468,7 @@ function FeaturedCourses() {
           </Link>
         </div>
       </div>
+      )}
     </section>
   );
 }
@@ -517,8 +529,11 @@ function CareGuidesPreview() {
 
 // ========== CONSULTATION CTA ==========
 function ConsultationCTA() {
+  const { isVisible } = useModules();
   return (
     <section className="py-12 md:py-20 relative overflow-hidden">
+      {!isVisible('consultations') ? null : (
+      <>
       <div className="absolute inset-0 bg-gradient-to-r from-brand-red/10 via-background to-brand-gold/10" />
       <div className="absolute inset-0" style={{
         backgroundImage: 'radial-gradient(circle at 30% 50%, rgba(139, 26, 26, 0.1) 0%, transparent 50%)',
@@ -560,6 +575,8 @@ function ConsultationCTA() {
           </Link>
         </motion.div>
       </div>
+      </>
+      )}
     </section>
   );
 }

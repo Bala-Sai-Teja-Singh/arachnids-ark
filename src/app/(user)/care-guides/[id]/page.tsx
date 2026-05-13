@@ -9,11 +9,13 @@ import { LocalStorage } from '@/mock-db/storage';
 import type { CareGuide } from '@/types';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useModules } from '@/hooks/use-modules';
 
 export default function CareGuideDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [guide, setGuide] = useState<CareGuide | null>(null);
   const router = useRouter();
+  const { isVisible } = useModules();
 
   useEffect(() => {
     const allGuides = LocalStorage.getAll<CareGuide>('care_guides');
@@ -91,20 +93,26 @@ export default function CareGuideDetailPage({ params }: { params: Promise<{ id: 
           </div>
         </div>
 
-        <div className="mt-20 p-8 rounded-2xl bg-gradient-to-br from-brand-red/10 to-brand-gold/5 border border-brand-red/20 text-center space-y-4">
-          <h3 className="text-2xl font-bold">Want to learn more?</h3>
-          <p className="text-muted-foreground max-w-xl mx-auto">
-            Our expert consultation services can help you with specific questions about your tarantula's health, housing, or behavior.
-          </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
-            <Button render={<Link href="/consultation" />} className="bg-brand-red hover:bg-brand-red-light text-white px-8">
-              Book a Consultation
-            </Button>
-            <Button variant="outline" render={<Link href="/courses" />} className="border-border hover:bg-accent">
-              Explore Courses
-            </Button>
+        {(isVisible('consultations') || isVisible('courses')) && (
+          <div className="mt-20 p-8 rounded-2xl bg-gradient-to-br from-brand-red/10 to-brand-gold/5 border border-brand-red/20 text-center space-y-4">
+            <h3 className="text-2xl font-bold">Want to learn more?</h3>
+            <p className="text-muted-foreground max-w-xl mx-auto">
+              Our expert consultation services can help you with specific questions about your tarantula's health, housing, or behavior.
+            </p>
+            <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
+              {isVisible('consultations') && (
+                <Button render={<Link href="/consultation" />} className="bg-brand-red hover:bg-brand-red-light text-white px-8">
+                  Book a Consultation
+                </Button>
+              )}
+              {isVisible('courses') && (
+                <Button variant="outline" render={<Link href="/courses" />} className="border-border hover:bg-accent">
+                  Explore Courses
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </motion.div>
     </div>
   );

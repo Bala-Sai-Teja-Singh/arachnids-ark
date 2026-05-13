@@ -116,6 +116,8 @@ export default function CheckoutPage() {
       return;
     }
 
+    const hasPhysicalProducts = items.some(item => item.type === 'product');
+
     const newErrors: Record<string, string> = {};
     if (!deliveryName.trim()) newErrors.name = 'Full name is required';
     if (!deliveryPhone.trim()) {
@@ -126,7 +128,9 @@ export default function CheckoutPage() {
         newErrors.phone = 'Mobile number must be at least 10 digits';
       }
     }
-    if (!deliveryAddress.trim()) newErrors.address = 'Delivery address is required';
+    if (hasPhysicalProducts && !deliveryAddress.trim()) {
+      newErrors.address = 'Delivery address is required';
+    }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -275,7 +279,7 @@ export default function CheckoutPage() {
                 <CardHeader className="bg-accent/10 border-b border-border">
                   <CardTitle className="text-lg flex items-center gap-2">
                     <UserIcon className="h-5 w-5 text-brand-gold" />
-                    Delivery Information
+                    {items.some(item => item.type === 'product') ? 'Delivery Information' : 'Contact Information'}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6 space-y-6">
@@ -301,20 +305,22 @@ export default function CheckoutPage() {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="address" className="text-sm font-medium">Shipping Address *</Label>
-                    <div className="relative">
-                      <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Textarea
-                        id="address"
-                        value={deliveryAddress}
-                        onChange={(e) => setDeliveryAddress(e.target.value)}
-                        placeholder="Street address, City, State, ZIP code"
-                        className={`pl-10 min-h-[100px] ${errors.address ? 'border-red-500' : 'bg-background/50'}`}
-                      />
+                  {items.some(item => item.type === 'product') && (
+                    <div className="space-y-2">
+                      <Label htmlFor="address" className="text-sm font-medium">Shipping Address *</Label>
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Textarea
+                          id="address"
+                          value={deliveryAddress}
+                          onChange={(e) => setDeliveryAddress(e.target.value)}
+                          placeholder="Street address, City, State, ZIP code"
+                          className={`pl-10 min-h-[100px] ${errors.address ? 'border-red-500' : 'bg-background/50'}`}
+                        />
+                      </div>
+                      {errors.address && <p className="text-xs text-red-500">{errors.address}</p>}
                     </div>
-                    {errors.address && <p className="text-xs text-red-500">{errors.address}</p>}
-                  </div>
+                  )}
 
                   <div className="space-y-2">
                     <Label htmlFor="message" className="text-sm font-medium">Order Note (Optional)</Label>

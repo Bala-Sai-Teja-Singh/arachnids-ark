@@ -19,8 +19,16 @@ import {
   XCircle,
   Undo2,
   Search,
-  User as UserIcon
+  User as UserIcon,
+  Plus,
+  Trash2,
+  Edit2,
+  Settings2,
+  Mail,
+  RefreshCcw
 } from 'lucide-react';
+import { Select as SharedSelect } from '@/components/shared/atoms/select';
+import { Product, Course, ConsultationSettings, OrderItem } from '@/types';
 import { Button } from '@/components/ui/button';
 import { TableMolecule } from '@/components/shared/molecules/table';
 import { StatusBadge } from '@/components/shared/molecules/status-badge';
@@ -50,14 +58,25 @@ export default function AdminOrdersPage() {
   const [pendingStatusUpdate, setPendingStatusUpdate] = useState<{ id: string, status: OrderStatus, userId: string } | null>(null);
   const [isResendModalOpen, setIsResendModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isEditingItems, setIsEditingItems] = useState(false);
+  const [editingOrderItems, setEditingOrderItems] = useState<OrderItem[]>([]);
+  const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
+  const [itemSearchQuery, setItemSearchQuery] = useState('');
+  const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
+  const [editingShippingCharge, setEditingShippingCharge] = useState<number>(0);
+  const [updateSummary, setUpdateSummary] = useState('');
   const { addNotification } = useNotificationStore();
   const searchParams = useSearchParams();
 
   useEffect(() => {
     setIsLoading(true);
     const allOrders = LocalStorage.getAll<Order>('orders').sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOrders(allOrders);
-    setTimeout(() => setIsLoading(false), 300);
+    setTimeout(() => {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsLoading(false);
+    }, 300);
 
     // Auto-select if ID is in search params
     const orderId = searchParams.get('id');
@@ -73,7 +92,9 @@ export default function AdminOrdersPage() {
 
   useEffect(() => {
     if (selectedOrder) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTrackingId(selectedOrder.trackingId || '');
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCourierPartner(selectedOrder.courierPartner || '');
     }
   }, [selectedOrder]);
@@ -125,7 +146,8 @@ export default function AdminOrdersPage() {
     const order = updatedOrders.find(o => o.id === id);
 
     // AUTOMATIC ENROLLMENT & BOOKING
-    if (order && status === 'payment_verified') {
+    const paidStatuses: OrderStatus[] = ['payment_verified', 'order_shipped', 'order_completed'];
+    if (order && paidStatuses.includes(status)) {
       const newlyUnlockedCourses: string[] = [];
 
       order.items.forEach(item => {
@@ -202,8 +224,8 @@ export default function AdminOrdersPage() {
             courses: newlyUnlockedCourses,
           })
         })
-        .then(() => toast.success(`Unlocked ${newlyUnlockedCourses.length} course(s) and sent notification`))
-        .catch(console.error);
+          .then(() => toast.success(`Unlocked ${newlyUnlockedCourses.length} course(s) and sent notification`))
+          .catch(console.error);
       }
     }
 
@@ -213,6 +235,8 @@ export default function AdminOrdersPage() {
         sendEmailNotification(order, 'payment-verified');
       } else if (status === 'order_shipped') {
         sendEmailNotification(order, 'order-shipped');
+      } else if (status === 'awaiting_payment') {
+        resendPaymentEmail(order);
       }
     }
 
@@ -383,6 +407,95 @@ export default function AdminOrdersPage() {
     toast.success('Order marked as Dispatched & email sent');
   };
 
+  const startEditingItems = () => {
+    if (!selectedOrder) return;
+    setEditingOrderItems([...selectedOrder.items]);
+    setEditingShippingCharge(selectedOrder.shippingCharge || 0);
+    setIsEditingItems(true);
+  };
+
+  const updateItem = (index: number, updates: Partial<OrderItem>) => {
+    const newItems = [...editingOrderItems];
+    newItems[index] = { ...newItems[index], ...updates };
+    setEditingOrderItems(newItems);
+  };
+
+  const removeItem = (index: number) => {
+    const newItems = editingOrderItems.filter((_, i) => i !== index);
+    setEditingOrderItems(newItems);
+  };
+
+  const addNewItem = (item: any, type: 'product' | 'course' | 'consultation') => {
+    const newItem: OrderItem = {
+      id: item.id,
+      name: item.name || item.title,
+      price: item.price || (item.sizes?.[0]?.price) || 0,
+      quantity: 1,
+      type: type,
+      status: 'pending',
+      image: item.images?.[0] || item.thumbnail || '',
+      metadata: type === 'product' ? { size: item.sizes?.[0]?.size } : {}
+    };
+    setEditingOrderItems([...editingOrderItems, newItem]);
+    setIsAddItemModalOpen(false);
+    toast.success(`Added ${newItem.name}`);
+  };
+
+  const saveItemChanges = async () => {
+    if (!selectedOrder) return;
+    setIsUpdatingOrder(true);
+
+    const newItems = editingOrderItems;
+    const newShipping = editingShippingCharge;
+    const newTotalPrice = newItems.reduce((acc, item) => acc + (item.price * item.quantity), 0) + newShipping;
+
+    const updatedOrder = {
+      ...selectedOrder,
+      items: newItems,
+      shippingCharge: newShipping,
+      totalPrice: newTotalPrice,
+      updatedAt: new Date().toISOString()
+    };
+
+    try {
+      LocalStorage.update<Order>('orders', selectedOrder.id, updatedOrder);
+
+      // Only send update email if order is past 'pending' state
+      if (selectedOrder.status !== 'pending') {
+        await fetch('/api/emails/order-updated', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            order: updatedOrder,
+            changeSummary: updateSummary,
+            adminEmail: LocalStorage.getAll<User>('users').find(u => u.role === 'admin')?.email || 'harrysweettt@gmail.com'
+          })
+        });
+        toast.success('Order updated and customer notified');
+      } else {
+        toast.success('Order updated (No email sent for pending orders)');
+      }
+
+      setOrders(prev => prev.map(o => o.id === selectedOrder.id ? updatedOrder : o));
+      setSelectedOrder(updatedOrder);
+      setIsEditingItems(false);
+      setUpdateSummary(''); // Reset update summary
+
+      addNotification({
+        userId: selectedOrder.userId,
+        title: 'Order Updated',
+        message: `Your order #${selectedOrder.id.split('-')[0]} has been updated with changes to items/statuses.`,
+        type: 'info',
+        link: `/dashboard/orders?id=${selectedOrder.id}`,
+      });
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to update order');
+    } finally {
+      setIsUpdatingOrder(false);
+    }
+  };
+
   if (isLoading) {
     return <Loading text="Fetching orders..." />;
   }
@@ -487,193 +600,322 @@ export default function AdminOrdersPage() {
       />
 
       {/* Detail Modal */}
-      <Modal 
-        isOpen={!!selectedOrder} 
+      <Modal
+        isOpen={!!selectedOrder}
         onClose={() => setSelectedOrder(null)}
         variant="extra-large"
         size="extra-large"
         className="sm:max-w-[95vw] sm:max-h-[95vh]"
         noPadding
       >
-        {selectedOrder && (
+        {selectedOrder ? (
           <div className="flex flex-col h-full">
             <div className="p-4 sm:p-6 border-b border-border bg-muted/30">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:pr-12">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-brand-red/10 flex items-center justify-center shrink-0">
-                      <ShoppingBag className="h-5 w-5 text-brand-red" />
-                    </div>
-                    <div>
-                      <h3 className="text-base sm:text-lg font-bold">Order Details</h3>
-                      <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">
-                        #{selectedOrder.id.split('-')[0]} • {new Date(selectedOrder.createdAt).toLocaleString()}
-                      </p>
-                    </div>
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-brand-red/10 flex items-center justify-center shrink-0">
+                    <ShoppingBag className="h-5 w-5 text-brand-red" />
                   </div>
-                  {selectedOrder.status !== 'order_completed' && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleResendEmail(selectedOrder!)}
-                      className="h-8 px-3 text-[9px] uppercase font-bold tracking-widest border-brand-gold/30 text-brand-gold hover:bg-brand-gold/10 gap-2 shadow-sm w-fit"
-                    >
-                      {(() => {
-                        const info = getResendButtonInfo(selectedOrder.status);
-                        return (
-                          <>
-                            <info.icon className="h-3.5 w-3.5" />
-                            {info.label}
-                          </>
-                        );
-                      })()}
-                    </Button>
-                  )}
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold">Order Details</h3>
+                    <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">
+                      #{selectedOrder.id.split('-')[0]} • {new Date(selectedOrder.createdAt).toLocaleString()}
+                    </p>
+                  </div>
                 </div>
+                {selectedOrder.status !== 'order_completed' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleResendEmail(selectedOrder!)}
+                    className="h-8 px-3 text-[9px] uppercase font-bold tracking-widest border-brand-gold/30 text-brand-gold hover:bg-brand-gold/10 gap-2 shadow-sm w-fit"
+                  >
+                    {(() => {
+                      const info = getResendButtonInfo(selectedOrder.status);
+                      return (
+                        <>
+                          <info.icon className="h-3.5 w-3.5" />
+                          {info.label}
+                        </>
+                      );
+                    })()}
+                  </Button>
+                )}
               </div>
+            </div>
 
-              <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 space-y-8">
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                  {/* Left Column: Status Journey */}
-                  <div className="lg:col-span-4 space-y-6">
-                    <div className="flex items-center justify-between gap-2">
-                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Lifecycle Journey</h4>
-                    </div>
-                    <div className="space-y-3">
-                      {[
-                        { id: 'pending', label: 'Order Received', icon: Clock },
-                        { id: 'awaiting_payment', label: 'Awaiting Payment', icon: CreditCard },
-                        { id: 'payment_verified', label: 'Payment Verified', icon: CheckCircle2 },
-                        { id: 'order_shipped', label: 'Dispatched', icon: Truck },
-                        { id: 'order_completed', label: 'Completed', icon: CheckCircle2 }
-                      ].map((step, idx, arr) => {
-                        const isCompleted = arr.findIndex(s => s.id === selectedOrder.status) >= idx;
-                        const isCurrent = selectedOrder.status === step.id;
-                        const isNext = arr.findIndex(s => s.id === selectedOrder.status) + 1 === idx;
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 space-y-8">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Left Column: Status Journey */}
+                <div className="lg:col-span-4 space-y-6">
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Lifecycle Journey</h4>
+                  </div>
+                  <div className="space-y-3">
+                    {[
+                      { id: 'pending', label: 'Order Received', icon: Clock },
+                      { id: 'awaiting_payment', label: 'Awaiting Payment', icon: CreditCard },
+                      { id: 'payment_verified', label: 'Payment Verified', icon: CheckCircle2 },
+                      { id: 'order_shipped', label: 'Dispatched', icon: Truck },
+                      { id: 'order_completed', label: 'Completed', icon: CheckCircle2 }
+                    ].filter(step => {
+                      if (step.id === 'order_shipped') {
+                        return selectedOrder.items.some(item => item.type === 'product');
+                      }
+                      return true;
+                    }).map((step, idx, arr) => {
+                      const isCompleted = arr.findIndex(s => s.id === selectedOrder.status) >= idx;
+                      const isCurrent = selectedOrder.status === step.id;
+                      const isNext = arr.findIndex(s => s.id === selectedOrder.status) + 1 === idx;
 
-                        return (
-                          <div
-                            key={step.id}
-                            onClick={() => {
-                              if (selectedOrder.status === 'order_cancelled') {
-                                toast.error('Cannot change status of a cancelled order');
+                      return (
+                        <div
+                          key={step.id}
+                          onClick={() => {
+                            if (selectedOrder.status === 'order_cancelled') {
+                              toast.error('Cannot change status of a cancelled order');
+                              return;
+                            }
+
+                            // Scroll to shipping details if trying to dispatch without tracking info
+                            if (step.id === 'order_shipped' && (!trackingId || !courierPartner)) {
+                              const el = document.getElementById('shipping-details-form');
+                              if (el) {
+                                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                toast.info('Please enter shipping details first');
                                 return;
                               }
-                              
-                              // Scroll to shipping details if trying to dispatch without tracking info
-                              if (step.id === 'order_shipped' && (!trackingId || !courierPartner)) {
-                                const el = document.getElementById('shipping-details-form');
-                                if (el) {
-                                  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                  toast.info('Please enter shipping details first');
-                                  return;
-                                }
-                              }
-                              
-                              updateStatus(selectedOrder!.id, step.id as OrderStatus, selectedOrder!.userId);
-                            }}
-                            className={cn(
-                              "relative flex items-center gap-4 p-3 rounded-xl border transition-all duration-300 group cursor-pointer",
-                              selectedOrder.status === 'order_cancelled' && "cursor-not-allowed opacity-60",
-                              isCurrent ? "bg-brand-gold/10 border-brand-gold shadow-lg shadow-brand-gold/5" :
-                                isCompleted ? "bg-green-500/5 border-green-500/20 hover:border-green-500/50" :
-                                  "bg-muted/30 border-border hover:border-brand-gold/50"
-                            )}
-                          >
-                            <div className={cn(
-                              "h-8 w-8 rounded-full flex items-center justify-center transition-colors",
-                              isCurrent ? "bg-brand-gold text-black" :
-                                isCompleted ? "bg-green-500/20 text-green-500" : "bg-muted text-muted-foreground"
-                            )}>
-                              {isCompleted && !isCurrent ? <CheckCircle2 className="h-4 w-4" /> : <step.icon className="h-4 w-4" />}
-                            </div>
-                            <div className="flex-1">
-                              <p className={cn("text-[10px] font-bold uppercase tracking-wider", isCurrent ? "text-brand-gold" : isCompleted ? "text-green-500" : "text-muted-foreground")}>
-                                {step.label}
-                              </p>
-                              {isCurrent && <p className="text-[9px] text-brand-gold/70 italic leading-none mt-1">Current Stage</p>}
-                            </div>
-                            {isNext && <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />}
-                          </div>
-                        );
-                      })}
+                            }
 
-                      {/* Cancel Action */}
-                      <div className="pt-4 border-t border-border mt-4">
-                        {selectedOrder.status !== 'order_cancelled' ? (
-                          <Button
-                            variant="ghost"
-                            onClick={() => updateStatus(selectedOrder.id, 'order_cancelled', selectedOrder.userId)}
-                            className="w-full justify-start gap-3 text-red-500 hover:text-red-600 hover:bg-red-500/10 h-12 rounded-xl border border-transparent hover:border-red-500/20"
-                          >
-                            <XCircle className="h-5 w-5" />
-                            <div className="text-left">
-                              <p className="text-[10px] font-bold uppercase tracking-widest">Cancel Order</p>
-                              <p className="text-[8px] text-red-500/70">Voids items and notifies customer</p>
-                            </div>
-                          </Button>
-                        ) : (
-                          <div className="p-4 rounded-xl border border-red-500/20 bg-red-500/5 flex flex-col gap-2">
-                            <div className="flex items-center gap-2 text-red-500 font-bold text-xs">
-                              <XCircle className="h-4 w-4" /> Order Cancelled
-                            </div>
-                            <p className="text-[10px] text-muted-foreground italic">"{(selectedOrder!.cancellationReason || 'No reason specified')}"</p>
+                            updateStatus(selectedOrder!.id, step.id as OrderStatus, selectedOrder!.userId);
+                          }}
+                          className={cn(
+                            "relative flex items-center gap-4 p-3 rounded-xl border transition-all duration-300 group cursor-pointer",
+                            selectedOrder.status === 'order_cancelled' && "cursor-not-allowed opacity-60",
+                            isCurrent ? "bg-brand-gold/10 border-brand-gold shadow-lg shadow-brand-gold/5" :
+                              isCompleted ? "bg-green-500/5 border-green-500/20 hover:border-green-500/50" :
+                                "bg-muted/30 border-border hover:border-brand-gold/50"
+                          )}
+                        >
+                          <div className={cn(
+                            "h-8 w-8 rounded-full flex items-center justify-center transition-colors",
+                            isCurrent ? "bg-brand-gold text-black" :
+                              isCompleted ? "bg-green-500/20 text-green-500" : "bg-muted text-muted-foreground"
+                          )}>
+                            {isCompleted && !isCurrent ? <CheckCircle2 className="h-4 w-4" /> : <step.icon className="h-4 w-4" />}
                           </div>
-                        )}
-                      </div>
+                          <div className="flex-1">
+                            <p className={cn("text-[10px] font-bold uppercase tracking-wider", isCurrent ? "text-brand-gold" : isCompleted ? "text-green-500" : "text-muted-foreground")}>
+                              {step.label}
+                            </p>
+                            {isCurrent && <p className="text-[9px] text-brand-gold/70 italic leading-none mt-1">Current Stage</p>}
+                          </div>
+                          {isNext && <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />}
+                        </div>
+                      );
+                    })}
+
+                    {/* Cancel Action */}
+                    <div className="pt-4 border-t border-border mt-4">
+                      {selectedOrder.status !== 'order_cancelled' ? (
+                        <Button
+                          variant="ghost"
+                          onClick={() => updateStatus(selectedOrder.id, 'order_cancelled', selectedOrder.userId)}
+                          className="w-full justify-start gap-3 text-red-500 hover:text-red-600 hover:bg-red-500/10 h-12 rounded-xl border border-transparent hover:border-red-500/20"
+                        >
+                          <XCircle className="h-5 w-5" />
+                          <div className="text-left">
+                            <p className="text-[10px] font-bold uppercase tracking-widest">Cancel Order</p>
+                            <p className="text-[8px] text-red-500/70">Voids items and notifies customer</p>
+                          </div>
+                        </Button>
+                      ) : (
+                        <div className="p-4 rounded-xl border border-red-500/20 bg-red-500/5 flex flex-col gap-2">
+                          <div className="flex items-center gap-2 text-red-500 font-bold text-xs">
+                            <XCircle className="h-4 w-4" /> Order Cancelled
+                          </div>
+                          <p className="text-[10px] text-muted-foreground italic">"{(selectedOrder!.cancellationReason || 'No reason specified')}"</p>
+                        </div>
+                      )}
                     </div>
                   </div>
+                </div>
 
-                  {/* Right Column: Order Content */}
-                  <div className="lg:col-span-8 space-y-8">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Items Section */}
-                      <div className="space-y-4">
+                {/* Right Column: Order Content */}
+                <div className="lg:col-span-8 space-y-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Items Section */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between gap-2">
                         <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                           <Package className="h-3 w-3" /> Items Purchased
                         </h4>
-                        <div className="space-y-2">
-                          {selectedOrder!.items.map((item, idx) => (
-                            <div key={idx} className="flex gap-3 items-center p-3 rounded-xl bg-muted/30 border border-border/50 group hover:border-brand-gold/30 transition-colors">
-                              <div className="h-10 w-10 rounded-lg border border-border bg-background overflow-hidden flex-shrink-0 flex items-center justify-center">
-                                {item.image ? <img src={item.image} alt="" className="h-full w-full object-cover" /> : <ShoppingBag className="h-4 w-4 text-muted-foreground" />}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs font-bold uppercase truncate">{item.name}</p>
-                                <p className="text-[9px] text-muted-foreground">{item.type === 'product' ? (item.metadata?.size || 'N/A') : item.type} × {item.quantity}</p>
-                              </div>
-                              <p className="text-xs font-bold text-brand-gold">{formatPrice(item.price * item.quantity)}</p>
-                            </div>
-                          ))}
-                          <div className="pt-2 px-2 space-y-1">
-                            <div className="flex justify-between text-[10px] text-muted-foreground"><span>Subtotal</span><span>{formatPrice(selectedOrder!.totalPrice - selectedOrder!.shippingCharge)}</span></div>
-                            <div className="flex justify-between text-[10px] text-muted-foreground"><span>Shipping</span><span>{formatPrice(selectedOrder!.shippingCharge)}</span></div>
-                            <div className="flex justify-between text-xs font-bold text-brand-gold pt-1 border-t border-border mt-1"><span>Total</span><span>{formatPrice(selectedOrder!.totalPrice)}</span></div>
-                          </div>
-                        </div>
+                        {!isEditingItems && selectedOrder.status !== 'order_cancelled' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={startEditingItems}
+                            className="h-7 px-2 text-[9px] uppercase font-bold tracking-widest text-brand-gold hover:bg-brand-gold/10 gap-1"
+                          >
+                            <Edit2 className="h-3 w-3" /> Manage Items
+                          </Button>
+                        )}
                       </div>
+                      <div className="space-y-2">
+                        {isEditingItems ? (
+                          <div className="space-y-4">
+                            <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                              {editingOrderItems.map((item, idx) => (
+                                <div key={idx} className="p-3 rounded-xl bg-card border border-border space-y-3 shadow-sm">
+                                  <div className="flex gap-3 items-center">
+                                    <div className="h-10 w-10 rounded-lg border border-border bg-background overflow-hidden flex-shrink-0 flex items-center justify-center">
+                                      {item.image ? <img src={item.image} alt="" className="h-full w-full object-cover" /> : <ShoppingBag className="h-4 w-4 text-muted-foreground" />}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-xs font-bold uppercase truncate">{item.name}</p>
+                                      <p className="text-[9px] text-muted-foreground">{item.type}</p>
+                                    </div>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-500/10" onClick={() => removeItem(idx)}>
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                      <label className="text-[8px] uppercase font-black text-muted-foreground">Price</label>
+                                      <Input
+                                        type="number"
+                                        value={item.price}
+                                        onChange={(e) => updateItem(idx, { price: Number(e.target.value) })}
+                                        className="h-8 text-xs"
+                                      />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <label className="text-[8px] uppercase font-black text-muted-foreground">Quantity</label>
+                                      <Input
+                                        type="number"
+                                        value={item.quantity}
+                                        onChange={(e) => updateItem(idx, { quantity: Number(e.target.value) })}
+                                        className="h-8 text-xs"
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <label className="text-[8px] uppercase font-black text-muted-foreground">Item Status</label>
+                                    <SharedSelect
+                                      options={[
+                                        { value: 'pending', label: 'Pending' },
+                                        { value: 'payment_verified', label: 'Verified' },
+                                        { value: 'order_shipped', label: 'Shipped' },
+                                        { value: 'order_completed', label: 'Completed' },
+                                        { value: 'order_cancelled', label: 'Cancelled' }
+                                      ]}
+                                      value={item.status || 'pending'}
+                                      onValueChange={(val) => updateItem(idx, { status: val as OrderStatus })}
+                                      className="h-8 text-xs"
+                                    />
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
 
-                      {/* Customer & Delivery Section */}
-                      <div className="space-y-4">
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                          <MapPin className="h-3 w-3" /> Customer & Delivery
-                        </h4>
-                        <div className="p-4 rounded-2xl border border-border bg-background/50 space-y-4 shadow-inner">
-                          <div className="space-y-3">
-                            <div className="flex items-start gap-3">
-                              <UserIcon className="h-3.5 w-3.5 text-brand-red mt-0.5" />
-                              <div className="min-w-0">
-                                <p className="text-[8px] text-muted-foreground uppercase font-black">Recipient</p>
-                                <p className="text-xs font-bold">{selectedOrder!.deliveryName}</p>
-                                <p className="text-[9px] text-muted-foreground">{selectedOrder!.userEmail}</p>
+                            <Button
+                              variant="outline"
+                              className="w-full h-10 border-dashed border-border hover:border-brand-gold hover:text-brand-gold bg-transparent"
+                              onClick={() => setIsAddItemModalOpen(true)}
+                            >
+                              <Plus className="h-4 w-4 mr-2" /> Add New Item
+                            </Button>
+
+                            <div className="pt-6 border-t border-border space-y-4">
+                              <div className="space-y-2 p-3 rounded-xl bg-brand-gold/5 border border-brand-gold/20">
+                                <div className="flex items-center justify-between">
+                                  <label className="text-[10px] uppercase font-black text-brand-gold">Shipping Charge</label>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-bold text-muted-foreground">₹</span>
+                                    <input
+                                      type="number"
+                                      className="w-24 bg-background border border-brand-gold/30 rounded-lg px-2 py-1 text-xs font-bold focus:ring-1 focus:ring-brand-gold outline-none"
+                                      value={editingShippingCharge}
+                                      onChange={(e) => setEditingShippingCharge(Number(e.target.value))}
+                                    />
+                                  </div>
+                                </div>
+                                <p className="text-[9px] text-muted-foreground italic">Manually override the shipping cost for this order</p>
                               </div>
                             </div>
-                            <div className="flex items-start gap-3">
-                              <Phone className="h-3.5 w-3.5 text-brand-red mt-0.5" />
-                              <div className="min-w-0">
-                                <p className="text-[8px] text-muted-foreground uppercase font-black">Phone</p>
-                                <p className="text-xs font-bold">{selectedOrder!.deliveryPhone}</p>
+                            <div className="pt-4 border-t border-border space-y-4">
+                              <div className="space-y-2">
+                                <label className="text-[10px] uppercase font-black text-muted-foreground">Update Note (Sent to User)</label>
+                                <textarea
+                                  className="w-full h-20 bg-background border border-border rounded-xl p-3 text-xs focus:ring-1 focus:ring-brand-gold/50 outline-none resize-none"
+                                  placeholder="Briefly describe what was updated..."
+                                  value={updateSummary}
+                                  onChange={(e) => setUpdateSummary(e.target.value)}
+                                />
+                              </div>
+                              <div className="flex gap-2">
+                                <Button variant="outline" className="flex-1 h-10" onClick={() => setIsEditingItems(false)}>Cancel</Button>
+                                <Button
+                                  className="flex-1 h-10 bg-brand-gold hover:bg-brand-gold/90 text-black font-bold"
+                                  onClick={saveItemChanges}
+                                  disabled={isUpdatingOrder}
+                                >
+                                  {isUpdatingOrder ? <RefreshCcw className="h-4 w-4 animate-spin mr-2" /> : <Mail className="h-4 w-4 mr-2" />}
+                                  Save & Notify
+                                </Button>
                               </div>
                             </div>
+                          </div>
+                        ) : (
+                          <>
+                            {selectedOrder!.items.map((item, idx) => (
+                              <div key={idx} className="flex gap-3 items-center p-3 rounded-xl bg-muted/30 border border-border/50 group hover:border-brand-gold/30 transition-colors relative">
+                                <div className="h-10 w-10 rounded-lg border border-border bg-background overflow-hidden flex-shrink-0 flex items-center justify-center">
+                                  {item.image ? <img src={item.image} alt="" className="h-full w-full object-cover" /> : <ShoppingBag className="h-4 w-4 text-muted-foreground" />}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-xs font-bold uppercase truncate">{item.name}</p>
+                                    {item.status && <StatusBadge status={item.status} className="scale-[0.6] origin-left" />}
+                                  </div>
+                                  <p className="text-[9px] text-muted-foreground">{item.type === 'product' ? (item.metadata?.size || 'N/A') : item.type} × {item.quantity}</p>
+                                </div>
+                                <p className="text-xs font-bold text-brand-gold">{formatPrice(item.price * item.quantity)}</p>
+                              </div>
+                            ))}
+                            <div className="pt-2 px-2 space-y-1">
+                              <div className="flex justify-between text-[10px] text-muted-foreground"><span>Subtotal</span><span>{formatPrice(selectedOrder!.totalPrice - selectedOrder!.shippingCharge)}</span></div>
+                              <div className="flex justify-between text-[10px] text-muted-foreground"><span>Shipping</span><span>{formatPrice(selectedOrder!.shippingCharge)}</span></div>
+                              <div className="flex justify-between text-xs font-bold text-brand-gold pt-1 border-t border-border mt-1"><span>Total Amount</span><span>{formatPrice(selectedOrder!.totalPrice)}</span></div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Customer & Delivery Section */}
+                    <div className="space-y-4">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                        <MapPin className="h-3 w-3" /> {selectedOrder!.items.some(item => item.type === 'product') ? 'Customer & Delivery' : 'Customer Information'}
+                      </h4>
+                      <div className="p-4 rounded-2xl border border-border bg-background/50 space-y-4 shadow-inner">
+                        <div className="space-y-3">
+                          <div className="flex items-start gap-3">
+                            <UserIcon className="h-3.5 w-3.5 text-brand-red mt-0.5" />
+                            <div className="min-w-0">
+                              <p className="text-[8px] text-muted-foreground uppercase font-black">Recipient</p>
+                              <p className="text-xs font-bold">{selectedOrder!.deliveryName}</p>
+                              <p className="text-[9px] text-muted-foreground">{selectedOrder!.userEmail}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-3">
+                            <Phone className="h-3.5 w-3.5 text-brand-red mt-0.5" />
+                            <div className="min-w-0">
+                              <p className="text-[8px] text-muted-foreground uppercase font-black">Phone</p>
+                              <p className="text-xs font-bold">{selectedOrder!.deliveryPhone}</p>
+                            </div>
+                          </div>
+                          {selectedOrder!.deliveryAddress && (
                             <div className="flex items-start gap-3">
                               <MapPin className="h-3.5 w-3.5 text-brand-red mt-0.5" />
                               <div className="min-w-0">
@@ -681,62 +923,64 @@ export default function AdminOrdersPage() {
                                 <p className="text-xs font-medium leading-relaxed">{selectedOrder!.deliveryAddress}</p>
                               </div>
                             </div>
-                          </div>
-                          {selectedOrder!.message && (
-                            <div className="p-2.5 rounded-xl bg-brand-gold/5 border border-brand-gold/10 italic text-[10px] text-muted-foreground">
-                              "{selectedOrder!.message}"
-                            </div>
                           )}
                         </div>
-
-                        {/* Dispatch Logistics Section */}
-                        {['payment_verified', 'order_shipped', 'order_completed'].includes(selectedOrder!.status) && (
-                          <div id="shipping-details-form" className="space-y-4 pt-2">
-                            <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                              <Truck className="h-3 w-3" /> Dispatch Logistics
-                            </h4>
-                            <div className="p-4 rounded-2xl border border-border bg-accent/10 space-y-4 shadow-sm">
-                              <div className="space-y-3">
-                                <Input
-                                  label="Courier Partner"
-                                  labelClassName="text-[9px] uppercase tracking-widest text-muted-foreground"
-                                  value={courierPartner}
-                                  onChange={(e) => setCourierPartner(e.target.value)}
-                                  placeholder="e.g. Delhivery, BlueDart"
-                                  className="h-8 text-xs bg-background/50"
-                                />
-                                <Input
-                                  label="Tracking ID / AWB"
-                                  labelClassName="text-[9px] uppercase tracking-widest text-muted-foreground"
-                                  value={trackingId}
-                                  onChange={(e) => setTrackingId(e.target.value)}
-                                  placeholder="Enter tracking number"
-                                  className="h-8 text-xs bg-background/50"
-                                />
-                              </div>
-                              <Button
-                                onClick={updateTrackingInfo}
-                                disabled={selectedOrder!.status === 'order_cancelled'}
-                                className="w-full h-8 bg-brand-gold hover:bg-brand-gold/90 text-black font-bold text-[10px] uppercase tracking-widest gap-2 shadow-lg shadow-brand-gold/10"
-                              >
-                                <Save className="h-3 w-3" /> Update & Notify
-                              </Button>
-                              <p className="text-[8px] text-muted-foreground text-center italic">Triggers shipping email to customer</p>
-                            </div>
+                        {selectedOrder!.message && (
+                          <div className="p-2.5 rounded-xl bg-brand-gold/5 border border-brand-gold/10 italic text-[10px] text-muted-foreground">
+                            "{selectedOrder!.message}"
                           </div>
                         )}
                       </div>
+
+                      {/* Dispatch Logistics Section */}
+                      {['payment_verified', 'order_shipped', 'order_completed'].includes(selectedOrder!.status) && 
+                       selectedOrder!.items.some(item => item.type === 'product') && (
+                        <div id="shipping-details-form" className="space-y-4 pt-2">
+                          <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                            <Truck className="h-3 w-3" /> Dispatch Logistics
+                          </h4>
+                          <div className="p-4 rounded-2xl border border-border bg-accent/10 space-y-4 shadow-sm">
+                            <div className="space-y-3">
+                              <Input
+                                label="Courier Partner"
+                                labelClassName="text-[9px] uppercase tracking-widest text-muted-foreground"
+                                value={courierPartner}
+                                onChange={(e) => setCourierPartner(e.target.value)}
+                                placeholder="e.g. Delhivery, BlueDart"
+                                className="h-8 text-xs bg-background/50"
+                              />
+                              <Input
+                                label="Tracking ID / AWB"
+                                labelClassName="text-[9px] uppercase tracking-widest text-muted-foreground"
+                                value={trackingId}
+                                onChange={(e) => setTrackingId(e.target.value)}
+                                placeholder="Enter tracking number"
+                                className="h-8 text-xs bg-background/50"
+                              />
+                            </div>
+                            <Button
+                              onClick={updateTrackingInfo}
+                              disabled={selectedOrder!.status === 'order_cancelled'}
+                              className="w-full h-8 bg-brand-gold hover:bg-brand-gold/90 text-black font-bold text-[10px] uppercase tracking-widest gap-2 shadow-lg shadow-brand-gold/10"
+                            >
+                              <Save className="h-3 w-3" /> Update & Notify
+                            </Button>
+                            <p className="text-[8px] text-muted-foreground text-center italic">Triggers shipping email to customer</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-        )}
+          </div>
+        ) : null}
       </Modal>
 
       {/* Cancellation Modal */}
-      <Modal 
-        isOpen={isCancellationModalOpen} 
+      <Modal
+        isOpen={isCancellationModalOpen}
         onClose={() => setIsCancellationModalOpen(false)}
         variant="confirm"
         title="Cancellation Audit"
@@ -761,9 +1005,80 @@ export default function AdminOrdersPage() {
         </div>
       </Modal>
 
+      {/* Add Item Modal */}
+      <Modal
+        isOpen={isAddItemModalOpen}
+        onClose={() => setIsAddItemModalOpen(false)}
+        title="Add Item to Order"
+        variant="medium"
+      >
+        <div className="space-y-6 py-4">
+          <div className="space-y-2">
+            <Label className="text-[10px] uppercase font-black text-muted-foreground">Search Catalog</Label>
+            <Input
+              placeholder="Search products or courses..."
+              value={itemSearchQuery}
+              onChange={(e) => setItemSearchQuery(e.target.value)}
+              startContent={<Search className="h-4 w-4 text-muted-foreground" />}
+              isClearable
+              onClear={() => setItemSearchQuery('')}
+            />
+          </div>
+
+          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+            {/* Products */}
+            <div className="space-y-2">
+              <h5 className="text-[8px] uppercase font-black text-muted-foreground border-b border-border pb-1">Products</h5>
+              {LocalStorage.getAll<Product>('products')
+                .filter(p => p.name.toLowerCase().includes(itemSearchQuery.toLowerCase()))
+                .slice(0, 5)
+                .map(p => (
+                  <div key={p.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 border border-border/50">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded bg-background border border-border flex items-center justify-center overflow-hidden">
+                        {p.images?.[0] ? <img src={p.images[0]} alt="" className="h-full w-full object-cover" /> : <ShoppingBag className="h-3 w-3 text-muted-foreground" />}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold uppercase truncate">{p.name}</p>
+                        <p className="text-[8px] text-brand-gold">{formatPrice(p.sizes?.[0]?.price || 0)}</p>
+                      </div>
+                    </div>
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => addNewItem(p, 'product')}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+            </div>
+
+            {/* Courses */}
+            <div className="space-y-2">
+              <h5 className="text-[8px] uppercase font-black text-muted-foreground border-b border-border pb-1">Courses</h5>
+              {LocalStorage.getAll<Course>('courses')
+                .filter(c => c.title.toLowerCase().includes(itemSearchQuery.toLowerCase()))
+                .map(c => (
+                  <div key={c.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 border border-border/50">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded bg-background border border-border flex items-center justify-center overflow-hidden">
+                        {c.thumbnail ? <img src={c.thumbnail} alt="" className="h-full w-full object-cover" /> : <ShoppingBag className="h-3 w-3 text-muted-foreground" />}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold uppercase truncate">{c.title}</p>
+                        <p className="text-[8px] text-brand-gold">{formatPrice(c.price)}</p>
+                      </div>
+                    </div>
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => addNewItem(c, 'course')}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+            </div>
+          </div>
+        </div>
+      </Modal>
+
       {/* Resend Email Confirmation Modal */}
-      <Modal 
-        isOpen={isResendModalOpen} 
+      <Modal
+        isOpen={isResendModalOpen}
         onClose={() => setIsResendModalOpen(false)}
         variant="confirm"
         title="Email Notification Guard"

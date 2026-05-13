@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -30,8 +30,18 @@ export default function SignupPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect');
-  const { signup, isLoading } = useAuthStore();
+  const { signup, isLoading, isAuthenticated, user } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      if (user?.role === 'admin') {
+        router.replace('/admin');
+      } else {
+        router.push('/dashboard');
+      }
+    }
+  }, [isAuthenticated, user, router]);
 
   const fields: FormFieldConfig[] = [
     {
@@ -92,7 +102,7 @@ export default function SignupPage() {
       if (redirect) {
         router.push(redirect);
       } else {
-        router.push('/dashboard');
+        router.push('/');
       }
     } else {
       toast.error(result.error || 'Signup failed');
