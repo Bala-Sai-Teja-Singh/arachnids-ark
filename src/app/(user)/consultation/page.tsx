@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
-import { LocalStorage } from '@/mock-db/storage';
+import { Db } from '@/lib/db';
 import { useAuthStore } from '@/store/auth-store';
 import { useNotificationStore } from '@/store/notification-store';
 import type { ConsultationSettings, ConsultationDuration, ConsultationUrgency, ConsultationSlot, ConsultationBooking } from '@/types';
@@ -55,14 +55,16 @@ export default function ConsultationPage() {
   const [hasPurchased, setHasPurchased] = useState(false);
 
   useEffect(() => {
-    loadReviews('consultation-general', 'consultation');
-    if (user) {
-      const orders = LocalStorage.getAll<any>('orders');
-      const purchased = orders.some(
-        (ord: any) => ord.userId === user.id && ord.items.some((item: any) => item.type === 'consultation') && ['payment_verified', 'order_shipped', 'order_completed'].includes(ord.status)
-      );
-      setHasPurchased(purchased);
-    }
+      (async () => {
+      loadReviews('consultation-general', 'consultation');
+      if (user) {
+        const orders = await Db.getAll<any>('orders');
+        const purchased = orders.some(
+          (ord: any) => ord.userId === user.id && ord.items.some((item: any) => item.type === 'consultation') && ['payment_verified', 'order_shipped', 'order_completed'].includes(ord.status)
+        );
+        setHasPurchased(purchased);
+      }
+      })();
   }, [user, loadReviews]);
 
   useEffect(() => {
@@ -70,10 +72,12 @@ export default function ConsultationPage() {
   }, [step]);
 
   useEffect(() => {
-    const data = LocalStorage.getAll<ConsultationSettings>('consultation_settings');
-    if (data.length > 0) {
-      setSettings(data[0]);
-    }
+      (async () => {
+      const data = await Db.getSettings<ConsultationSettings>('consultation_settings');
+      if (data) {
+        setSettings(data);
+      }
+      })();
   }, []);
 
   useEffect(() => {

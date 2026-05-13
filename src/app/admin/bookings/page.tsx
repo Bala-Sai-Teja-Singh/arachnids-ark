@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Modal } from '@/components/shared/molecules/modal';
 import { Input } from '@/components/shared/atoms/input';
 import { Label } from '@/components/ui/label';
-import { LocalStorage } from '@/mock-db/storage';
+import { Db } from '@/lib/db';
 import { useNotificationStore } from '@/store/notification-store';
 import type { ConsultationBooking, BookingStatus } from '@/types';
 import { formatPrice } from '@/constants/pricing';
@@ -41,13 +41,15 @@ export default function AdminBookingsPage() {
   const { addNotification } = useNotificationStore();
 
   useEffect(() => {
-    setBookings(LocalStorage.getAll<ConsultationBooking>('bookings').sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+    (async () => {
+    setBookings((await Db.getAll<ConsultationBooking>('bookings')).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+  })();
   }, []);
 
-  const updateStatus = (id: string, status: BookingStatus, userId: string) => {
-    LocalStorage.update<ConsultationBooking>('bookings', id, { status });
+  const updateStatus = async (id: string, status: BookingStatus, userId: string) => {
+    await Db.update<ConsultationBooking>('bookings', id, { status });
     // Refresh background content
-    const updatedBookings = LocalStorage.getAll<ConsultationBooking>('bookings').sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const updatedBookings = (await Db.getAll<ConsultationBooking>('bookings')).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     setBookings(updatedBookings);
 
     if (status === 'scheduled') {
@@ -146,7 +148,7 @@ export default function AdminBookingsPage() {
       });
   };
 
-  const sendScheduledEmail = (booking: ConsultationBooking, slot: any) => {
+  const sendScheduledEmail = async (booking: ConsultationBooking, slot: any) => {
     fetch('/api/emails/consultation-scheduled', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -167,7 +169,7 @@ export default function AdminBookingsPage() {
       });
   };
 
-  const sendCancelledEmail = (booking: ConsultationBooking, slot: any) => {
+  const sendCancelledEmail = async (booking: ConsultationBooking, slot: any) => {
     fetch('/api/emails/consultation-cancelled', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -194,19 +196,19 @@ export default function AdminBookingsPage() {
     return 'payment_verified';
   };
 
-  const handleUpdateItemStatus = (itemIdx: number, status: BookingStatus) => {
+  const handleUpdateItemStatus = async (itemIdx: number, status: BookingStatus) => {
     if (!selectedBooking || !selectedBooking.items) return;
 
     const newItems = [...selectedBooking.items];
     newItems[itemIdx] = { ...newItems[itemIdx], status };
     
-    LocalStorage.update<ConsultationBooking>('bookings', selectedBooking.id, { items: newItems });
+    await Db.update<ConsultationBooking>('bookings', selectedBooking.id, { items: newItems });
     setBookings(prev => prev.map(b => b.id === selectedBooking.id ? { ...b, items: newItems } : b));
     setSelectedBooking(prev => prev ? { ...prev, items: newItems } : null);
     toast.success('Session status updated');
   };
 
-  const handleUpdateSlotDetails = (itemIdx: number, slotId: string) => {
+  const handleUpdateSlotDetails = async (itemIdx: number, slotId: string) => {
     if (!selectedBooking || !selectedBooking.items) return;
 
     const newItems = [...selectedBooking.items];
@@ -247,7 +249,7 @@ export default function AdminBookingsPage() {
     if (allCompleted) updates.status = 'completed';
     else if (newItems.some(i => i.status === 'scheduled')) updates.status = 'scheduled';
 
-    LocalStorage.update<ConsultationBooking>('bookings', selectedBooking.id, updates);
+    await Db.update<ConsultationBooking>('bookings', selectedBooking.id, updates);
     setBookings(prev => prev.map(b => b.id === selectedBooking.id ? { ...b, ...updates } : b));
     setSelectedBooking(prev => prev ? { ...prev, ...updates } : null);
     
@@ -257,11 +259,11 @@ export default function AdminBookingsPage() {
     toast.success('Call details updated and client notified');
   };
 
-  const handleDeleteSlot = (itemIdx: number, slotId: string) => {
+  const handleDeleteSlot = async (itemIdx: number, slotId: string) => {
     setDeleteConfirmInfo({ itemIdx, slotId });
   };
 
-  const executeDeleteSlot = () => {
+  const executeDeleteSlot = async () => {
     if (!selectedBooking || !selectedBooking.items || !deleteConfirmInfo) return;
 
     const { itemIdx, slotId } = deleteConfirmInfo;
@@ -278,7 +280,7 @@ export default function AdminBookingsPage() {
     const updates: Partial<ConsultationBooking> = { items: newItems };
     if (allCompleted) updates.status = 'completed';
 
-    LocalStorage.update<ConsultationBooking>('bookings', selectedBooking.id, updates);
+    await Db.update<ConsultationBooking>('bookings', selectedBooking.id, updates);
     setBookings(prev => prev.map(b => b.id === selectedBooking.id ? { ...b, ...updates } : b));
     setSelectedBooking(prev => prev ? { ...prev, ...updates } : null);
     
@@ -290,7 +292,7 @@ export default function AdminBookingsPage() {
     setDeleteConfirmInfo(null);
   };
 
-  const handleAddSlot = () => {
+  const handleAddSlot = async () => {
     if (!selectedBooking || activeItemIdx === null || !selectedBooking.items) return;
 
     const newItems = [...selectedBooking.items];
@@ -320,7 +322,7 @@ export default function AdminBookingsPage() {
       status: 'scheduled' as BookingStatus // At least one call scheduled
     };
 
-    LocalStorage.update<ConsultationBooking>('bookings', selectedBooking.id, updates);
+    await Db.update<ConsultationBooking>('bookings', selectedBooking.id, updates);
     setBookings(prev => prev.map(b => b.id === selectedBooking.id ? { ...b, ...updates } : b));
     setSelectedBooking(prev => prev ? { ...prev, ...updates } : null);
 

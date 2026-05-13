@@ -16,7 +16,7 @@ import { EmptyState } from '@/components/shared/molecules/empty-state';
 import { ProductCard } from '@/components/shared/molecules/product-card';
 import { Select as SharedSelect } from '@/components/shared/atoms/select';
 import { Loading } from '@/components/shared/molecules/loading';
-import { LocalStorage } from '@/mock-db/storage';
+import { Db } from '@/lib/db';
 import { useCartStore } from '@/store/cart-store';
 import { useAuthStore } from '@/store/auth-store';
 import { useRouter } from 'next/navigation';
@@ -149,7 +149,7 @@ export default function ShopPage() {
   const { isAuthenticated } = useAuthStore();
   const router = useRouter();
 
-  const checkScroll = () => {
+  const checkScroll = async () => {
     const el = tabsListRef.current;
     if (el) {
       setShowLeftShade(el.scrollLeft > 10);
@@ -164,8 +164,8 @@ export default function ShopPage() {
   }, [products]);
 
   useEffect(() => {
-    setTimeout(() => {
-      setProducts(LocalStorage.getAll<Product>('products'));
+    setTimeout(async () => {
+      setProducts(await Db.getAll<Product>('products'));
       setLoading(false);
     }, 300);
 
@@ -175,7 +175,7 @@ export default function ShopPage() {
     }
   }, []);
 
-  const handleLike = (e: React.MouseEvent, productId: string) => {
+  const handleLike = async (e: React.MouseEvent, productId: string) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -195,7 +195,7 @@ export default function ShopPage() {
     const product = products.find(p => p.id === productId);
     if (product) {
       const newLikes = isLiked ? Math.max(0, (product.likes || 0) - 1) : (product.likes || 0) + 1;
-      LocalStorage.update<Product>('products', productId, { likes: newLikes });
+      await Db.update<Product>('products', productId, { likes: newLikes });
       setProducts(prev => prev.map(p => p.id === productId ? { ...p, likes: newLikes } : p));
       if (!isLiked) toast.success(`You liked ${product.name}!`, { icon: <Heart className="h-4 w-4 text-red-500 fill-red-500" /> });
     }

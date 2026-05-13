@@ -7,8 +7,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/shared/atoms/button';
 import { formatPrice } from '@/constants/pricing';
-import { cn } from '@/lib/utils';
+import { cn, getProxiedImageUrl } from '@/lib/utils';
 import type { Product } from '@/types';
+import { ImageViewer } from '@/components/shared/molecules/image-viewer';
 
 /**
  * Universal ProductCard molecule.
@@ -55,10 +56,11 @@ export function ProductCard({
         className="block relative h-48 bg-gradient-to-br from-brand-red/20 via-background to-brand-gold/10 overflow-hidden"
       >
         {product.images && product.images.length > 0 ? (
-          <img
+          <ImageViewer
             src={product.images[0]}
             alt={product.name}
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+            className="w-full h-full"
+            imageClassName="transition-transform duration-700 group-hover:scale-110"
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">

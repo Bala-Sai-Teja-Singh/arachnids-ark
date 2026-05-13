@@ -75,9 +75,9 @@ export function FormArray({
           >
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pr-10">
               {fields.map((f) => (
-                <div key={f.name} className={cn(f.gridSpan)}>
+                <div key={f.name || 'flat-array-item'} className={cn(f.gridSpan)}>
                   <FormField
-                    name={`${name}.${index}.${f.name}`}
+                    name={f.name ? `${name}.${index}.${f.name}` : `${name}.${index}`}
                     label={f.label}
                     type={f.type as any}
                     options={f.options}

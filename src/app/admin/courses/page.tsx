@@ -7,14 +7,16 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Modal } from '@/components/shared/molecules/modal';
 import { TableMolecule } from '@/components/shared/molecules/table';
-import { LocalStorage } from '@/mock-db/storage';
+import { Db } from '@/lib/db';
 import type { Course } from '@/types';
 import { formatPrice } from '@/constants/pricing';
 import { z } from 'zod';
 import { FormBuilder, type FormFieldConfig } from '@/components/shared/organisms/form-builder';
+import { getProxiedImageUrl } from '@/lib/utils';
 import { SectionHeader } from '@/components/shared/molecules/section-header';
 import { EmptyState } from '@/components/shared/molecules/empty-state';
 import { Loading } from '@/components/shared/molecules/loading';
+import { ImageViewer } from '@/components/shared/molecules/image-viewer';
 
 const courseSchema = z.object({
   title: z.string().min(3, 'Title is too short'),
@@ -36,9 +38,11 @@ export default function AdminCoursesPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
-    setIsLoading(true);
-    setCourses(LocalStorage.getAll<Course>('courses'));
-    setTimeout(() => setIsLoading(false), 300);
+    (async () => {
+      setIsLoading(true);
+      setCourses(await Db.getAll<Course>('courses'));
+      setTimeout(() => setIsLoading(false), 300);
+    })();
   }, []);
 
   const fields: FormFieldConfig[] = [
@@ -51,15 +55,15 @@ export default function AdminCoursesPage() {
     { name: 'contentPreview', label: 'Short Preview Text', type: 'textarea', placeholder: 'Describe what students will learn...', required: true, gridSpan: 'md:col-span-2' }
   ];
 
-  const handleOpenEdit = (course: Course | null) => {
+  const handleOpenEdit = async (course: Course | null) => {
     setEditingCourse(course);
     setIsCourseModalOpen(true);
   };
 
-  const handleSaveCourse = (values: CourseFormValues) => {
+  const handleSaveCourse = async (values: CourseFormValues) => {
     if (editingCourse) {
       const updatedCourse = { ...editingCourse, ...values };
-      LocalStorage.update('courses', updatedCourse.id, updatedCourse as Course);
+      await Db.update('courses', updatedCourse.id, updatedCourse as Course);
       toast.success('Course updated');
     } else {
       const newCourse = {
@@ -71,18 +75,22 @@ export default function AdminCoursesPage() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       } as Course;
-      LocalStorage.create('courses', newCourse);
+      await Db.create('courses', newCourse);
       toast.success('Course added');
     }
-    setCourses(LocalStorage.getAll<Course>('courses'));
     setIsCourseModalOpen(false);
+    setIsLoading(true);
+    setCourses(await Db.getAll<Course>('courses'));
+    setTimeout(() => setIsLoading(false), 300);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (deleteId) {
-      LocalStorage.delete('courses', deleteId);
-      setCourses(LocalStorage.getAll<Course>('courses'));
+      await Db.delete('courses', deleteId);
       setDeleteId(null);
+      setIsLoading(true);
+      setCourses(await Db.getAll<Course>('courses'));
+      setTimeout(() => setIsLoading(false), 300);
       toast.success('Course deleted');
     }
   };
@@ -109,8 +117,8 @@ export default function AdminCoursesPage() {
             header: 'Title',
             cell: (course) => (
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-md bg-muted overflow-hidden shrink-0 border border-border group-hover:border-brand-gold/50 transition-colors">
-                  {course.thumbnail ? <img src={course.thumbnail} alt="" className="w-full h-full object-cover" /> : <GraduationCap className="m-auto h-4 w-4 opacity-20" />}
+                <div className="w-10 h-10 rounded-md bg-muted border border-border shrink-0 group-hover:border-brand-gold/50 transition-colors">
+                  {course.thumbnail ? <ImageViewer src={course.thumbnail} className="w-full h-full rounded-md" imageClassName="rounded-md" /> : <div className="w-full h-full flex"><GraduationCap className="m-auto h-4 w-4 opacity-20" /></div>}
                 </div>
                 <div className="font-medium group-hover:text-brand-gold transition-colors">{course.title}</div>
               </div>
@@ -129,7 +137,7 @@ export default function AdminCoursesPage() {
             header: 'Actions',
             align: 'right',
             cell: (course) => (
-              <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex justify-end gap-2">
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenEdit(course)}><Edit className="h-4 w-4" /></Button>
                 <Button variant="ghost" size="icon" className="h-8 w-8 hover:text-red-400" onClick={() => setDeleteId(course.id)}><Trash2 className="h-4 w-4" /></Button>
               </div>
@@ -139,8 +147,8 @@ export default function AdminCoursesPage() {
         renderMobileItem={(course) => (
           <div className="space-y-4">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-lg bg-muted overflow-hidden shrink-0 border border-border">
-                {course.thumbnail ? <img src={course.thumbnail} alt="" className="w-full h-full object-cover" /> : <GraduationCap className="m-auto h-5 w-5 opacity-20" />}
+              <div className="w-12 h-12 rounded-lg bg-muted border border-border shrink-0">
+                {course.thumbnail ? <ImageViewer src={course.thumbnail} className="w-full h-full rounded-lg" imageClassName="rounded-lg" /> : <div className="w-full h-full flex"><GraduationCap className="m-auto h-5 w-5 opacity-20" /></div>}
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-bold text-sm truncate">{course.title}</h3>
@@ -162,28 +170,31 @@ export default function AdminCoursesPage() {
         emptyDescription="No courses found."
       />
 
-      <Modal 
-        isOpen={isCourseModalOpen} 
+      <Modal
+        isOpen={isCourseModalOpen}
         onClose={() => setIsCourseModalOpen(false)}
         variant="large"
         title={editingCourse ? 'Edit Course' : 'Add New Course'}
       >
-          <FormBuilder
-            schema={courseSchema}
-            fields={fields}
-            defaultValues={editingCourse || { difficulty: 'beginner', price: 0 }}
-            onSubmit={handleSaveCourse}
-            submitLabel={editingCourse ? 'Save Changes' : 'Create Course'}
-            className="pb-8"
-          />
+        <FormBuilder
+          schema={courseSchema}
+          fields={fields}
+          defaultValues={editingCourse || { difficulty: 'beginner', price: 0 }}
+          onSubmit={handleSaveCourse}
+          submitLabel={editingCourse ? 'Save Changes' : 'Create Course'}
+          submitAlignment="right"
+          className="pb-8"
+        />
       </Modal>
 
-      <Modal 
-        isOpen={!!deleteId} 
+      <Modal
+        isOpen={!!deleteId}
         onClose={() => setDeleteId(null)}
         variant="confirm"
         title="Delete Course"
-        description="Are you sure you want to delete this course? This action cannot be undone."
+        className='!max-w-100'
+        headerClassName='!border-0'
+        footerClassName='!border-0'
         footer={(
           <div className="flex gap-2 w-full justify-end">
             <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
@@ -191,7 +202,7 @@ export default function AdminCoursesPage() {
           </div>
         )}
       >
-        <div className="py-2" />
+        <p>Are you sure you want to delete this course? This action cannot be undone.</p>
       </Modal>
     </div>
   );

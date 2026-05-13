@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { BookOpen, Clock, Search, Book } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { LocalStorage } from '@/mock-db/storage';
+import { Db } from '@/lib/db';
 import { SectionHeader } from '@/components/shared/molecules/section-header';
 import { Input } from '@/components/shared/atoms/input';
 import { Select } from '@/components/shared/atoms/select';
@@ -21,10 +21,12 @@ export default function CareGuidesPage() {
   const [category, setCategory] = useState('all');
 
   useEffect(() => {
+    (async () => {
     setLoading(true);
-    const data = LocalStorage.getAll<CareGuide>('care_guides');
+    const data = await Db.getAll<CareGuide>('care_guides');
     setGuides(data);
     setTimeout(() => setLoading(false), 400);
+  })();
   }, []);
 
   const categories = [

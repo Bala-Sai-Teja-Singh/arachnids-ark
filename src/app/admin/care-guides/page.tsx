@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { TableMolecule } from '@/components/shared/molecules/table';
 import { Badge } from '@/components/ui/badge';
 import { Modal } from '@/components/shared/molecules/modal';
-import { LocalStorage } from '@/mock-db/storage';
+import { Db } from '@/lib/db';
 import type { CareGuide } from '@/types';
 import { SectionHeader } from '@/components/shared/molecules/section-header';
 
@@ -30,7 +30,9 @@ export default function AdminCareGuidesPage() {
   });
 
   useEffect(() => {
-    setGuides(LocalStorage.getAll<CareGuide>('care_guides'));
+    (async () => {
+      setGuides(await Db.getAll<CareGuide>('care_guides'));
+    })();
   }, []);
 
   const filtered = guides.filter(g =>
@@ -38,7 +40,7 @@ export default function AdminCareGuidesPage() {
     g.category.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleOpenEdit = (guide: CareGuide | null) => {
+  const handleOpenEdit = async (guide: CareGuide | null) => {
     if (guide) {
       setEditingGuide(guide);
       setFormData({ ...guide });
@@ -51,7 +53,7 @@ export default function AdminCareGuidesPage() {
     setIsModalOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.title || !formData.content) {
       toast.error('Title and content are required');
       return;
@@ -60,25 +62,25 @@ export default function AdminCareGuidesPage() {
     setLoading(true);
     if (editingGuide) {
       const updated = { ...editingGuide, ...formData } as CareGuide;
-      LocalStorage.update('care_guides', updated.id, updated);
+      await Db.update('care_guides', updated.id, updated);
       toast.success('Care guide updated');
     } else {
       const newGuide = {
         ...formData,
         id: `guide-${Date.now()}`,
       } as CareGuide;
-      LocalStorage.create('care_guides', newGuide);
+      await Db.create('care_guides', newGuide);
       toast.success('Care guide added');
     }
 
-    setGuides(LocalStorage.getAll<CareGuide>('care_guides'));
+    setGuides(await Db.getAll<CareGuide>('care_guides'));
     setIsModalOpen(false);
     setLoading(false);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (deleteId) {
-      LocalStorage.delete('care_guides', deleteId);
+      await Db.delete('care_guides', deleteId);
       setGuides(guides.filter(g => g.id !== deleteId));
       setDeleteId(null);
       toast.success('Care guide deleted');
@@ -238,7 +240,9 @@ export default function AdminCareGuidesPage() {
         onClose={() => setDeleteId(null)}
         variant="confirm"
         title="Confirm Deletion"
-        description="Are you sure you want to delete this care guide? This action cannot be undone."
+        className='!max-w-100'
+        headerClassName='!border-0'
+        footerClassName='!border-0'
         footer={(
           <div className="flex gap-2 w-full justify-end">
             <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
@@ -246,7 +250,7 @@ export default function AdminCareGuidesPage() {
           </div>
         )}
       >
-        <div className="py-2" />
+        <p >Are you sure you want to delete this care guide? This action cannot be undone.</p>
       </Modal>
     </div>
   );

@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { StatusBadge } from '@/components/shared/molecules/status-badge';
 import { EmptyState } from '@/components/shared/molecules/empty-state';
 import { useAuthStore } from '@/store/auth-store';
-import { LocalStorage } from '@/mock-db/storage';
+import { Db } from '@/lib/db';
 import type { ConsultationBooking } from '@/types';
 import { formatPrice } from '@/constants/pricing';
 import { Badge } from '@/components/ui/badge';
@@ -19,12 +19,15 @@ export default function MyConsultationsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    (async () => {
     if (!user) return;
-    const data = LocalStorage.getAll<ConsultationBooking>('bookings')
+    const allBookings = await Db.getAll<ConsultationBooking>('bookings');
+    const data = allBookings
       .filter(b => b.userId === user.id)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     setBookings(data);
     setLoading(false);
+  })();
   }, [user]);
 
   return (

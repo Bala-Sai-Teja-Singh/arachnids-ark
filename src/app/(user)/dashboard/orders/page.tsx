@@ -13,7 +13,7 @@ import { StatusBadge } from '@/components/shared/molecules/status-badge';
 import { SectionHeader } from '@/components/shared/molecules/section-header';
 import { EmptyState } from '@/components/shared/molecules/empty-state';
 import { useAuthStore } from '@/store/auth-store';
-import { LocalStorage } from '@/mock-db/storage';
+import { Db } from '@/lib/db';
 import type { Order, SystemSettings } from '@/types';
 import { formatPrice } from '@/constants/pricing';
 import { toast } from 'sonner';
@@ -35,31 +35,34 @@ export default function MyOrdersPage() {
   const [copiedUPI, setCopiedUPI] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
-    const data = LocalStorage.getAll<Order>('orders')
-      .filter(o => o.userId === user.id)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    setTimeout(() => {
-      setOrders(data);
-    }, 0);
-
-    const settingsData = LocalStorage.getAll<SystemSettings>('system_settings');
-    if (settingsData.length > 0) {
-      setSystemSettings(settingsData[0]);
-      const defaultUPI = settingsData[0].upiIds.find(u => u.isDefault) || settingsData[0].upiIds[0];
-      if (defaultUPI) setSelectedUPI(defaultUPI.value);
-    }
-
-    // Auto-expand if ID is in search params
-    const orderId = searchParams.get('id');
-    if (orderId) {
-      setExpandedOrders(new Set([orderId]));
-      // Scroll to the order element after a small delay
+      (async () => {
+      if (!user) return;
+      const allOrders = await Db.getAll<Order>('orders');
+      const data = allOrders
+        .filter(o => o.userId === user.id)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setTimeout(() => {
-        const el = document.getElementById(`order-${orderId}`);
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 100);
-    }
+        setOrders(data);
+      }, 0);
+  
+      const settingsData = await Db.getSettings<SystemSettings>('system_settings');
+      if (settingsData) {
+        setSystemSettings(settingsData);
+        const defaultUPI = settingsData.upiIds.find(u => u.isDefault) || settingsData.upiIds[0];
+        if (defaultUPI) setSelectedUPI(defaultUPI.value);
+      }
+  
+      // Auto-expand if ID is in search params
+      const orderId = searchParams.get('id');
+      if (orderId) {
+        setExpandedOrders(new Set([orderId]));
+        // Scroll to the order element after a small delay
+        setTimeout(() => {
+          const el = document.getElementById(`order-${orderId}`);
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+      }
+      })();
   }, [user, searchParams]);
 
   const toggleExpand = (id: string) => {

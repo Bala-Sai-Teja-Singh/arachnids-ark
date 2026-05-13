@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { formatPrice } from '@/constants/pricing';
-import { LocalStorage } from '@/mock-db/storage';
+import { Db } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { useNotificationStore } from '@/store/notification-store';
@@ -42,50 +42,56 @@ export default function CheckoutPage() {
   const updateItemSize = useCartStore(state => state.updateItemSize);
 
   useEffect(() => {
-    if (items.length === 0 && !isSubmitting && !isSuccess) {
-      router.push('/shop');
-    }
-
-    const sysSettings = LocalStorage.getAll<SystemSettings>('system_settings');
-    if (sysSettings.length > 0) {
-      setShippingSettings(sysSettings[0].shippingSettings);
-    }
+      (async () => {
+      if (items.length === 0 && !isSubmitting && !isSuccess) {
+        router.push('/shop');
+      }
+  
+      const sysSettings = await Db.getSettings<SystemSettings>('system_settings');
+      if (sysSettings) {
+        setShippingSettings(sysSettings.shippingSettings);
+      }
+      })();
   }, [items, router, isSubmitting]);
 
   useEffect(() => {
-    if (!shippingSettings) return;
-
-    // Count products (Tarantulas, etc) in the cart for shipping
-    const productCount = items.reduce((acc, item) => {
-      if (item.type === 'product') {
-        const product = LocalStorage.getById<Product>('products', item.id);
-        if (product?.mainCategory === 'Tarantulas') {
-          return acc + item.quantity;
+      (async () => {
+      if (!shippingSettings) return;
+  
+      // Count products (Tarantulas, etc) in the cart for shipping
+      let productCount = 0;
+      for (const item of items) {
+        if (item.type === 'product') {
+          const product = await Db.getById<Product>('products', item.id);
+          if (product?.mainCategory === 'Tarantulas') {
+            productCount += item.quantity;
+          }
         }
       }
-      return acc;
-    }, 0);
-
-    // Find applicable shipping rule
-    const rule = shippingSettings.rules?.find(
-      r => productCount >= r.minQuantity && productCount <= r.maxQuantity
-    );
-
-    setShippingCharge(rule ? rule.charge : 0);
+  
+      // Find applicable shipping rule
+      const rule = shippingSettings.rules?.find(
+        r => productCount >= r.minQuantity && productCount <= r.maxQuantity
+      );
+  
+      setShippingCharge(rule ? rule.charge : 0);
+      })();
   }, [items, shippingSettings]);
 
   useEffect(() => {
-    // Load full product details for size switching
-    const details: Record<string, Product> = {};
-    items.forEach(item => {
-      if (item.type === 'product' && !productDetails[item.id]) {
-        const p = LocalStorage.getById<Product>('products', item.id);
-        if (p) details[item.id] = p;
+      (async () => {
+      // Load full product details for size switching
+      const details: Record<string, Product> = {};
+      for (const item of items) {
+        if (item.type === 'product' && !productDetails[item.id]) {
+          const p = await Db.getById<Product>('products', item.id);
+          if (p) details[item.id] = p;
+        }
       }
-    });
-    if (Object.keys(details).length > 0) {
-      setProductDetails(prev => ({ ...prev, ...details }));
-    }
+      if (Object.keys(details).length > 0) {
+        setProductDetails(prev => ({ ...prev, ...details }));
+      }
+      })();
   }, [items, productDetails]);
 
   useEffect(() => {
@@ -167,18 +173,18 @@ export default function CheckoutPage() {
     };
 
     try {
-      LocalStorage.create('orders', order);
+      await Db.create('orders', order);
 
       // Trigger Email Notification
-      const settingsData = LocalStorage.getAll<SystemSettings>('system_settings');
-      const paymentDetails = settingsData.length > 0 ? {
-        upiIds: settingsData[0].upiIds,
-        bankDetails: settingsData[0].bankDetails,
-        paymentInstructions: settingsData[0].paymentInstructions
+      const settingsData = await Db.getSettings<SystemSettings>('system_settings');
+      const paymentDetails = settingsData ? {
+        upiIds: settingsData.upiIds,
+        bankDetails: settingsData.bankDetails,
+        paymentInstructions: settingsData.paymentInstructions
       } : null;
 
       if (paymentDetails) {
-        const adminUser = LocalStorage.getAll<User>('users').find(u => u.role === 'admin');
+        const adminUser = (await Db.getAll<User>('users')).find(u => u.role === 'admin');
         const adminEmail = adminUser?.email || 'harrysweettt@gmail.com';
 
         fetch('/api/emails/order-confirmation', {

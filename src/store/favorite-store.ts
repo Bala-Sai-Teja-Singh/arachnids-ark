@@ -2,9 +2,8 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { LocalStorage } from '@/mock-db/storage';
+import { DbClient } from '@/lib/db-client';
 import { toast } from 'sonner';
-import type { Product, Course, ConsultationBooking } from '@/types';
 
 type ItemType = 'product' | 'course' | 'consultation';
 
@@ -45,27 +44,16 @@ export const useFavoriteStore = create<FavoriteStore>()(
           toast.success('Added to favorites');
         }
 
-        // Update local storage for the specific collection
+        // Update likes count in DB (fire and forget)
         const collection = type === 'product' ? 'products' : type === 'course' ? 'courses' : 'bookings';
-        
-        // Note: For consultations, we might not have a base 'consultation' collection 
-        // since bookings are per-user. But courses and products do.
-        if (collection !== 'bookings') {
-          const item = LocalStorage.getById<Product | Course>(collection, id);
+        (async () => {
+          const item = await DbClient.getById<any>(collection, id);
           if (item) {
-            LocalStorage.update<Product | Course>(collection, id, { 
-              likes: Math.max(0, (item.likes || 0) + delta) 
+            await DbClient.update(collection, id, {
+              likes: Math.max(0, (item.likes || 0) + delta),
             });
           }
-        } else {
-          // If it's a consultation booking, we update the specific booking
-          const booking = LocalStorage.getById<ConsultationBooking>('bookings', id);
-          if (booking) {
-             LocalStorage.update<ConsultationBooking>('bookings', id, { 
-               likes: Math.max(0, (booking.likes || 0) + delta) 
-             });
-          }
-        }
+        })();
 
         set({
           likedIds: {

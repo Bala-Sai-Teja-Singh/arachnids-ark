@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Modal } from '@/components/shared/molecules/modal';
 import { TableMolecule } from '@/components/shared/molecules/table';
-import { LocalStorage } from '@/mock-db/storage';
+import { Db } from '@/lib/db';
 import type { User, UserRole } from '@/types';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/auth-store';
@@ -21,10 +21,12 @@ export default function AdminUsersPage() {
   const { user: currentUser } = useAuthStore();
 
   useEffect(() => {
-    setUsers(LocalStorage.getAll<User>('users'));
+    (async () => {
+      setUsers(await Db.getAll<User>('users'));
+    })();
   }, []);
 
-  const promptRoleChange = (id: string, name: string, currentRole: UserRole) => {
+  const promptRoleChange = async (id: string, name: string, currentRole: UserRole) => {
     if (id === currentUser?.id) {
       toast.error('You cannot change your own role.');
       return;
@@ -33,17 +35,17 @@ export default function AdminUsersPage() {
     setRoleChangeInfo({ id, name, targetRole });
   };
 
-  const confirmRoleChange = () => {
+  const confirmRoleChange = async () => {
     if (!roleChangeInfo) return;
     const { id, targetRole } = roleChangeInfo;
-    LocalStorage.update<User>('users', id, { role: targetRole });
+    await Db.update<User>('users', id, { role: targetRole });
     // Refresh background content
-    setUsers(LocalStorage.getAll<User>('users'));
+    setUsers(await Db.getAll<User>('users'));
     toast.success(`Role updated to ${targetRole}`);
     setRoleChangeInfo(null);
   };
 
-  const promptDelete = (id: string) => {
+  const promptDelete = async (id: string) => {
     if (id === currentUser?.id) {
       toast.error('You cannot delete your own account.');
       return;
@@ -51,11 +53,11 @@ export default function AdminUsersPage() {
     setDeleteId(id);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (deleteId) {
-      LocalStorage.delete('users', deleteId);
+      await Db.delete('users', deleteId);
       // Refresh background content
-      setUsers(LocalStorage.getAll<User>('users'));
+      setUsers(await Db.getAll<User>('users'));
       setDeleteId(null);
       toast.success('User deleted');
     }
@@ -65,8 +67,8 @@ export default function AdminUsersPage() {
     if (!resetPasswordInfo || !newPassword) return;
     setIsResetting(true);
     await new Promise(r => setTimeout(r, 800));
-    
-    LocalStorage.update<User>('users', resetPasswordInfo.id, { password: newPassword });
+
+    await Db.update<User>('users', resetPasswordInfo.id, { password: newPassword });
     toast.success(`Password reset for ${resetPasswordInfo.name}`);
     setResetPasswordInfo(null);
     setNewPassword('');
@@ -106,9 +108,9 @@ export default function AdminUsersPage() {
             align: 'right',
             cell: (u) => (
               <div className="flex justify-end gap-1">
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
+                <Button
+                  variant="ghost"
+                  size="icon"
                   className="text-muted-foreground hover:text-brand-gold h-8 w-8"
                   onClick={() => promptRoleChange(u.id, u.name, u.role)}
                   disabled={u.id === currentUser?.id}
@@ -116,19 +118,19 @@ export default function AdminUsersPage() {
                 >
                   {u.role === 'admin' ? <ShieldAlert className="h-4 w-4" /> : <Shield className="h-4 w-4" />}
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
+                <Button
+                  variant="ghost"
+                  size="icon"
                   className="text-muted-foreground hover:text-brand-gold h-8 w-8"
                   onClick={() => setResetPasswordInfo({ id: u.id, name: u.name })}
                   title="Reset Password"
                 >
                   <Key className="h-4 w-4" />
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="text-muted-foreground hover:text-red-400 h-8 w-8" 
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground hover:text-red-400 h-8 w-8"
                   onClick={() => promptDelete(u.id)}
                   disabled={u.id === currentUser?.id}
                 >
@@ -142,8 +144,8 @@ export default function AdminUsersPage() {
       />
 
       {/* Role Change Confirmation Modal */}
-      <Modal 
-        isOpen={!!roleChangeInfo} 
+      <Modal
+        isOpen={!!roleChangeInfo}
         onClose={() => setRoleChangeInfo(null)}
         variant="confirm"
         title="Confirm Role Change"
@@ -160,12 +162,14 @@ export default function AdminUsersPage() {
       </Modal>
 
       {/* Delete Confirmation Modal */}
-      <Modal 
-        isOpen={!!deleteId} 
+      <Modal
+        isOpen={!!deleteId}
         onClose={() => setDeleteId(null)}
         variant="confirm"
         title="Confirm Deletion"
-        description="Are you sure you want to delete this user? This action cannot be undone."
+        className='!max-w-100'
+        headerClassName='!border-0'
+        footerClassName='!border-0'
         footer={(
           <div className="flex gap-2 w-full justify-end">
             <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
@@ -173,12 +177,12 @@ export default function AdminUsersPage() {
           </div>
         )}
       >
-        <div className="py-2" />
+        <p>Are you sure you want to delete this user? This action cannot be undone.</p>
       </Modal>
 
       {/* Admin Password Reset Modal */}
-      <Modal 
-        isOpen={!!resetPasswordInfo} 
+      <Modal
+        isOpen={!!resetPasswordInfo}
         onClose={() => {
           setResetPasswordInfo(null);
           setNewPassword('');
@@ -188,8 +192,8 @@ export default function AdminUsersPage() {
         footer={(
           <div className="flex gap-2 w-full justify-end">
             <Button variant="outline" onClick={() => setResetPasswordInfo(null)}>Cancel</Button>
-            <Button 
-              className="bg-brand-red hover:bg-brand-red/90 text-white" 
+            <Button
+              className="bg-brand-red hover:bg-brand-red/90 text-white"
               onClick={confirmResetPassword}
               disabled={!newPassword || isResetting}
             >
@@ -201,7 +205,7 @@ export default function AdminUsersPage() {
       >
         <div className="space-y-4 py-4">
           <p className="text-sm text-muted-foreground">
-            Enter a new password for <span className="text-foreground font-bold">{resetPasswordInfo?.name}</span>. 
+            Enter a new password for <span className="text-foreground font-bold">{resetPasswordInfo?.name}</span>.
             The user will need to use this new password to login.
           </p>
           <div className="space-y-2">

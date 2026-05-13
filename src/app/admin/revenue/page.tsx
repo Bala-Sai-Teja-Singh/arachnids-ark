@@ -8,7 +8,7 @@ import autoTable from 'jspdf-autotable';
 import { TableMolecule } from '@/components/shared/molecules/table';
 import { Input } from '@/components/shared/atoms/input';
 import { Button } from '@/components/ui/button';
-import { LocalStorage } from '@/mock-db/storage';
+import { Db } from '@/lib/db';
 import { formatPrice } from '@/constants/pricing';
 import type { Order, CourseEnrollment, ConsultationBooking } from '@/types';
 import { Badge } from '@/components/ui/badge';
@@ -46,117 +46,119 @@ export default function AdminRevenuePage() {
   });
 
   useEffect(() => {
-    const orders = LocalStorage.getAll<Order>('orders');
-    const enrollments = LocalStorage.getAll<CourseEnrollment>('enrollments');
-    const bookings = LocalStorage.getAll<ConsultationBooking>('bookings');
-
-    const completedOrders: RevenueItem[] = orders
-      .filter(o => ['payment_verified', 'order_shipped', 'order_completed'].includes(o.status))
-      .flatMap(o => {
-        const itemsByType = o.items.reduce((acc, item) => {
-          if (!acc[item.type]) acc[item.type] = [];
-          acc[item.type].push(item);
-          return acc;
-        }, {} as Record<string, typeof o.items>);
-
-        const rows: RevenueItem[] = [];
-
-        // 1. Group products into one row
-        if (itemsByType['product']) {
-          const products = itemsByType['product'];
-          const totalQty = products.reduce((acc, i) => acc + (i.quantity || 1), 0);
-          const totalAmount = products.reduce((acc, i) => acc + (i.price * (i.quantity || 1)), 0);
-          
-          rows.push({
-            id: `${o.id}-products`,
-            type: 'product',
-            name: products.length === 1 && products[0].quantity === 1 
-              ? products[0].name 
-              : `${totalQty} Items (${products.length} Species)`,
-            userName: o.userName,
-            userEmail: o.userEmail,
-            userPhone: o.deliveryPhone,
-            amount: totalAmount + (o.shippingCharge || 0), // Add shipping to product row
-            date: o.createdAt,
-            status: o.status
-          });
-        }
-
-        // 2. Individual rows for courses and consultations
-        ['course', 'consultation'].forEach(type => {
-          if (itemsByType[type]) {
-            itemsByType[type].forEach((item, idx) => {
-              rows.push({
-                id: `${o.id}-${type}-${idx}`,
-                type: type as any,
-                name: item.name + (item.quantity > 1 ? ` (x${item.quantity})` : ''),
-                userName: o.userName,
-                userEmail: o.userEmail,
-                userPhone: o.deliveryPhone,
-                amount: item.price * (item.quantity || 1),
-                date: o.createdAt,
-                status: o.status
-              });
+      (async () => {
+      const orders = await Db.getAll<Order>('orders');
+      const enrollments = await Db.getAll<CourseEnrollment>('enrollments');
+      const bookings = await Db.getAll<ConsultationBooking>('bookings');
+  
+      const completedOrders: RevenueItem[] = orders
+        .filter(o => ['payment_verified', 'order_shipped', 'order_completed'].includes(o.status))
+        .flatMap(o => {
+          const itemsByType = o.items.reduce((acc, item) => {
+            if (!acc[item.type]) acc[item.type] = [];
+            acc[item.type].push(item);
+            return acc;
+          }, {} as Record<string, typeof o.items>);
+  
+          const rows: RevenueItem[] = [];
+  
+          // 1. Group products into one row
+          if (itemsByType['product']) {
+            const products = itemsByType['product'];
+            const totalQty = products.reduce((acc, i) => acc + (i.quantity || 1), 0);
+            const totalAmount = products.reduce((acc, i) => acc + (i.price * (i.quantity || 1)), 0);
+            
+            rows.push({
+              id: `${o.id}-products`,
+              type: 'product',
+              name: products.length === 1 && products[0].quantity === 1 
+                ? products[0].name 
+                : `${totalQty} Items (${products.length} Species)`,
+              userName: o.userName,
+              userEmail: o.userEmail,
+              userPhone: o.deliveryPhone,
+              amount: totalAmount + (o.shippingCharge || 0), // Add shipping to product row
+              date: o.createdAt,
+              status: o.status
             });
           }
+  
+          // 2. Individual rows for courses and consultations
+          ['course', 'consultation'].forEach(type => {
+            if (itemsByType[type]) {
+              itemsByType[type].forEach((item, idx) => {
+                rows.push({
+                  id: `${o.id}-${type}-${idx}`,
+                  type: type as any,
+                  name: item.name + (item.quantity > 1 ? ` (x${item.quantity})` : ''),
+                  userName: o.userName,
+                  userEmail: o.userEmail,
+                  userPhone: o.deliveryPhone,
+                  amount: item.price * (item.quantity || 1),
+                  date: o.createdAt,
+                  status: o.status
+                });
+              });
+            }
+          });
+  
+          return rows;
         });
-
-        return rows;
-      });
-
-    const completedEnrollments: RevenueItem[] = enrollments
-      .filter(e => e.status === 'enrolled' && !e.orderId)
-      .map(e => ({
-        id: e.id,
-        type: 'course',
-        name: e.courseTitle,
-        userName: e.userName,
-        userEmail: e.userEmail,
-        userPhone: (e as any).userPhone,
-        amount: e.totalPrice,
-        date: e.createdAt,
-        status: e.status
-      }));
-
-    const completedBookings: RevenueItem[] = bookings
-      .filter(b => ['payment_verified', 'scheduled', 'completed'].includes(b.status) && !b.orderId)
-      .map(b => {
-        let name = `${b.duration} min Consultation`;
-        if (b.items && b.items.length > 0) {
-          if (b.items.length === 1) {
-            name = b.items[0].label;
-          } else {
-            const totalMins = b.items.reduce((acc, curr) => acc + (curr.duration * (curr.quantity || 1)), 0);
-            name = `${b.items.length} Sessions (${totalMins} mins)`;
+  
+      const completedEnrollments: RevenueItem[] = enrollments
+        .filter(e => e.status === 'enrolled' && !e.orderId)
+        .map(e => ({
+          id: e.id,
+          type: 'course',
+          name: e.courseTitle,
+          userName: e.userName,
+          userEmail: e.userEmail,
+          userPhone: (e as any).userPhone,
+          amount: e.totalPrice,
+          date: e.createdAt,
+          status: e.status
+        }));
+  
+      const completedBookings: RevenueItem[] = bookings
+        .filter(b => ['payment_verified', 'scheduled', 'completed'].includes(b.status) && !b.orderId)
+        .map(b => {
+          let name = `${b.duration} min Consultation`;
+          if (b.items && b.items.length > 0) {
+            if (b.items.length === 1) {
+              name = b.items[0].label;
+            } else {
+              const totalMins = b.items.reduce((acc, curr) => acc + (curr.duration * (curr.quantity || 1)), 0);
+              name = `${b.items.length} Sessions (${totalMins} mins)`;
+            }
           }
-        }
-        
-        return {
-          id: b.id,
-          type: 'consultation',
-          name,
-          userName: b.userName,
-          userEmail: b.userEmail,
-          userPhone: (b as any).userPhone,
-          amount: b.totalPrice || 0,
-          date: b.createdAt,
-          status: b.status
-        };
+          
+          return {
+            id: b.id,
+            type: 'consultation',
+            name,
+            userName: b.userName,
+            userEmail: b.userEmail,
+            userPhone: (b as any).userPhone,
+            amount: b.totalPrice || 0,
+            date: b.createdAt,
+            status: b.status
+          };
+        });
+  
+      const allItems = [...completedOrders, ...completedEnrollments, ...completedBookings].sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+  
+      setRevenueItems(allItems);
+      setFilteredItems(allItems);
+  
+      setTotals({
+        total: allItems.reduce((acc, curr) => acc + curr.amount, 0),
+        products: completedOrders.reduce((acc, curr) => acc + curr.amount, 0),
+        courses: completedEnrollments.reduce((acc, curr) => acc + curr.amount, 0),
+        consultations: completedBookings.reduce((acc, curr) => acc + curr.amount, 0),
       });
-
-    const allItems = [...completedOrders, ...completedEnrollments, ...completedBookings].sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
-
-    setRevenueItems(allItems);
-    setFilteredItems(allItems);
-
-    setTotals({
-      total: allItems.reduce((acc, curr) => acc + curr.amount, 0),
-      products: completedOrders.reduce((acc, curr) => acc + curr.amount, 0),
-      courses: completedEnrollments.reduce((acc, curr) => acc + curr.amount, 0),
-      consultations: completedBookings.reduce((acc, curr) => acc + curr.amount, 0),
-    });
+      })();
   }, []);
 
   useEffect(() => {

@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { BookOpen, Clock, ChevronLeft, Calendar, Share2, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { LocalStorage } from '@/mock-db/storage';
+import { Db } from '@/lib/db';
 import type { CareGuide } from '@/types';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -18,11 +18,13 @@ export default function CareGuideDetailPage({ params }: { params: Promise<{ id: 
   const { isVisible } = useModules();
 
   useEffect(() => {
-    const allGuides = LocalStorage.getAll<CareGuide>('care_guides');
-    const found = allGuides.find(g => g.id === id);
-    if (found) {
-      setGuide(found);
-    }
+      (async () => {
+      const allGuides = await Db.getAll<CareGuide>('care_guides');
+      const found = allGuides.find(g => g.id === id);
+      if (found) {
+        setGuide(found);
+      }
+      })();
   }, [id]);
 
   if (!guide) {

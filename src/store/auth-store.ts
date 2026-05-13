@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User, SafeUser, UserRole } from '@/types';
-import { LocalStorage } from '@/mock-db/storage';
+import { DbClient } from '@/lib/db-client';
 
 interface AuthState {
   user: SafeUser | null;
@@ -18,12 +18,6 @@ interface AuthState {
   checkEmailAvailability: (email: string) => Promise<{ available: boolean }>;
 }
 
-function toSafeUser(user: User): SafeUser {
-  const safeUser = { ...user };
-  delete (safeUser as any).password;
-  return safeUser as SafeUser;
-}
-
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -33,32 +27,22 @@ export const useAuthStore = create<AuthState>()(
 
       login: async (email: string, password: string) => {
         set({ isLoading: true });
-        // Simulate network delay
-        await new Promise(r => setTimeout(r, 500));
 
-        const users = LocalStorage.getAll<User>('users');
-        const user = users.find(u => u.email === email && u.password === password);
+        const result = await DbClient.login(email, password);
 
-        if (!user) {
+        if (result.error || !result.user) {
           set({ isLoading: false });
-          return { success: false, error: 'Invalid email or password' };
+          return { success: false, error: result.error || 'Invalid email or password' };
         }
 
-        set({ user: toSafeUser(user), isAuthenticated: true, isLoading: false });
+        set({ user: result.user, isAuthenticated: true, isLoading: false });
         return { success: true };
       },
 
       signup: async (name: string, email: string, password: string, phone?: string) => {
         set({ isLoading: true });
-        await new Promise(r => setTimeout(r, 500));
 
-        const users = LocalStorage.getAll<User>('users');
-        if (users.find(u => u.email === email)) {
-          set({ isLoading: false });
-          return { success: false, error: 'Email already registered' };
-        }
-
-        const newUser: User = {
+        const newUser = {
           id: `user-${Date.now()}`,
           name,
           email,
@@ -69,9 +53,16 @@ export const useAuthStore = create<AuthState>()(
           updatedAt: new Date().toISOString(),
         };
 
-        LocalStorage.create('users', newUser);
-        set({ user: toSafeUser(newUser), isAuthenticated: true, isLoading: false });
-        return { success: true };
+        try {
+          const created = await DbClient.create<User>('users', newUser);
+          // Remove password from the response for safe user
+          const { password: _, ...safeUser } = created as any;
+          set({ user: safeUser, isAuthenticated: true, isLoading: false });
+          return { success: true };
+        } catch {
+          set({ isLoading: false });
+          return { success: false, error: 'Signup failed' };
+        }
       },
 
       logout: () => {
@@ -83,13 +74,12 @@ export const useAuthStore = create<AuthState>()(
         if (!user) return;
         const updated = { ...user, ...updates, updatedAt: new Date().toISOString() };
         set({ user: updated });
-        // Also update in storage
-        LocalStorage.update<User>('users', user.id, updates as Partial<User>);
+        // Also update in DB
+        DbClient.update('users', user.id, updates);
       },
 
       changePassword: async (currentPassword: string, newPassword: string) => {
         set({ isLoading: true });
-        await new Promise(r => setTimeout(r, 800));
 
         const { user } = get();
         if (!user) {
@@ -97,17 +87,9 @@ export const useAuthStore = create<AuthState>()(
           return { success: false, error: 'Not authenticated' };
         }
 
-        const users = LocalStorage.getAll<User>('users');
-        const dbUser = users.find(u => u.id === user.id);
-
-        if (!dbUser || dbUser.password !== currentPassword) {
-          set({ isLoading: false });
-          return { success: false, error: 'Incorrect current password' };
-        }
-
-        LocalStorage.update<User>('users', user.id, { password: newPassword });
+        const result = await DbClient.changePassword(user.id, currentPassword, newPassword);
         set({ isLoading: false });
-        return { success: true };
+        return result;
       },
 
       hasRole: (role: UserRole) => {
@@ -116,9 +98,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       checkEmailAvailability: async (email: string) => {
-        const users = LocalStorage.getAll<User>('users');
-        const exists = users.some(u => u.email.toLowerCase() === email.toLowerCase());
-        return { available: !exists };
+        return DbClient.checkEmailAvailability(email);
       },
     }),
     {

@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { LocalStorage } from '@/mock-db/storage';
+import { Db } from '@/lib/db';
 import { useState, useEffect } from 'react';
 import type { Product } from '@/types';
 import { toast } from 'sonner';
@@ -21,17 +21,19 @@ export function CartDrawer() {
   const count = totalItems();
 
   useEffect(() => {
-    // Load full product details for size switching
-    const details: Record<string, Product> = {};
-    items.forEach(item => {
-      if (item.type === 'product' && !productDetails[item.id]) {
-        const p = LocalStorage.getById<Product>('products', item.id);
-        if (p) details[item.id] = p;
+      (async () => {
+      // Load full product details for size switching
+      const details: Record<string, Product> = {};
+      for (const item of items) {
+        if (item.type === 'product' && !productDetails[item.id]) {
+          const p = await Db.getById<Product>('products', item.id);
+          if (p) details[item.id] = p;
+        }
       }
-    });
-    if (Object.keys(details).length > 0) {
-      setProductDetails(prev => ({ ...prev, ...details }));
-    }
+      if (Object.keys(details).length > 0) {
+        setProductDetails(prev => ({ ...prev, ...details }));
+      }
+      })();
   }, [items, productDetails]);
 
   const handleSizeChange = (productId: string, oldSize: string, newSizeName: string) => {

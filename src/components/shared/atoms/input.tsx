@@ -246,6 +246,12 @@ const Input = React.forwardRef<
                 props.onKeyDown?.(e);
                 if (e.key === 'Escape') onClose?.();
               }}
+              onWheel={(e) => {
+                props.onWheel?.(e);
+                if (effectiveType === 'number') {
+                  (e.target as HTMLInputElement).blur();
+                }
+              }}
               className={cn(
                 'file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:cursor-not-allowed disabled:opacity-50 md:text-sm',
                 `${label && labelPlacement === 'inside' ? 'border-none h-fit !shadow-none' : ''}`,

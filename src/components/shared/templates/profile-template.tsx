@@ -214,6 +214,7 @@ export function ProfileTemplate({
                 onSubmit={onSubmit}
                 isSubmitting={isSubmitting}
                 submitLabel={isAdmin ? "Save Admin Profile" : "Save Profile Changes"}
+                submitAlignment="right"
                 className="space-y-6"
               />
             </CardContent>

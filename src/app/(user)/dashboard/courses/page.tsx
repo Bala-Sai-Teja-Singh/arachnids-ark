@@ -12,7 +12,7 @@ import { StatusBadge } from '@/components/shared/molecules/status-badge';
 import { EmptyState } from '@/components/shared/molecules/empty-state';
 import { SectionHeader } from '@/components/shared/molecules/section-header';
 import { useAuthStore } from '@/store/auth-store';
-import { LocalStorage } from '@/mock-db/storage';
+import { Db } from '@/lib/db';
 import type { CourseEnrollment, Order, OrderStatus, SystemSettings } from '@/types';
 import { formatPrice } from '@/constants/pricing';
 import { toast } from 'sonner';
@@ -29,55 +29,58 @@ export default function MyCoursesPage() {
   const [copiedUPI, setCopiedUPI] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
-
-    // --- SELF-HEALING SYNC LOGIC ---
-    // Check for paid orders that might have missed the enrollment trigger
-    const orders = LocalStorage.getAll<Order>('orders');
-    const existingEnrollments = LocalStorage.getAll<CourseEnrollment>('enrollments');
-    const paidStatuses: OrderStatus[] = ['payment_verified', 'order_shipped', 'order_completed'];
-
-    let syncNeeded = false;
-    orders.filter(o => o.userId === user.id && paidStatuses.includes(o.status)).forEach(order => {
-      order.items.forEach(item => {
-        if (item.type === 'course') {
-          const alreadyEnrolled = existingEnrollments.some(e => e.userId === user.id && e.courseId === item.id);
-          if (!alreadyEnrolled) {
-            LocalStorage.create<CourseEnrollment>('enrollments', {
-              id: `enr-${Date.now()}-${item.id}`,
-              userId: user.id,
-              userName: user.name,
-              userEmail: user.email,
-              courseId: item.id,
-              courseTitle: item.name,
-              status: 'enrolled',
-              totalPrice: item.price,
-              orderId: order.id,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString()
-            } as CourseEnrollment);
-            syncNeeded = true;
+      (async () => {
+      if (!user) return;
+  
+      // --- SELF-HEALING SYNC LOGIC ---
+      // Check for paid orders that might have missed the enrollment trigger
+      const orders = await Db.getAll<Order>('orders');
+      const existingEnrollments = await Db.getAll<CourseEnrollment>('enrollments');
+      const paidStatuses: OrderStatus[] = ['payment_verified', 'order_shipped', 'order_completed'];
+  
+      let syncNeeded = false;
+      for (const order of orders.filter(o => o.userId === user.id && paidStatuses.includes(o.status))) {
+        for (const item of order.items) {
+          if (item.type === 'course') {
+            const alreadyEnrolled = existingEnrollments.some(e => e.userId === user.id && e.courseId === item.id);
+            if (!alreadyEnrolled) {
+              await Db.create<CourseEnrollment>('enrollments', {
+                id: `enr-${Date.now()}-${item.id}`,
+                userId: user.id,
+                userName: user.name,
+                userEmail: user.email,
+                courseId: item.id,
+                courseTitle: item.name,
+                status: 'enrolled',
+                totalPrice: item.price,
+                orderId: order.id,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+              } as CourseEnrollment);
+              syncNeeded = true;
+            }
           }
         }
-      });
-    });
-
-    if (syncNeeded) {
-      toast.success('Course list synchronized!');
-    }
-    // --- END SYNC LOGIC ---
-
-    const data = LocalStorage.getAll<CourseEnrollment>('enrollments')
-      .filter(e => e.userId === user.id)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    setEnrollments(data);
-
-    const settingsData = LocalStorage.getAll<SystemSettings>('system_settings');
-    if (settingsData.length > 0) {
-      setSystemSettings(settingsData[0]);
-      const defaultUPI = settingsData[0].upiIds.find(u => u.isDefault) || settingsData[0].upiIds[0];
-      if (defaultUPI) setSelectedUPI(defaultUPI.value);
-    }
+      }
+  
+      if (syncNeeded) {
+        toast.success('Course list synchronized!');
+      }
+      // --- END SYNC LOGIC ---
+  
+      const allEnrollments = await Db.getAll<CourseEnrollment>('enrollments');
+      const data = allEnrollments
+        .filter(e => e.userId === user.id)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setEnrollments(data);
+  
+      const settingsData = await Db.getSettings<SystemSettings>('system_settings');
+      if (settingsData) {
+        setSystemSettings(settingsData);
+        const defaultUPI = settingsData.upiIds.find(u => u.isDefault) || settingsData.upiIds[0];
+        if (defaultUPI) setSelectedUPI(defaultUPI.value);
+      }
+      })();
   }, [user]);
 
   const handleCopy = (text: string) => {

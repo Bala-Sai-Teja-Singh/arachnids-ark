@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/shared/molecules/status-badge';
 import { VideoPlayer } from '@/components/shared/video-player';
-import { LocalStorage } from '@/mock-db/storage';
+import { Db } from '@/lib/db';
 import { useAuthStore } from '@/store/auth-store';
 import type { ConsultationBooking } from '@/types';
 import { formatPrice } from '@/constants/pricing';
@@ -22,12 +22,14 @@ export default function ConsultationDetailPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user || !params.id) return;
-    const data = LocalStorage.getById<ConsultationBooking>('bookings', params.id as string);
-    if (data && data.userId === user.id) {
-      setBooking(data);
-    }
-    setLoading(false);
+      (async () => {
+      if (!user || !params.id) return;
+      const data = await Db.getById<ConsultationBooking>('bookings', params.id as string);
+      if (data && data.userId === user.id) {
+        setBooking(data);
+      }
+      setLoading(false);
+      })();
   }, [user, params.id]);
 
   if (loading) return <div className="container mx-auto px-4 py-8 text-center">Loading details...</div>;

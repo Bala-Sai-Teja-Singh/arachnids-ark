@@ -9,7 +9,7 @@ import { Button } from '@/components/shared/atoms/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/shared/atoms/input';
 import { toast } from 'sonner';
-import { LocalStorage } from '@/mock-db/storage';
+import { Db } from '@/lib/db';
 import type { User } from '@/types';
 
 export default function ResetPasswordPage() {
@@ -43,7 +43,7 @@ export default function ResetPasswordPage() {
       // Simulate API call delay
       await new Promise(r => setTimeout(r, 800));
 
-      const users = LocalStorage.getAll<User>('users');
+      const users = await Db.getAll<User>('users');
       const user = users.find(u => u.email === email);
 
       if (!user) {
@@ -51,7 +51,7 @@ export default function ResetPasswordPage() {
       }
 
       // Update password in mock DB
-      LocalStorage.update<User>('users', user.id, { password });
+      await Db.update<User>('users', user.id, { password });
       
       toast.success('Password reset successfully! Please login with your new password.');
       router.push('/login');

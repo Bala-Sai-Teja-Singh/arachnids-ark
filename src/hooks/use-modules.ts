@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { LocalStorage } from '@/mock-db/storage';
+import { DbClient } from '@/lib/db-client';
 import { useAuthStore } from '@/store/auth-store';
 import { SystemSettings } from '@/types';
 
@@ -14,11 +14,12 @@ export function useModules() {
   });
 
   useEffect(() => {
-    const data = LocalStorage.getAll<SystemSettings>('system_settings');
-    if (data.length > 0 && data[0].modules) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setModules(data[0].modules);
-    }
+    (async () => {
+      const data = await DbClient.getSettings<SystemSettings>('system_settings');
+      if (data && data.modules) {
+        setModules(data.modules);
+      }
+    })();
   }, []);
 
   const isVisible = useCallback((moduleName?: string) => {

@@ -38,7 +38,7 @@ import { Modal } from '@/components/shared/molecules/modal';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/shared/atoms/input';
 import { Separator } from '@/components/ui/separator';
-import { LocalStorage } from '@/mock-db/storage';
+import { Db } from '@/lib/db';
 import { useNotificationStore } from '@/store/notification-store';
 import { ALL_STATUSES, STATUS_CONFIG } from '@/constants/statuses';
 import { formatPrice } from '@/constants/pricing';
@@ -65,29 +65,35 @@ export default function AdminOrdersPage() {
   const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
   const [editingShippingCharge, setEditingShippingCharge] = useState<number>(0);
   const [updateSummary, setUpdateSummary] = useState('');
+  const [catalogProducts, setCatalogProducts] = useState<Product[]>([]);
+  const [catalogCourses, setCatalogCourses] = useState<Course[]>([]);
   const { addNotification } = useNotificationStore();
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    setIsLoading(true);
-    const allOrders = LocalStorage.getAll<Order>('orders').sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setOrders(allOrders);
-    setTimeout(() => {
+      (async () => {
+      setIsLoading(true);
+      const allOrders = (await Db.getAll<Order>('orders')).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setIsLoading(false);
-    }, 300);
-
-    // Auto-select if ID is in search params
-    const orderId = searchParams.get('id');
-    if (orderId) {
-      const order = allOrders.find(o => o.id === orderId);
-      if (order) {
-        setSelectedOrder(order);
-        setTrackingId(order.trackingId || '');
-        setCourierPartner(order.courierPartner || '');
+      setOrders(allOrders);
+      setCatalogProducts(await Db.getAll<Product>('products'));
+      setCatalogCourses(await Db.getAll<Course>('courses'));
+      setTimeout(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setIsLoading(false);
+      }, 300);
+  
+      // Auto-select if ID is in search params
+      const orderId = searchParams.get('id');
+      if (orderId) {
+        const order = allOrders.find(o => o.id === orderId);
+        if (order) {
+          setSelectedOrder(order);
+          setTrackingId(order.trackingId || '');
+          setCourierPartner(order.courierPartner || '');
+        }
       }
-    }
+      })();
   }, [searchParams]);
 
   useEffect(() => {
@@ -99,8 +105,8 @@ export default function AdminOrdersPage() {
     }
   }, [selectedOrder]);
 
-  const updateStatus = (id: string, status: OrderStatus, userId: string, forceResend: boolean = false) => {
-    const existingOrders = LocalStorage.getAll<Order>('orders');
+  const updateStatus = async (id: string, status: OrderStatus, userId: string, forceResend: boolean = false) => {
+    const existingOrders = await Db.getAll<Order>('orders');
     const orderToUpdate = existingOrders.find(o => o.id === id);
 
     if (orderToUpdate?.status === 'order_cancelled') {
@@ -138,9 +144,9 @@ export default function AdminOrdersPage() {
     executeStatusUpdate(id, status, userId, forceResend);
   };
 
-  const executeStatusUpdate = (id: string, status: OrderStatus, userId: string, sendEmail: boolean = true) => {
-    LocalStorage.update<Order>('orders', id, { status, updatedAt: new Date().toISOString() });
-    const updatedOrders = LocalStorage.getAll<Order>('orders').sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const executeStatusUpdate = async (id: string, status: OrderStatus, userId: string, sendEmail: boolean = true) => {
+    await Db.update<Order>('orders', id, { status, updatedAt: new Date().toISOString() });
+    const updatedOrders = (await Db.getAll<Order>('orders')).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     setOrders(updatedOrders);
 
     const order = updatedOrders.find(o => o.id === id);
@@ -150,13 +156,13 @@ export default function AdminOrdersPage() {
     if (order && paidStatuses.includes(status)) {
       const newlyUnlockedCourses: string[] = [];
 
-      order.items.forEach(item => {
+      for (const item of order.items) {
         if (item.type === 'course') {
-          const enrollments = LocalStorage.getAll<CourseEnrollment>('enrollments');
+          const enrollments = await Db.getAll<CourseEnrollment>('enrollments');
           const alreadyCreated = enrollments.some((e: CourseEnrollment) => e.orderId === order.id && e.courseId === item.id);
 
           if (!alreadyCreated) {
-            LocalStorage.create<CourseEnrollment>('enrollments', {
+            await Db.create<CourseEnrollment>('enrollments', {
               id: `enr-${Date.now()}-${item.id}`,
               userId,
               userName: order.userName,
@@ -173,7 +179,7 @@ export default function AdminOrdersPage() {
             newlyUnlockedCourses.push(item.name);
           }
         } else if (item.type === 'consultation') {
-          const bookings = LocalStorage.getAll<ConsultationBooking>('bookings');
+          const bookings = await Db.getAll<ConsultationBooking>('bookings');
           const alreadyCreated = bookings.some((b: ConsultationBooking) => b.orderId === order.id);
 
           if (!alreadyCreated) {
@@ -183,7 +189,7 @@ export default function AdminOrdersPage() {
             // Use the first item for top-level metadata defaults
             const firstItem = consultationItems[0];
 
-            LocalStorage.create<ConsultationBooking>('bookings', {
+            await Db.create<ConsultationBooking>('bookings', {
               id: `bk-${Date.now()}-${order.id}`,
               userId,
               userName: order.userName,
@@ -211,7 +217,7 @@ export default function AdminOrdersPage() {
             toast.success(`${consultationItems.length} consultation(s) added to a new booking`);
           }
         }
-      });
+      }
 
       // Trigger grouped course unlocked email
       if (newlyUnlockedCourses.length > 0) {
@@ -258,20 +264,20 @@ export default function AdminOrdersPage() {
     setPendingStatusUpdate(null);
   };
 
-  const handleCancelOrder = () => {
+  const handleCancelOrder = async () => {
     if (!orderToCancel || !cancellationReason.trim()) {
       toast.error('Please enter a cancellation reason');
       return;
     }
 
     const { id, userId } = orderToCancel!;
-    LocalStorage.update<Order>('orders', id, {
+    await Db.update<Order>('orders', id, {
       status: 'order_cancelled',
       cancellationReason,
       updatedAt: new Date().toISOString()
     });
 
-    const updatedOrders = LocalStorage.getAll<Order>('orders').sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const updatedOrders = (await Db.getAll<Order>('orders')).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     setOrders(updatedOrders);
 
     const order = updatedOrders.find(o => o.id === id);
@@ -296,16 +302,16 @@ export default function AdminOrdersPage() {
     toast.success('Order cancelled and customer notified');
   };
 
-  const sendEmailNotification = (order: Order, type: string) => {
+  const sendEmailNotification = async (order: Order, type: string) => {
     fetch(`/api/emails/${type}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         order,
-        adminEmail: LocalStorage.getAll<User>('users').find(u => u.role === 'admin')?.email || 'harrysweettt@gmail.com'
+        adminEmail: (await Db.getAll<User>('users')).find(u => u.role === 'admin')?.email || 'harrysweettt@gmail.com'
       })
     })
-      .then(() => {
+      .then(async () => {
         toast.success(`Notification email sent to customer!`);
         // Track email sent
         const existingEmails = order.emailsSent || [];
@@ -316,7 +322,7 @@ export default function AdminOrdersPage() {
         };
         const currentStatus = statusMap[type];
         if (currentStatus && !existingEmails.includes(currentStatus)) {
-          LocalStorage.update<Order>('orders', order.id, {
+          await Db.update<Order>('orders', order.id, {
             emailsSent: [...existingEmails, currentStatus]
           });
         }
@@ -327,20 +333,21 @@ export default function AdminOrdersPage() {
       });
   };
 
-  const resendPaymentEmail = (order: Order) => {
-    const settingsData = LocalStorage.getAll<SystemSettings>('system_settings');
-    if (settingsData.length > 0) {
+  const resendPaymentEmail = async (order: Order) => {
+    const settingsData = await Db.getSettings<SystemSettings>('system_settings');
+    if (settingsData) {
+      const adminUsers = await Db.getAll<User>('users');
       fetch('/api/emails/order-confirmation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           order,
           paymentDetails: {
-            upiIds: settingsData[0].upiIds,
-            bankDetails: settingsData[0].bankDetails,
-            paymentInstructions: settingsData[0].paymentInstructions
+            upiIds: settingsData.upiIds,
+            bankDetails: settingsData.bankDetails,
+            paymentInstructions: settingsData.paymentInstructions
           },
-          adminEmail: LocalStorage.getAll<User>('users').find(u => u.role === 'admin')?.email || 'harrysweettt@gmail.com'
+          adminEmail: adminUsers.find(u => u.role === 'admin')?.email || 'harrysweettt@gmail.com'
         })
       })
         .then(() => toast.success('Payment instruction email resent!'))
@@ -351,7 +358,7 @@ export default function AdminOrdersPage() {
     }
   };
 
-  const handleResendEmail = (order: Order) => {
+  const handleResendEmail = async (order: Order) => {
     if (['pending', 'awaiting_payment'].includes(order.status)) {
       resendPaymentEmail(order);
     } else if (order.status === 'payment_verified') {
@@ -381,15 +388,15 @@ export default function AdminOrdersPage() {
     }
   };
 
-  const updateTrackingInfo = () => {
+  const updateTrackingInfo = async () => {
     if (!selectedOrder) return;
-    LocalStorage.update<Order>('orders', selectedOrder.id, {
+    await Db.update<Order>('orders', selectedOrder.id, {
       trackingId,
       courierPartner,
       status: 'order_shipped',
       updatedAt: new Date().toISOString()
     });
-    const updatedOrders = LocalStorage.getAll<Order>('orders').sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const updatedOrders = (await Db.getAll<Order>('orders')).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     setOrders(updatedOrders);
     setSelectedOrder(updatedOrders.find(o => o.id === selectedOrder.id) || null);
     // Notify user
@@ -407,25 +414,25 @@ export default function AdminOrdersPage() {
     toast.success('Order marked as Dispatched & email sent');
   };
 
-  const startEditingItems = () => {
+  const startEditingItems = async () => {
     if (!selectedOrder) return;
     setEditingOrderItems([...selectedOrder.items]);
     setEditingShippingCharge(selectedOrder.shippingCharge || 0);
     setIsEditingItems(true);
   };
 
-  const updateItem = (index: number, updates: Partial<OrderItem>) => {
+  const updateItem = async (index: number, updates: Partial<OrderItem>) => {
     const newItems = [...editingOrderItems];
     newItems[index] = { ...newItems[index], ...updates };
     setEditingOrderItems(newItems);
   };
 
-  const removeItem = (index: number) => {
+  const removeItem = async (index: number) => {
     const newItems = editingOrderItems.filter((_, i) => i !== index);
     setEditingOrderItems(newItems);
   };
 
-  const addNewItem = (item: any, type: 'product' | 'course' | 'consultation') => {
+  const addNewItem = async (item: any, type: 'product' | 'course' | 'consultation') => {
     const newItem: OrderItem = {
       id: item.id,
       name: item.name || item.title,
@@ -458,7 +465,7 @@ export default function AdminOrdersPage() {
     };
 
     try {
-      LocalStorage.update<Order>('orders', selectedOrder.id, updatedOrder);
+      await Db.update<Order>('orders', selectedOrder.id, updatedOrder);
 
       // Only send update email if order is past 'pending' state
       if (selectedOrder.status !== 'pending') {
@@ -468,7 +475,7 @@ export default function AdminOrdersPage() {
           body: JSON.stringify({
             order: updatedOrder,
             changeSummary: updateSummary,
-            adminEmail: LocalStorage.getAll<User>('users').find(u => u.role === 'admin')?.email || 'harrysweettt@gmail.com'
+            adminEmail: (await Db.getAll<User>('users')).find(u => u.role === 'admin')?.email || 'harrysweettt@gmail.com'
           })
         });
         toast.success('Order updated and customer notified');
@@ -1029,7 +1036,7 @@ export default function AdminOrdersPage() {
             {/* Products */}
             <div className="space-y-2">
               <h5 className="text-[8px] uppercase font-black text-muted-foreground border-b border-border pb-1">Products</h5>
-              {LocalStorage.getAll<Product>('products')
+              {catalogProducts
                 .filter(p => p.name.toLowerCase().includes(itemSearchQuery.toLowerCase()))
                 .slice(0, 5)
                 .map(p => (
@@ -1053,7 +1060,7 @@ export default function AdminOrdersPage() {
             {/* Courses */}
             <div className="space-y-2">
               <h5 className="text-[8px] uppercase font-black text-muted-foreground border-b border-border pb-1">Courses</h5>
-              {LocalStorage.getAll<Course>('courses')
+              {catalogCourses
                 .filter(c => c.title.toLowerCase().includes(itemSearchQuery.toLowerCase()))
                 .map(c => (
                   <div key={c.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 border border-border/50">

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { LocalStorage } from '@/mock-db/storage';
+import { Db } from '@/lib/db';
 import type { Product, Course, CareGuide } from '@/types';
 import { formatPrice } from '@/constants/pricing';
 import { useEffect, useState } from 'react';
@@ -161,17 +161,19 @@ function FeaturedTarantulas() {
   const { isVisible } = useModules();
 
   useEffect(() => {
-    const all = LocalStorage.getAll<Product>('products');
-    setProducts(all.filter(p => p.featured && p.isVisible !== false).slice(0, 4));
-
-    // Load liked products from local storage
-    const savedLikes = localStorage.getItem('arachnidsark_liked_products');
-    if (savedLikes) {
-      setLikedIds(JSON.parse(savedLikes));
-    }
+      (async () => {
+      const all = await Db.getAll<Product>('products');
+      setProducts(all.filter(p => p.featured && p.isVisible !== false).slice(0, 4));
+  
+      // Load liked products from local storage
+      const savedLikes = localStorage.getItem('arachnidsark_liked_products');
+      if (savedLikes) {
+        setLikedIds(JSON.parse(savedLikes));
+      }
+      })();
   }, []);
 
-  const handleLike = (e: React.MouseEvent, productId: string) => {
+  const handleLike = async (e: React.MouseEvent, productId: string) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -201,7 +203,7 @@ function FeaturedTarantulas() {
     const product = products.find(p => p.id === productId);
     if (product) {
       const newLikes = isLiked ? Math.max(0, (product.likes || 0) - 1) : (product.likes || 0) + 1;
-      LocalStorage.update<Product>('products', productId, { likes: newLikes });
+      await Db.update<Product>('products', productId, { likes: newLikes });
       
       // Update local state to reflect new like count
       setProducts(prev => prev.map(p => 
@@ -391,8 +393,10 @@ function FeaturedCourses() {
   const { isVisible } = useModules();
 
   useEffect(() => {
-    const all = LocalStorage.getAll<Course>('courses');
+    (async () => {
+    const all = await Db.getAll<Course>('courses');
     setCourses(all.filter(c => c.featured).slice(0, 3));
+  })();
   }, []);
 
   return (
@@ -478,7 +482,9 @@ function CareGuidesPreview() {
   const [guides, setGuides] = useState<CareGuide[]>([]);
 
   useEffect(() => {
-    setGuides(LocalStorage.getAll<CareGuide>('care_guides').slice(0, 4));
+    (async () => {
+    setGuides((await Db.getAll<CareGuide>('care_guides')).slice(0, 4));
+  })();
   }, []);
 
   return (

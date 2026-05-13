@@ -5,14 +5,16 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Bug, Thermometer, Droplets, UtensilsCrossed, AlertTriangle, Heart, Share2, MessageSquare, Zap, Minus, Plus, ShoppingCart, Star, Send, User as UserIcon } from 'lucide-react';
+import { getProxiedImageUrl } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { ImageViewer } from '@/components/shared/molecules/image-viewer';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/shared/atoms/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { LocalStorage } from '@/mock-db/storage';
+import { Db } from '@/lib/db';
 import { useAuthStore } from '@/store/auth-store';
 import { useNotificationStore } from '@/store/notification-store';
 import type { Product, Order } from '@/types';
@@ -73,31 +75,33 @@ export default function ProductDetailPage() {
   }, [user]);
 
   useEffect(() => {
-    const p = LocalStorage.getById<Product>('products', params.id as string);
-    setTimeout(() => {
-      setProduct(p);
-      setLoading(false);
-      loadReviews(params.id as string, 'product');
-
-      if (user && p) {
-        const orders = LocalStorage.getAll<Order>('orders');
-        const purchased = orders.some(
-          (ord) => ord.userId === user.id && ord.items.some((item) => item.id === p.id && item.type === 'product') && ['payment_verified', 'order_shipped', 'order_completed'].includes(ord.status)
-        );
-        setHasPurchased(purchased);
-      }
-
-      // Load liked status from store
-      // (This will be updated later when I use favoriteStore in the UI)
-      const savedLikes = localStorage.getItem('arachnidsark_liked_products');
-      if (savedLikes) {
-        const likedIds = JSON.parse(savedLikes);
-        setIsLiked(likedIds.includes(params.id as string));
-      }
-    }, 0);
+    (async () => {
+      const p = await Db.getById<Product>('products', params.id as string);
+      setTimeout(async () => {
+        setProduct(p);
+        setLoading(false);
+        loadReviews(params.id as string, 'product');
+  
+        if (user && p) {
+          const orders = await Db.getAll<Order>('orders');
+          const purchased = orders.some(
+            (ord) => ord.userId === user.id && ord.items.some((item) => item.id === p.id && item.type === 'product') && ['payment_verified', 'order_shipped', 'order_completed'].includes(ord.status)
+          );
+          setHasPurchased(purchased);
+        }
+  
+        // Load liked status from store
+        // (This will be updated later when I use favoriteStore in the UI)
+        const savedLikes = localStorage.getItem('arachnidsark_liked_products');
+        if (savedLikes) {
+          const likedIds = JSON.parse(savedLikes);
+          setIsLiked(likedIds.includes(params.id as string));
+        }
+      }, 0);
+    })();
   }, [params.id, loadReviews, user]);
 
-  const handleLike = () => {
+  const handleLike = async () => {
     if (!product) return;
 
     if (!isAuthenticated) {
@@ -126,7 +130,7 @@ export default function ProductDetailPage() {
     
     // Update the like count in the mock database
     const newLikes = currentlyLiked ? Math.max(0, (product.likes || 0) - 1) : (product.likes || 0) + 1;
-    LocalStorage.update<Product>('products', product.id, { likes: newLikes });
+    await Db.update<Product>('products', product.id, { likes: newLikes });
     
     // Update local state to reflect new like count
     setProduct({ ...product, likes: newLikes });
@@ -214,10 +218,11 @@ export default function ProductDetailPage() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
           <div className="aspect-square rounded-xl bg-gradient-to-br from-brand-red/20 via-background to-brand-gold/10 relative overflow-hidden border border-border group">
             {product.images && product.images.length > 0 ? (
-              <img
+              <ImageViewer
                 src={product.images[activeImage]}
                 alt={product.name}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                className="w-full h-full"
+                imageClassName="transition-transform duration-500 group-hover:scale-110"
               />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center">
@@ -258,7 +263,7 @@ export default function ProductDetailPage() {
                   className={`relative w-20 h-20 rounded-lg overflow-hidden border-2 transition-all shrink-0 ${activeImage === idx ? 'border-brand-gold' : 'border-border hover:border-brand-gold/50'
                     }`}
                 >
-                  <img src={img} alt={`${product.name} ${idx + 1}`} className="w-full h-full object-cover" />
+                  <img src={getProxiedImageUrl(img)} alt={`${product.name} ${idx + 1}`} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>

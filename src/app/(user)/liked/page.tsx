@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Modal } from '@/components/shared/molecules/modal';
-import { LocalStorage } from '@/mock-db/storage';
+import { Db } from '@/lib/db';
 import type { Product, Course, CourseEnrollment } from '@/types';
 import { formatPrice } from '@/constants/pricing';
 import { useCartStore } from '@/store/cart-store';
@@ -42,18 +42,20 @@ export default function FavoritesPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/login?redirect=/liked');
-      return;
-    }
-
-    const allProducts = LocalStorage.getAll<Product>('products');
-    const allCourses = LocalStorage.getAll<Course>('courses');
-    const allEnrollments = LocalStorage.getAll<CourseEnrollment>('enrollments');
-    setProducts(allProducts);
-    setCourses(allCourses);
-    setEnrollments(allEnrollments);
-    setLoading(false);
+      (async () => {
+      if (!isAuthenticated) {
+        router.push('/login?redirect=/liked');
+        return;
+      }
+  
+      const allProducts = await Db.getAll<Product>('products');
+      const allCourses = await Db.getAll<Course>('courses');
+      const allEnrollments = await Db.getAll<CourseEnrollment>('enrollments');
+      setProducts(allProducts);
+      setCourses(allCourses);
+      setEnrollments(allEnrollments);
+      setLoading(false);
+      })();
   }, [isAuthenticated, router]);
 
   const likedProducts = useMemo(() => {

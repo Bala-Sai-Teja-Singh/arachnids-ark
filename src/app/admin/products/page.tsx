@@ -13,10 +13,11 @@ import { TableMolecule } from '@/components/shared/molecules/table';
 import { SectionHeader } from '@/components/shared/molecules/section-header';
 import { TabMolecule, type TabOption } from '@/components/shared/molecules/tabs';
 import { FormBuilder, type FormFieldConfig } from '@/components/shared/organisms/form-builder';
+import { getProxiedImageUrl } from '@/lib/utils';
 import { FormArray } from '@/components/shared/molecules/form-array';
 import { Loading } from '@/components/shared/molecules/loading';
 import { ProductSchema, type ProductSchemaType } from '@/schemas/product';
-import { LocalStorage } from '@/mock-db/storage';
+import { Db } from '@/lib/db';
 import { formatPrice } from '@/constants/pricing';
 import { Label } from '@/components/ui/label';
 import type { Product, MainCategory, CareLevel } from '@/types';
@@ -45,9 +46,11 @@ export default function AdminProductsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
-    setIsLoading(true);
-    setProducts(LocalStorage.getAll<Product>('products'));
-    setTimeout(() => setIsLoading(false), 300);
+    (async () => {
+      setIsLoading(true);
+      setProducts(await Db.getAll<Product>('products'));
+      setTimeout(() => setIsLoading(false), 300);
+    })();
   }, []);
 
   const filtered = products.filter(p =>
@@ -61,7 +64,10 @@ export default function AdminProductsPage() {
     mainCategory: 'Tarantulas', careLevel: 'beginner',
     humidity: '', temperature: '', feeding: '',
     isVisible: true, available: true,
-    sizes: [{ size: '', price: 0, stock: 0 }]
+    sizes: [{ size: '', price: 0, stock: 0 }],
+    tarantulaMeta: { world: 'New World', type: 'Terrestrial', temperament: 'docile' },
+    scorpionMeta: { habitatType: 'Desert', venomPotency: 'Mild', pincerType: 'Medium', communal: false },
+    centipedeMeta: { habitatType: 'Tropical', venomPotency: 'Moderate' }
   };
 
   const productFields: FormFieldConfig<ProductSchemaType>[] = [
@@ -111,30 +117,32 @@ export default function AdminProductsPage() {
     { name: 'feeding', label: 'Feeding', type: 'text', gridSpan: 'md:col-span-2' },
   ];
 
-  const handleToggle = (id: string, field: 'isVisible' | 'available') => {
+  const handleToggle = async (id: string, field: 'isVisible' | 'available') => {
     const product = products.find(p => p.id === id);
     if (product) {
       const updated = { ...product, [field]: !product[field] };
-      LocalStorage.update('products', id, updated);
-      setProducts(LocalStorage.getAll<Product>('products'));
+      await Db.update('products', id, updated);
+      setProducts(await Db.getAll<Product>('products'));
       toast.success('Status updated');
     }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     setDeleteId(id);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (deleteId) {
-      LocalStorage.delete('products', deleteId);
-      setProducts(LocalStorage.getAll<Product>('products'));
-      toast.success('Product deleted');
+      await Db.delete('products', deleteId);
       setDeleteId(null);
+      setIsLoading(true);
+      setProducts(await Db.getAll<Product>('products'));
+      setTimeout(() => setIsLoading(false), 300);
+      toast.success('Product deleted');
     }
   };
 
-  const handleFormSubmit = (data: ProductSchemaType) => {
+  const handleFormSubmit = async (data: ProductSchemaType) => {
     let legacyFields: Partial<Product> = {};
     if (data.mainCategory === 'Tarantulas' && data.tarantulaMeta) {
       legacyFields = {
@@ -146,7 +154,7 @@ export default function AdminProductsPage() {
 
     if (editingProduct) {
       const updated = { ...editingProduct, ...data, ...legacyFields, updatedAt: new Date().toISOString() };
-      LocalStorage.update('products', editingProduct.id, updated);
+      await Db.update('products', editingProduct.id, updated);
       toast.success('Product updated');
     } else {
       const newItem = {
@@ -154,11 +162,13 @@ export default function AdminProductsPage() {
         createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
         likes: 0
       };
-      LocalStorage.create('products', newItem);
+      await Db.create('products', newItem);
       toast.success('Product added');
     }
-    setProducts(LocalStorage.getAll<Product>('products'));
     setIsProductModalOpen(false);
+    setIsLoading(true);
+    setProducts(await Db.getAll<Product>('products'));
+    setTimeout(() => setIsLoading(false), 300);
   };
 
   if (isLoading) {
@@ -176,10 +186,10 @@ export default function AdminProductsPage() {
       >
         <div className="flex flex-col md:flex-row gap-4 items-start md:items-center w-full md:w-auto">
           <div className="w-full md:w-80">
-            <Input 
-              placeholder="Search..." 
-              value={search} 
-              onChange={(e) => setSearch(e.target.value)} 
+            <Input
+              placeholder="Search..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               className="bg-card border-border h-10"
               startContent={<Search className="h-4 w-4 text-muted-foreground" />}
               isClearable
@@ -203,7 +213,7 @@ export default function AdminProductsPage() {
             cell: (product) => (
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-md bg-muted overflow-hidden border border-border">
-                  {product.images?.[0] ? <img src={product.images[0]} alt="" className="w-full h-full object-cover" /> : <Bug className="m-auto h-4 w-4 opacity-20" />}
+                  {product.images?.[0] ? <img src={getProxiedImageUrl(product.images[0])} referrerPolicy="no-referrer" alt="" className="w-full h-full object-cover" /> : <Bug className="m-auto h-4 w-4 opacity-20" />}
                 </div>
                 <div>
                   <div className="font-medium">{product.name}</div>
@@ -255,59 +265,68 @@ export default function AdminProductsPage() {
         emptyDescription="No products found."
       />
 
-      <Modal 
-        isOpen={isProductModalOpen} 
+      <Modal
+        isOpen={isProductModalOpen}
         onClose={() => setIsProductModalOpen(false)}
         variant="extra-large"
         title={editingProduct ? 'Edit Product' : 'Add New Product'}
       >
 
-          <FormBuilder
-            schema={ProductSchema}
-            defaultValues={editingProduct || initialValues}
-            fields={productFields}
-            onSubmit={handleFormSubmit}
-            submitLabel={editingProduct ? 'Save Changes' : 'Create Product'}
-          >
-            <div className="space-y-6">
-              <FormArray
-                name="sizes"
-                label="Product Sizes & Stock"
-                newItemDefault={{ size: '', price: 0, stock: 0 }}
-                fields={[
-                  { name: 'size', label: 'Size', type: 'text' },
-                  { name: 'price', label: 'Price', type: 'number' },
-                  { name: 'stock', label: 'Stock', type: 'number' }
-                ]}
-              />
+        <FormBuilder
+          schema={ProductSchema}
+          defaultValues={editingProduct ? {
+            ...initialValues,
+            ...editingProduct,
+            tarantulaMeta: { ...initialValues.tarantulaMeta, ...editingProduct.tarantulaMeta } as any,
+            scorpionMeta: { ...initialValues.scorpionMeta, ...editingProduct.scorpionMeta } as any,
+            centipedeMeta: { ...initialValues.centipedeMeta, ...editingProduct.centipedeMeta } as any,
+          } : initialValues}
+          fields={productFields}
+          onSubmit={handleFormSubmit}
+          submitLabel={editingProduct ? 'Save Changes' : 'Create Product'}
+          submitAlignment="right"
+        >
+          <div className="space-y-6">
+            <FormArray
+              name="sizes"
+              label="Product Sizes & Stock"
+              newItemDefault={{ size: '', price: 0, stock: 0 }}
+              fields={[
+                { name: 'size', label: 'Size', type: 'text' },
+                { name: 'price', label: 'Price', type: 'number' },
+                { name: 'stock', label: 'Stock', type: 'number' }
+              ]}
+            />
 
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-gold ml-1">Images (URLs)</Label>
-                <FormArray
-                  name="images"
-                  newItemDefault=""
-                  fields={[{ name: '', label: 'URL', type: 'text', gridSpan: 'col-span-3' }]}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-gold ml-1">Images (URLs)</Label>
+              <FormArray
+                name="images"
+                newItemDefault=""
+                fields={[{ name: '', label: 'URL', type: 'text', gridSpan: 'col-span-3' }]}
+              />
             </div>
-          </FormBuilder>
+          </div>
+        </FormBuilder>
       </Modal>
 
       {/* Delete Confirmation Modal */}
-      <Modal 
-        isOpen={!!deleteId} 
+      <Modal
+        isOpen={!!deleteId}
         onClose={() => setDeleteId(null)}
         variant="confirm"
         title="Delete Product"
-        description="Are you sure you want to delete this product? This action cannot be undone."
         footer={(
           <div className="flex gap-2 w-full justify-end">
             <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
             <Button variant="destructive" onClick={confirmDelete}>Delete Product</Button>
           </div>
         )}
+        headerClassName='!border-0'
+        footerClassName='!border-0'
+        className='max-w-100'
       >
-        <div className="py-2" />
+        <p>Are you sure you want to delete this product? This action cannot be undone.</p>
       </Modal>
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import type { Review, ReviewStatus } from '@/types';
-import { LocalStorage } from '@/mock-db/storage';
+import { DbClient } from '@/lib/db-client';
 import { v4 as uuidv4 } from 'uuid';
 
 interface ReviewState {
@@ -20,26 +20,21 @@ export const useReviewStore = create<ReviewState>()((set, get) => ({
 
   loadReviews: (targetId, targetType) => {
     set({ isLoading: true });
-    const all = LocalStorage.getAll<Review>('reviews');
-    
-    let filtered = all;
-    if (targetId && targetType) {
-      filtered = all.filter(r => r.targetId === targetId && r.targetType === targetType);
-    } else if (targetId) {
-      // Fallback for old calls if any
-      filtered = all.filter(r => r.targetId === targetId);
-    }
-    
-    set({ 
-      reviews: filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()), 
-      isLoading: false 
-    });
+    (async () => {
+      const params: Record<string, string> = {};
+      if (targetId) params.targetId = targetId;
+      if (targetType) params.targetType = targetType;
+
+      const all = await DbClient.getAll<Review>('reviews', params);
+      set({
+        reviews: all.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+        isLoading: false,
+      });
+    })();
   },
 
   addReview: async (reviewData) => {
     set({ isLoading: true });
-    // Simulate delay
-    await new Promise(r => setTimeout(r, 500));
 
     const newReview: Review = {
       ...reviewData,
@@ -48,22 +43,22 @@ export const useReviewStore = create<ReviewState>()((set, get) => ({
       createdAt: new Date().toISOString(),
     };
 
-    LocalStorage.create('reviews', newReview);
+    await DbClient.create('reviews', newReview);
     const { reviews } = get();
     set({ reviews: [newReview, ...reviews], isLoading: false });
   },
 
   updateReviewStatus: (id, status) => {
-    LocalStorage.update<Review>('reviews', id, { status });
-    // Since we don't have target info here, we reload all for simplicity in the store 
-    // or the caller should handle it.
-    const all = LocalStorage.getAll<Review>('reviews');
-    set({ reviews: all.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) });
+    DbClient.update('reviews', id, { status });
+    set(state => ({
+      reviews: state.reviews.map(r => r.id === id ? { ...r, status } : r),
+    }));
   },
 
   deleteReview: (id) => {
-    LocalStorage.delete('reviews', id);
-    const all = LocalStorage.getAll<Review>('reviews');
-    set({ reviews: all.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) });
-  }
+    DbClient.delete('reviews', id);
+    set(state => ({
+      reviews: state.reviews.filter(r => r.id !== id),
+    }));
+  },
 }));

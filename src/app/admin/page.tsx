@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Users, ShoppingBag, GraduationCap, Calendar, DollarSign, ArrowUpRight, TrendingUp, Bug } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LocalStorage } from '@/mock-db/storage';
+import { Db } from '@/lib/db';
 import { formatPrice } from '@/constants/pricing';
 import type { User, Product, Course, Order, CourseEnrollment, ConsultationBooking } from '@/types';
 import {
@@ -24,27 +24,29 @@ export default function AdminDashboardPage() {
   const [revenueData, setRevenueData] = useState<{ name: string, total: number }[]>([]);
 
   useEffect(() => {
-    const users = LocalStorage.getAll<User>('users');
-    const products = LocalStorage.getAll<Product>('products');
-    const courses = LocalStorage.getAll<Course>('courses');
-    const orders = LocalStorage.getAll<Order>('orders');
-    const enrollments = LocalStorage.getAll<CourseEnrollment>('enrollments');
-    const bookings = LocalStorage.getAll<ConsultationBooking>('bookings');
-
-    const totalRevenue =
-      orders.filter(o => ['payment_uploaded', 'verified', 'completed'].includes(o.status)).reduce((acc, curr) => acc + curr.totalPrice, 0) +
-      enrollments.filter(e => ['payment_uploaded', 'verified', 'completed'].includes(e.status)).reduce((acc, curr) => acc + curr.totalPrice, 0) +
-      bookings.filter(b => ['payment_uploaded', 'verified', 'completed'].includes(b.status)).reduce((acc, curr) => acc + (curr?.totalPrice || 0), 0);
-
-    const activeOrders = orders.filter(o => !['completed', 'cancelled', 'rejected'].includes(o.status)).length;
-    const activeConsultations = bookings.filter(b => !['completed', 'cancelled', 'rejected'].includes(b.status)).length;
-
-    setTimeout(() => {
-      setStats({
-        users: users.length, products: products.length, courses: courses.length,
-        totalRevenue, activeOrders, activeConsultations
-      });
-    }, 0);
+    (async () => {
+      const users = await Db.getAll<User>('users');
+      const products = await Db.getAll<Product>('products');
+      const courses = await Db.getAll<Course>('courses');
+      const orders = await Db.getAll<Order>('orders');
+      const enrollments = await Db.getAll<CourseEnrollment>('enrollments');
+      const bookings = await Db.getAll<ConsultationBooking>('bookings');
+  
+      const totalRevenue =
+        orders.filter(o => ['payment_uploaded', 'verified', 'completed'].includes(o.status)).reduce((acc, curr) => acc + curr.totalPrice, 0) +
+        enrollments.filter(e => ['payment_uploaded', 'verified', 'completed'].includes(e.status)).reduce((acc, curr) => acc + curr.totalPrice, 0) +
+        bookings.filter(b => ['payment_uploaded', 'verified', 'completed'].includes(b.status)).reduce((acc, curr) => acc + (curr?.totalPrice || 0), 0);
+  
+      const activeOrders = orders.filter(o => !['completed', 'cancelled', 'rejected'].includes(o.status)).length;
+      const activeConsultations = bookings.filter(b => !['completed', 'cancelled', 'rejected'].includes(b.status)).length;
+  
+      setTimeout(() => {
+        setStats({
+          users: users.length, products: products.length, courses: courses.length,
+          totalRevenue, activeOrders, activeConsultations
+        });
+      }, 0);
+    })();
 
     const data = [
       { name: 'Jan', total: Math.floor(Math.random() * 50000) + 10000 },
@@ -53,7 +55,7 @@ export default function AdminDashboardPage() {
       { name: 'Apr', total: Math.floor(Math.random() * 50000) + 25000 },
       { name: 'May', total: Math.floor(Math.random() * 50000) + 30000 },
       { name: 'Jun', total: Math.floor(Math.random() * 50000) + 40000 },
-      { name: 'Jul', total: totalRevenue || 50000 },
+      { name: 'Jul', total: 50000 },
     ];
     setTimeout(() => {
       setRevenueData(data);

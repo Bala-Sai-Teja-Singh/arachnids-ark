@@ -9,7 +9,7 @@ import { useFavoriteStore } from '@/store/favorite-store';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { SkeletonCard } from '@/components/shared/skeleton-card';
-import { LocalStorage } from '@/mock-db/storage';
+import { Db } from '@/lib/db';
 import { useAuthStore } from '@/store/auth-store';
 import type { Course, CourseEnrollment } from '@/types';
 import { formatPrice } from '@/constants/pricing';
@@ -31,9 +31,9 @@ export default function CoursesPage() {
   const { user } = useAuthStore();
 
   useEffect(() => {
-    setTimeout(() => {
-      setCourses(LocalStorage.getAll<Course>('courses'));
-      setEnrollments(LocalStorage.getAll<CourseEnrollment>('enrollments'));
+    setTimeout(async () => {
+      setCourses(await Db.getAll<Course>('courses'));
+      setEnrollments(await Db.getAll<CourseEnrollment>('enrollments'));
       setLoading(false);
     }, 300);
   }, []);

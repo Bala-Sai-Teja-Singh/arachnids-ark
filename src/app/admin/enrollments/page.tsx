@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { LocalStorage } from '@/mock-db/storage';
+import { Db } from '@/lib/db';
 import { useNotificationStore } from '@/store/notification-store';
 import { Input } from '@/components/shared/atoms/input';
 import type { CourseEnrollment, EnrollmentStatus, Course } from '@/types';
@@ -21,13 +21,15 @@ export default function AdminEnrollmentsPage() {
   const { addNotification } = useNotificationStore();
 
   useEffect(() => {
-    setEnrollments(LocalStorage.getAll<CourseEnrollment>('enrollments').sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+    (async () => {
+    setEnrollments((await Db.getAll<CourseEnrollment>('enrollments')).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+  })();
   }, []);
 
-  const updateStatus = (id: string, status: EnrollmentStatus, userId: string, courseId: string) => {
-    LocalStorage.update<CourseEnrollment>('enrollments', id, { status });
+  const updateStatus = async (id: string, status: EnrollmentStatus, userId: string, courseId: string) => {
+    await Db.update<CourseEnrollment>('enrollments', id, { status });
     // Refresh background content
-    setEnrollments(LocalStorage.getAll<CourseEnrollment>('enrollments').sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+    setEnrollments((await Db.getAll<CourseEnrollment>('enrollments')).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
 
     // If status is enrolled, also unlock modules in course for user (handled abstractly here)
     if (status === 'enrolled') {

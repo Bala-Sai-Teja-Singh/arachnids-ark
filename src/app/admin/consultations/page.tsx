@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/shared/atoms/input';
 import { Label } from '@/components/ui/label';
 import { Modal } from '@/components/shared/molecules/modal';
-import { LocalStorage } from '@/mock-db/storage';
+import { Db } from '@/lib/db';
 import type { ConsultationSettings, ConsultationPricing } from '@/types';
 import { toast } from 'sonner';
 
@@ -16,13 +16,15 @@ export default function AdminConsultationsSettingsPage() {
   const [deletePricingIdx, setDeletePricingIdx] = useState<number | null>(null);
 
   useEffect(() => {
-    const data = LocalStorage.getAll<ConsultationSettings>('consultation_settings');
-    if (data.length > 0) setSettings(data[0]);
+    (async () => {
+      const data = await Db.getSettings<ConsultationSettings>('consultation_settings');
+      if (data) setSettings(data);
+    })();
   }, []);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!settings) return;
-    LocalStorage.setAll('consultation_settings', [settings]);
+    await Db.updateSettings('consultation_settings', settings);
     toast.success('Consultation settings saved');
   };
 
@@ -77,8 +79,8 @@ export default function AdminConsultationsSettingsPage() {
                 <div key={idx} className="group relative grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-xl border border-border bg-background/30 hover:border-brand-gold/30 transition-all">
                   <div className="space-y-2">
                     <Label className="text-xs">Label (e.g. 30 Minutes)</Label>
-                    <Input 
-                      value={p.label} 
+                    <Input
+                      value={p.label}
                       onChange={e => {
                         const newPricing = [...settings.pricing];
                         newPricing[idx].label = e.target.value;
@@ -90,11 +92,11 @@ export default function AdminConsultationsSettingsPage() {
                   <div className="space-y-2">
                     <Label className="text-xs">Duration (Minutes)</Label>
                     <div className="relative">
-                      <Input 
+                      <Input
                         type="number"
                         min="0"
                         placeholder="0"
-                        value={p.duration === 0 ? '' : p.duration} 
+                        value={p.duration === 0 ? '' : p.duration}
                         onChange={e => {
                           const newPricing = [...settings.pricing];
                           newPricing[idx] = { ...newPricing[idx], duration: Math.max(0, Number(e.target.value)) };
@@ -108,11 +110,11 @@ export default function AdminConsultationsSettingsPage() {
                   <div className="space-y-2">
                     <Label className="text-xs">Base Price (₹)</Label>
                     <div className="flex gap-2">
-                      <Input 
+                      <Input
                         type="number"
                         min="0"
                         placeholder="0"
-                        value={p.basePrice === 0 ? '' : p.basePrice} 
+                        value={p.basePrice === 0 ? '' : p.basePrice}
                         onChange={e => {
                           const newPricing = [...settings.pricing];
                           newPricing[idx] = { ...newPricing[idx], basePrice: Math.max(0, Number(e.target.value)) };
@@ -120,9 +122,9 @@ export default function AdminConsultationsSettingsPage() {
                         }}
                         className="bg-background/50"
                       />
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         className="text-muted-foreground hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={() => setDeletePricingIdx(idx)}
                       >
@@ -147,12 +149,12 @@ export default function AdminConsultationsSettingsPage() {
               <div key={u.urgency} className="space-y-2">
                 <Label className="capitalize">{u.label}</Label>
                 <div className="relative">
-                  <Input 
-                    type="number" 
+                  <Input
+                    type="number"
                     min="0"
                     step="0.1"
                     placeholder="0"
-                    value={u.multiplier === 0 ? '' : u.multiplier} 
+                    value={u.multiplier === 0 ? '' : u.multiplier}
                     onChange={e => {
                       const newM = [...settings.urgencyMultipliers];
                       newM[idx] = { ...newM[idx], multiplier: Math.max(0, Number(e.target.value)) };
@@ -169,12 +171,14 @@ export default function AdminConsultationsSettingsPage() {
       </div>
 
       {/* Delete Confirmation Modal */}
-      <Modal 
-        isOpen={deletePricingIdx !== null} 
+      <Modal
+        isOpen={deletePricingIdx !== null}
         onClose={() => setDeletePricingIdx(null)}
         variant="confirm"
         title="Delete Pricing Plan"
-        description="Are you sure you want to delete this pricing plan? Users will no longer be able to select this duration."
+        className='!max-w-100'
+        headerClassName='!border-0'
+        footerClassName='!border-0'
         footer={(
           <div className="flex gap-2 w-full justify-end">
             <Button variant="outline" onClick={() => setDeletePricingIdx(null)}>Cancel</Button>
@@ -182,7 +186,7 @@ export default function AdminConsultationsSettingsPage() {
           </div>
         )}
       >
-        <div className="py-2" />
+        <p>Are you sure you want to delete this pricing plan? Users will no longer be able to select this duration.</p>
       </Modal>
     </div>
   );

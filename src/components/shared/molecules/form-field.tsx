@@ -40,7 +40,12 @@ export type FormFieldProps = InputFormFieldProps | SelectFormFieldProps;
 
 export function FormField(props: FormFieldProps) {
   const { control, formState: { errors }, setValue } = useFormContext();
-  const error = errors[props.name];
+  
+  const getNestedError = (obj: any, path: string) => {
+    return path.split('.').reduce((acc, part) => acc && acc[part], obj);
+  };
+  
+  const error = getNestedError(errors, props.name);
   const errorMessage = error?.message as string | undefined;
 
   return (

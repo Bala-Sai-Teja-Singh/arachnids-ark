@@ -216,7 +216,9 @@ export default function AdminReviewsPage() {
         onClose={() => setDeleteId(null)}
         variant="confirm"
         title="Delete Review"
-        description="Are you sure you want to delete this review? This action cannot be undone."
+        className='!max-w-100'
+        headerClassName='!border-0'
+        footerClassName='!border-0'
         footer={(
           <div className="flex gap-2 w-full justify-end">
             <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
@@ -224,7 +226,7 @@ export default function AdminReviewsPage() {
           </div>
         )}
       >
-        <div className="py-2" />
+        <p>Are you sure you want to delete this review? This action cannot be undone.</p>
       </Modal>
 
       {/* Reject Confirmation */}
@@ -233,7 +235,9 @@ export default function AdminReviewsPage() {
         onClose={() => setRejectId(null)}
         variant="confirm"
         title="Reject Review"
-        description="Are you sure you want to reject this review? It will be hidden from the public shop."
+        className='!max-w-100'
+        headerClassName='!border-0'
+        footerClassName='!border-0'
         footer={(
           <div className="flex gap-2 w-full justify-end">
             <Button variant="outline" onClick={() => setRejectId(null)}>Cancel</Button>
@@ -241,7 +245,7 @@ export default function AdminReviewsPage() {
           </div>
         )}
       >
-        <div className="py-2" />
+        <p>Are you sure you want to reject this review? It will be hidden from the public shop.</p>
       </Modal>
     </div>
   );

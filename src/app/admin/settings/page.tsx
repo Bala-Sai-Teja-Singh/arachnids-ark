@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
-import { LocalStorage } from '@/mock-db/storage';
+import { Db } from '@/lib/db';
 import { SystemSettings, UPIId } from '@/types';
 
 export default function AdminSettingsPage() {
@@ -19,55 +19,55 @@ export default function AdminSettingsPage() {
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
 
   useEffect(() => {
-    const data = LocalStorage.getAll<SystemSettings>('system_settings');
-    const defaultShipping = {
-      rules: [
-        { id: 'ship-1', minQuantity: 1, maxQuantity: 2, charge: 250 },
-        { id: 'ship-2', minQuantity: 3, maxQuantity: 5, charge: 400 },
-        { id: 'ship-3', minQuantity: 6, maxQuantity: 99, charge: 600 },
-      ],
-      disclaimer: 'Note: Shipping charges may vary based on the time and seasonal conditions to ensure the safety of live arrivals.',
-    };
-
-    if (data.length > 0) {
-      const currentSettings = data[0];
-      if (!currentSettings.shippingSettings) {
-        currentSettings.shippingSettings = defaultShipping;
-      }
-      setSettings(currentSettings);
-    } else {
-      // Fallback default settings if not seeded
-      const defaultSettings: SystemSettings = {
-        upiIds: [
-          { id: 'upi-1', label: 'Primary UPI', value: 'payments@arachnidsark', isDefault: true },
+    (async () => {
+      const currentSettings = await Db.getSettings<SystemSettings>('system_settings');
+      const defaultShipping = {
+        rules: [
+          { id: 'ship-1', minQuantity: 1, maxQuantity: 2, charge: 250 },
+          { id: 'ship-2', minQuantity: 3, maxQuantity: 5, charge: 400 },
+          { id: 'ship-3', minQuantity: 6, maxQuantity: 99, charge: 600 },
         ],
-        bankDetails: 'Bank Name: HDFC Bank\nAccount Name: ArachnidsArk Pvt Ltd\nAccount Number: 50200001234567\nIFSC Code: HDFC0001234',
-        paymentInstructions: 'Please ensure you add your order request ID in the payment remarks.',
-        emailNotifications: {
-          orderConfirmations: true,
-          paymentVerification: true,
-          consultationReminders: true,
-        },
-        storeStatus: {
-          maintenanceMode: false,
-          acceptingConsultations: true,
-        },
-        modules: {
-          showCourses: true,
-          showProducts: true,
-          showConsultations: true,
-        },
-        shippingSettings: defaultShipping,
+        disclaimer: 'Note: Shipping charges may vary based on the time and seasonal conditions to ensure the safety of live arrivals.',
       };
-      setSettings(defaultSettings);
-      LocalStorage.setAll('system_settings', [defaultSettings]);
-    }
+
+      if (currentSettings) {
+        if (!currentSettings.shippingSettings) {
+          currentSettings.shippingSettings = defaultShipping;
+        }
+        setSettings(currentSettings);
+      } else {
+        const defaultSettings: SystemSettings = {
+          upiIds: [
+            { id: 'upi-1', label: 'Primary UPI', value: 'payments@arachnidsark', isDefault: true },
+          ],
+          bankDetails: 'Bank Name: HDFC Bank\nAccount Name: ArachnidsArk Pvt Ltd\nAccount Number: 50200001234567\nIFSC Code: HDFC0001234',
+          paymentInstructions: 'Please ensure you add your order request ID in the payment remarks.',
+          emailNotifications: {
+            orderConfirmations: true,
+            paymentVerification: true,
+            consultationReminders: true,
+          },
+          storeStatus: {
+            maintenanceMode: false,
+            acceptingConsultations: true,
+          },
+          modules: {
+            showCourses: true,
+            showProducts: true,
+            showConsultations: true,
+          },
+          shippingSettings: defaultShipping,
+        };
+        setSettings(defaultSettings);
+        await Db.saveSettings('system_settings', defaultSettings);
+      }
+    })();
   }, []);
 
   const handleSave = async () => {
     if (!settings) return;
     setLoading(true);
-    LocalStorage.setAll('system_settings', [settings]);
+    await Db.updateSettings('system_settings', settings);
     await new Promise(r => setTimeout(r, 800));
     toast.success('System settings saved successfully');
     setLoading(false);
@@ -486,9 +486,9 @@ export default function AdminSettingsPage() {
         footer={(
           <div className="flex gap-2 w-full justify-end">
             <Button variant="outline" onClick={() => setIsResetModalOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={() => {
-              LocalStorage.reset();
-              window.location.reload();
+            <Button variant="destructive" onClick={async () => {
+              toast.info('Factory reset is not available in production mode.');
+              setIsResetModalOpen(false);
             }}>
               Confirm Reset
             </Button>
