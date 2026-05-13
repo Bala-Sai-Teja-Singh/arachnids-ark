@@ -53,7 +53,7 @@ export default function ConsultationPage() {
   const [reviewComment, setReviewComment] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
   const [hasPurchased, setHasPurchased] = useState(false);
-  
+
   useEffect(() => {
     loadReviews('consultation-general', 'consultation');
     if (user) {
@@ -64,7 +64,7 @@ export default function ConsultationPage() {
       setHasPurchased(purchased);
     }
   }, [user, loadReviews]);
-  
+
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [step]);
@@ -94,7 +94,7 @@ export default function ConsultationPage() {
 
   const totalMins = useMemo(() => cart.reduce((acc, item) => acc + (item.duration * item.quantity), 0), [cart]);
   const totalPrice = useMemo(() => cart.reduce((acc, item) => acc + (item.basePrice * item.multiplier * item.quantity), 0), [cart]);
-  
+
   const updateCart = (dur: number, label: string, price: number, delta: number) => {
     const urgency = localUrgencies[dur] || 'normal';
     const multiplier = settings?.urgencyMultipliers.find(u => u.urgency === urgency)?.multiplier || 1;
@@ -125,7 +125,7 @@ export default function ConsultationPage() {
     });
 
     toast.success('Consultation items added to cart!');
-    
+
     if (redirect) {
       router.push('/checkout');
     } else {
@@ -141,291 +141,310 @@ export default function ConsultationPage() {
   if (!settings) return <div className="container mx-auto px-4 py-8"><div className="h-96 animate-pulse bg-muted rounded-xl" /></div>;
 
   return (
-    <div className="container mx-auto px-4 py-4 max-w-4xl">
+    <div className="container mx-auto px-4 py-4 max-w-7xl">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
         <Badge variant="outline" className="border-brand-gold/30 text-brand-gold mb-2">
           <Calendar className="h-3 w-3 mr-2" />
           Book Consultation
         </Badge>
+        <h1 className="text-3xl font-bold font-heading uppercase tracking-tight">Schedule Your Session</h1>
       </motion.div>
 
-      {/* Talktime Explanation */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-        <Card className="border-brand-gold/30 bg-brand-gold/5 mb-8 overflow-hidden">
-          <CardContent className="p-0">
-            <div className="flex flex-col sm:flex-row">
-              <div className="bg-brand-gold/10 p-6 flex items-center justify-center sm:w-24 shrink-0">
-                <Clock className="h-8 w-8 text-brand-gold" />
-              </div>
-              <div className="p-6 space-y-3">
-                <h3 className="font-bold text-lg text-brand-gold font-heading uppercase tracking-tight">Flexible "Talktime" Sessions</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Experience a more personalized relationship with Harmanpreet through our <strong>Prepaid Session Model</strong>. Instead of rigid one-off appointments, your purchased time acts as a flexible balance.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                  <div className="space-y-2">
-                    <p className="font-bold text-foreground flex items-center gap-2">
-                      <Zap className="h-3 w-3 text-brand-gold" /> Use it Your Way
-                    </p>
-                    <p className="text-muted-foreground">Buy a block of time (e.g., 2 sessions = 120 mins) and use it for multiple quick check-ins or long deep-dives as needed.</p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="font-bold text-foreground flex items-center gap-2">
-                      <CheckCircle className="h-3 w-3 text-brand-gold" /> Simple Connection
-                    </p>
-                    <p className="text-muted-foreground">After payment, you&apos;ll receive instructions via email to connect directly and mutually decide on the best dates and times.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* Progress Steps */}
-      <div className="flex flex-wrap items-center gap-y-4 gap-x-8 mb-12">
+      {/* Progress Steps (Global for clarity) */}
+      <div className="flex flex-wrap items-center gap-y-4 gap-x-8 mb-8 bg-muted/30 p-4 rounded-xl border border-border/50">
         {[
           { id: 1, label: 'Details & Query' },
           { id: 2, label: 'Confirmation' }
         ].map((s, i, arr) => (
           <div key={s.id} className="flex items-center gap-3">
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-500 ${
-                step >= s.id ? 'bg-brand-red text-white shadow-lg shadow-brand-red/20' : 'bg-muted text-muted-foreground'
-              }`}>
-                {step > s.id ? <CheckCircle className="h-5 w-5" /> : s.id}
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-500 ${step >= s.id ? 'bg-brand-red text-white shadow-lg shadow-brand-red/20' : 'bg-muted text-muted-foreground'
+                }`}>
+                {step > s.id ? <CheckCircle className="h-4 w-4" /> : s.id}
               </div>
-              <span className={`text-sm font-bold transition-colors duration-500 ${
-                step >= s.id ? 'text-foreground' : 'text-muted-foreground'
-              }`}>
+              <span className={`text-xs font-bold transition-colors duration-500 ${step >= s.id ? 'text-foreground' : 'text-muted-foreground'
+                }`}>
                 {s.label}
               </span>
             </div>
             {i < arr.length - 1 && (
-              <div className={`w-12 sm:w-24 h-0.5 rounded-full transition-all duration-1000 ${
-                step > s.id ? 'bg-brand-red' : 'bg-muted'
-              }`} />
+              <div className={`w-8 sm:w-16 h-0.5 rounded-full transition-all duration-1000 ${step > s.id ? 'bg-brand-red' : 'bg-muted'
+                }`} />
             )}
           </div>
         ))}
       </div>
 
-      <AnimatePresence mode="wait">
-        {/* Step 1: Duration & Urgency */}
-        {step === 1 && (
-          <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
-            {/* Duration & Cart */}
-            <Card className="border-border">
-              <CardHeader><CardTitle className="text-lg">Select Sessions <span className="text-red-500">*</span></CardTitle></CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {settings.pricing.map(p => {
-                    const currentUrgency = localUrgencies[p.duration] || 'normal';
-                    const activeItems = cart.filter(i => i.duration === p.duration);
-                    const totalQty = activeItems.reduce((a, b) => a + b.quantity, 0);
-                    
-                    return (
-                      <div key={p.duration} className={`flex flex-col gap-4 rounded-xl border-2 p-4 transition-all relative overflow-hidden group ${totalQty > 0 ? 'border-brand-gold bg-brand-gold/10' : 'border-border hover:border-brand-gold/50'}`}>
-                        <div className="flex flex-col items-center gap-2">
-                          <Clock className={`h-6 w-6 transition-colors ${totalQty > 0 ? 'text-brand-gold' : 'text-muted-foreground'}`} />
-                          <div className="text-center">
-                            <span className={`font-bold block transition-colors ${totalQty > 0 ? 'text-foreground' : 'text-muted-foreground'}`}>{p.label}</span>
-                            <span className="text-lg font-bold text-brand-gold">{formatPrice(p.basePrice)}</span>
-                          </div>
-                        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Main Content Area: Steps */}
+        <div className="lg:col-span-7 xl:col-span-8 order-2 lg:order-1">
+          <AnimatePresence mode="wait">
+            {/* Step 1: Duration & Urgency */}
+            {step === 1 && (
+              <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+                {/* Duration & Cart */}
+                <Card className="border-border">
+                  <CardHeader><CardTitle className="text-lg">Select Sessions <span className="text-red-500">*</span></CardTitle></CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {settings.pricing.map(p => {
+                        const currentUrgency = localUrgencies[p.duration] || 'normal';
+                        const activeItems = cart.filter(i => i.duration === p.duration);
+                        const totalQty = activeItems.reduce((a, b) => a + b.quantity, 0);
 
-                        <Separator className="bg-border/50" />
+                        return (
+                          <div key={p.duration} className={`flex flex-col gap-4 rounded-xl border-2 p-4 transition-all relative overflow-hidden group ${totalQty > 0 ? 'border-brand-gold bg-brand-gold/10' : 'border-border hover:border-brand-gold/50'}`}>
+                            <div className="flex flex-col items-center gap-2">
+                              <Clock className={`h-6 w-6 transition-colors ${totalQty > 0 ? 'text-brand-gold' : 'text-muted-foreground'}`} />
+                              <div className="text-center">
+                                <span className={`font-bold block transition-colors ${totalQty > 0 ? 'text-foreground' : 'text-muted-foreground'}`}>{p.label}</span>
+                                <span className="text-lg font-bold text-brand-gold">{formatPrice(p.basePrice)}</span>
+                              </div>
+                            </div>
 
-                        <div className="space-y-2">
-                          <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">Set Urgency</Label>
-                          <div className="flex gap-1">
-                            {settings.urgencyMultipliers.map(u => {
-                              const UIcon = urgencyIcons[u.urgency];
-                              const isSelected = currentUrgency === u.urgency;
-                              return (
-                                <button
-                                  key={u.urgency}
-                                  onClick={() => setLocalUrgencies(prev => ({ ...prev, [p.duration]: u.urgency }))}
-                                  className={`flex-1 flex flex-col items-center py-2 rounded-lg border transition-all ${isSelected ? 'bg-brand-gold text-white border-brand-gold' : 'bg-background/50 border-border text-muted-foreground hover:border-brand-gold/50'}`}
-                                >
-                                  <UIcon className="h-3 w-3 mb-1" />
-                                  <span className="text-[8px] font-bold uppercase">{u.label}</span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-3 mt-auto bg-background/50 rounded-lg border border-border p-1 w-full justify-between">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => updateCart(p.duration, p.label, p.basePrice, -1)}
-                            disabled={!cart.find(i => i.duration === p.duration && i.urgency === currentUrgency)}
-                            className="h-8 w-8 rounded-md"
-                          >
-                            -
-                          </Button>
-                          <div className="text-center">
-                            <span className="font-bold text-sm block">{cart.find(i => i.duration === p.duration && i.urgency === currentUrgency)?.quantity || 0}</span>
-                            <span className="text-[8px] text-muted-foreground uppercase">{currentUrgency}</span>
-                          </div>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => updateCart(p.duration, p.label, p.basePrice, 1)}
-                            className="h-8 w-8 rounded-md hover:bg-brand-gold hover:text-white"
-                          >
-                            +
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                            <Separator className="bg-border/50" />
 
-                {cart.length > 0 && (
-                  <div className="mt-6 p-4 rounded-xl border border-brand-gold/30 bg-brand-gold/5">
-                    <h4 className="text-xs font-bold text-brand-gold uppercase tracking-widest mb-3">Selected Sessions Summary</h4>
-                    <div className="space-y-3">
-                      {cart.map((item, idx) => (
-                        <div key={`${item.duration}-${item.urgency}`} className="flex justify-between items-center text-sm">
-                          <div className="space-y-0.5">
-                            <span className="text-foreground font-medium">{item.label} × {item.quantity}</span>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className={`text-[10px] h-4 px-1 ${urgencyColors[item.urgency]}`}>
-                                {item.urgency}
-                              </Badge>
-                              <span className="text-[10px] text-muted-foreground">{item.multiplier}x multiplier</span>
+                            <div className="space-y-2">
+                              <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">Set Urgency</Label>
+                              <div className="flex gap-1">
+                                {settings.urgencyMultipliers.map(u => {
+                                  const UIcon = urgencyIcons[u.urgency];
+                                  const isSelected = currentUrgency === u.urgency;
+                                  return (
+                                    <button
+                                      key={u.urgency}
+                                      onClick={() => setLocalUrgencies(prev => ({ ...prev, [p.duration]: u.urgency }))}
+                                      className={`flex-1 flex flex-col items-center py-2 rounded-lg border transition-all ${isSelected ? 'bg-brand-gold text-white border-brand-gold' : 'bg-background/50 border-border text-muted-foreground hover:border-brand-gold/50'}`}
+                                    >
+                                      <UIcon className="h-3 w-3 mb-1" />
+                                      <span className="text-[8px] font-bold uppercase">{u.label}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-3 mt-auto bg-background/50 rounded-lg border border-border p-1 w-full justify-between">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => updateCart(p.duration, p.label, p.basePrice, -1)}
+                                disabled={!cart.find(i => i.duration === p.duration && i.urgency === currentUrgency)}
+                                className="h-8 w-8 rounded-md"
+                              >
+                                -
+                              </Button>
+                              <div className="text-center">
+                                <span className="font-bold text-sm block">{cart.find(i => i.duration === p.duration && i.urgency === currentUrgency)?.quantity || 0}</span>
+                                <span className="text-[8px] text-muted-foreground uppercase">{currentUrgency}</span>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => updateCart(p.duration, p.label, p.basePrice, 1)}
+                                className="h-8 w-8 rounded-md hover:bg-brand-gold hover:text-white"
+                              >
+                                +
+                              </Button>
                             </div>
                           </div>
-                          <span className="font-bold text-brand-gold">{formatPrice(item.basePrice * item.multiplier * item.quantity)}</span>
+                        );
+                      })}
+                    </div>
+
+                    {cart.length > 0 && (
+                      <div className="mt-6 p-4 rounded-xl border border-brand-gold/30 bg-brand-gold/5">
+                        <h4 className="text-xs font-bold text-brand-gold uppercase tracking-widest mb-3">Selected Sessions Summary</h4>
+                        <div className="space-y-3">
+                          {cart.map((item, idx) => (
+                            <div key={`${item.duration}-${item.urgency}`} className="flex justify-between items-center text-sm">
+                              <div className="space-y-0.5">
+                                <span className="text-foreground font-medium">{item.label} × {item.quantity}</span>
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline" className={`text-[10px] h-4 px-1 ${urgencyColors[item.urgency]}`}>
+                                    {item.urgency}
+                                  </Badge>
+                                  <span className="text-[10px] text-muted-foreground">{item.multiplier}x multiplier</span>
+                                </div>
+                              </div>
+                              <span className="font-bold text-brand-gold">{formatPrice(item.basePrice * item.multiplier * item.quantity)}</span>
+                            </div>
+                          ))}
+                          <Separator className="bg-brand-gold/20 my-2" />
+                          <div className="flex justify-between font-bold text-base">
+                            <span>Total Amount</span>
+                            <span className="text-brand-gold">{formatPrice(totalPrice)}</span>
+                          </div>
                         </div>
-                      ))}
-                      <Separator className="bg-brand-gold/20 my-2" />
-                      <div className="flex justify-between font-bold text-base">
-                        <span>Total Amount</span>
-                        <span className="text-brand-gold">{formatPrice(totalPrice)}</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <div className="space-y-2">
+                  <Label>Describe your query <span className="text-red-500">*</span></Label>
+                  <Textarea
+                    placeholder="Tell us about what you need help with..."
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    rows={4}
+                    className="bg-card border-border"
+                  />
+                </div>
+
+                <Button
+                  onClick={() => setStep(2)}
+                  disabled={cart.length === 0}
+                  className="w-full bg-brand-red hover:bg-brand-red-light text-white"
+                  size="lg"
+                >
+                  Next: Review Booking <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </motion.div>
+            )}
+
+            {/* Step 2: Confirm */}
+            {step === 2 && (
+              <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+                <Card className="border-border">
+                  <CardHeader><CardTitle className="text-lg">Booking Summary</CardTitle></CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-3 rounded-lg bg-muted/50">
+                        <p className="text-xs text-muted-foreground">Total Duration</p>
+                        <p className="font-medium">{totalMins} minutes</p>
+                      </div>
+                      <div className="p-3 rounded-lg bg-muted/50">
+                        <p className="text-xs text-muted-foreground">Total Sessions</p>
+                        <p className="font-medium">{cart.reduce((a, b) => a + b.quantity, 0)} sessions</p>
                       </div>
                     </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
 
-
-             {/* Live Price Summary */}
-             <motion.div key={totalPrice} initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="p-6 rounded-xl bg-gradient-to-r from-brand-red/10 to-brand-gold/10 border border-border">
-               <div className="flex items-center justify-between">
-                 <div>
-                    <p className="text-sm text-muted-foreground">Total Talktime</p>
-                    <p className="text-2xl font-bold text-foreground">
-                      {totalMins} <span className="text-sm font-normal text-muted-foreground">Minutes</span>
-                    </p>
-                 </div>
-                 <div className="text-right">
-                    <p className="text-sm text-muted-foreground">Grand Total</p>
-                    <motion.span key={totalPrice} initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="text-3xl font-bold text-brand-gold">
-                      {formatPrice(totalPrice)}
-                    </motion.span>
-                 </div>
-               </div>
-             </motion.div>
-
-            <div className="space-y-2">
-              <Label>Describe your query <span className="text-red-500">*</span></Label>
-              <Textarea
-                placeholder="Tell us about what you need help with..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                rows={4}
-                className="bg-card border-border"
-              />
-            </div>
-
-            <Button 
-               onClick={() => setStep(2)} 
-               disabled={cart.length === 0}
-               className="w-full bg-brand-red hover:bg-brand-red-light text-white" 
-               size="lg"
-             >
-               Next: Review Booking <ArrowRight className="ml-2 h-4 w-4" />
-             </Button>
-          </motion.div>
-        )}
-
-        {/* Step 2: Confirm */}
-        {step === 2 && (
-          <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
-            <Card className="border-border">
-              <CardHeader><CardTitle className="text-lg">Booking Summary</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
-                 <div className="grid grid-cols-2 gap-4">
-                  <div className="p-3 rounded-lg bg-muted/50">
-                    <p className="text-xs text-muted-foreground">Total Duration</p>
-                    <p className="font-medium">{totalMins} minutes</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-muted/50">
-                    <p className="text-xs text-muted-foreground">Total Sessions</p>
-                    <p className="font-medium">{cart.reduce((a, b) => a + b.quantity, 0)} sessions</p>
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <p className="text-xs font-bold text-brand-gold uppercase tracking-widest">Plan Details</p>
-                  <div className="space-y-2">
-                    {cart.map((item, idx) => (
-                      <div key={idx} className="flex justify-between items-center text-sm p-2 rounded bg-background/50 border border-border">
-                        <div className="flex flex-col">
-                          <span className="font-medium">{item.label} × {item.quantity}</span>
-                          <span className="text-[10px] text-muted-foreground">Urgency: {item.urgency}</span>
-                        </div>
-                        <span className="font-bold">{formatPrice(item.basePrice * item.multiplier * item.quantity)}</span>
+                    <div className="space-y-2">
+                      <p className="text-xs font-bold text-brand-gold uppercase tracking-widest">Plan Details</p>
+                      <div className="space-y-2">
+                        {cart.map((item, idx) => (
+                          <div key={idx} className="flex justify-between items-center text-sm p-2 rounded bg-background/50 border border-border">
+                            <div className="flex flex-col">
+                              <span className="font-medium">{item.label} × {item.quantity}</span>
+                              <span className="text-[10px] text-muted-foreground">Urgency: {item.urgency}</span>
+                            </div>
+                            <span className="font-bold">{formatPrice(item.basePrice * item.multiplier * item.quantity)}</span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    </div>
+                    <div className="p-4 rounded-lg border border-brand-gold/20 bg-brand-gold/5">
+                      <p className="text-sm font-medium mb-1">Schedule Info</p>
+                      <p className="text-xs text-muted-foreground">
+                        Admin will assign a date and time slot for your consultation once the booking is reviewed. You will receive a notification.
+                      </p>
+                    </div>
+                    {query && (
+                      <div className="p-3 rounded-lg bg-muted/50">
+                        <p className="text-xs text-muted-foreground mb-1">Query</p>
+                        <p className="text-sm">{query}</p>
+                      </div>
+                    )}
+                    <Separator className="bg-accent/50" />
+                    <div className="flex items-center justify-between p-4 rounded-lg bg-brand-gold/5 border border-brand-gold/20">
+                      <span className="font-medium">Total Amount</span>
+                      <span className="text-2xl font-bold text-brand-gold">{formatPrice(totalPrice)}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <Button variant="outline" onClick={() => setStep(1)} className="w-full">Back</Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleSubmit(false)}
+                    disabled={submitting}
+                    className="w-full border-brand-gold text-brand-gold hover:bg-brand-gold/10"
+                  >
+                    <ShoppingBag className="mr-2 h-4 w-4" /> Add to Cart
+                  </Button>
+                  <Button
+                    onClick={() => handleSubmit(true)}
+                    disabled={submitting}
+                    className="w-full bg-brand-red hover:bg-brand-red-light text-white"
+                  >
+                    {submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</> : 'Checkout Now'}
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Sidebar Info Area: Talktime & Price Summary */}
+        <div className="lg:col-span-5 xl:col-span-4 space-y-6 order-1 lg:order-2 lg:sticky lg:top-24">
+          {/* Talktime Explanation Card */}
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+            <Card className="border-brand-gold/30 bg-brand-gold/5 overflow-hidden">
+              <CardHeader className="bg-brand-gold/10 pb-4">
+                <CardTitle className="text-sm font-bold text-brand-gold font-heading uppercase tracking-tight flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Flexible "Talktime" Sessions
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 space-y-4">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Experience a more personalized relationship with Harmanpreet through our <strong>Prepaid Session Model</strong>.
+                </p>
+
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold text-foreground flex items-center gap-2 uppercase tracking-wider">
+                      <Zap className="h-3 w-3 text-brand-gold" /> Use it Your Way
+                    </p>
+                    <p className="text-[10px] text-muted-foreground leading-normal">Buy a block of time and use it for multiple quick check-ins or long deep-dives as needed.</p>
+                  </div>
+
+                  <Separator className="bg-brand-gold/10" />
+
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold text-foreground flex items-center gap-2 uppercase tracking-wider">
+                      <CheckCircle className="h-3 w-3 text-brand-gold" /> Simple Connection
+                    </p>
+                    <p className="text-[10px] text-muted-foreground leading-normal">After payment, you&apos;ll receive instructions via email to connect directly and mutually decide on slots.</p>
                   </div>
                 </div>
-                <div className="p-4 rounded-lg border border-brand-gold/20 bg-brand-gold/5">
-                  <p className="text-sm font-medium mb-1">Schedule Info</p>
-                  <p className="text-xs text-muted-foreground">
-                    Admin will assign a date and time slot for your consultation once the booking is reviewed. You will receive a notification.
+
+                <div className="p-3 rounded-lg bg-brand-gold/10 border border-brand-gold/20 flex items-center gap-3">
+                  <div className="bg-brand-gold/20 p-2 rounded-md">
+                    <Calendar className="h-4 w-4 text-brand-gold" />
+                  </div>
+                  <p className="text-[9px] text-brand-gold font-medium leading-tight">
+                    Sessions act as a flexible balance. No rigid one-off appointments.
                   </p>
                 </div>
-                {query && (
-                  <div className="p-3 rounded-lg bg-muted/50">
-                    <p className="text-xs text-muted-foreground mb-1">Query</p>
-                    <p className="text-sm">{query}</p>
-                  </div>
-                )}
-                <Separator className="bg-accent/50" />
-                <div className="flex items-center justify-between p-4 rounded-lg bg-brand-gold/5 border border-brand-gold/20">
-                  <span className="font-medium">Total Amount</span>
-                  <span className="text-2xl font-bold text-brand-gold">{formatPrice(totalPrice)}</span>
-                </div>
               </CardContent>
             </Card>
+          </motion.div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <Button variant="outline" onClick={() => setStep(1)} className="w-full">Back</Button>
-              <Button
-                variant="outline"
-                onClick={() => handleSubmit(false)}
-                disabled={submitting}
-                className="w-full border-brand-gold text-brand-gold hover:bg-brand-gold/10"
-              >
-                <ShoppingBag className="mr-2 h-4 w-4" /> Add to Cart
-              </Button>
-              <Button
-                onClick={() => handleSubmit(true)}
-                disabled={submitting}
-                className="w-full bg-brand-red hover:bg-brand-red-light text-white"
-              >
-                {submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</> : 'Checkout Now'}
-              </Button>
+          {/* Live Price Summary Sidebar Card */}
+          <motion.div key={totalPrice} initial={{ scale: 0.98 }} animate={{ scale: 1 }} className="p-6 rounded-xl bg-gradient-to-br from-brand-red/10 via-background to-brand-gold/10 border border-border shadow-xl">
+            <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-4">Pricing Summary</h4>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Total Talktime</span>
+                <span className="text-lg font-bold">{totalMins} <span className="text-[10px] font-normal">Mins</span></span>
+              </div>
+              <Separator className="bg-border/50" />
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-foreground uppercase">Grand Total</span>
+                <motion.span key={totalPrice} initial={{ y: -5, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="text-2xl font-extrabold text-brand-gold font-mono">
+                  {formatPrice(totalPrice)}
+                </motion.span>
+              </div>
+              <p className="text-[9px] text-muted-foreground italic text-center pt-2">
+                * Final slots are subject to specialist availability.
+              </p>
             </div>
           </motion.div>
-        )}
-      </AnimatePresence>
+        </div>
+      </div>
 
       {/* Reviews Section */}
       <motion.div
