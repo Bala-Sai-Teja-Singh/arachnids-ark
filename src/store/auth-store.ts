@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User, SafeUser, UserRole } from '@/types';
 import { DbClient } from '@/lib/db-client';
+import { useFavoriteStore } from './favorite-store';
 
 interface AuthState {
   user: SafeUser | null;
@@ -36,6 +37,8 @@ export const useAuthStore = create<AuthState>()(
         }
 
         set({ user: result.user, isAuthenticated: true, isLoading: false });
+        // Load favorites
+        useFavoriteStore.getState().loadFavorites(result.user.id);
         return { success: true };
       },
 
@@ -56,8 +59,11 @@ export const useAuthStore = create<AuthState>()(
         try {
           const created = await DbClient.create<User>('users', newUser);
           // Remove password from the response for safe user
-          const { password: _, ...safeUser } = created as any;
-          set({ user: safeUser, isAuthenticated: true, isLoading: false });
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { password: _password, ...safeUser } = created as User & { password?: string };
+          set({ user: safeUser as SafeUser, isAuthenticated: true, isLoading: false });
+          // Load favorites
+          useFavoriteStore.getState().loadFavorites(safeUser.id);
           return { success: true };
         } catch {
           set({ isLoading: false });
@@ -67,6 +73,7 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         set({ user: null, isAuthenticated: false });
+        useFavoriteStore.getState().clearFavorites();
       },
 
       updateProfile: (updates: Partial<SafeUser>) => {

@@ -10,9 +10,12 @@ import { Db } from '@/lib/db';
 import type { User, UserRole } from '@/types';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/auth-store';
+import { Loading } from '@/components/shared/molecules/loading';
+import { SectionHeader } from '@/components/shared/molecules/section-header';
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [roleChangeInfo, setRoleChangeInfo] = useState<{ id: string, name: string, targetRole: UserRole } | null>(null);
   const [resetPasswordInfo, setResetPasswordInfo] = useState<{ id: string, name: string } | null>(null);
@@ -22,7 +25,9 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     (async () => {
+      setIsLoading(true);
       setUsers(await Db.getAll<User>('users'));
+      setIsLoading(false);
     })();
   }, []);
 
@@ -75,8 +80,13 @@ export default function AdminUsersPage() {
     setIsResetting(false);
   };
 
+  if (isLoading) {
+    return <Loading text="Scanning neural archives for user data..." />;
+  }
+
   return (
     <div className="space-y-6">
+      <SectionHeader />
 
       <TableMolecule
         data={users}

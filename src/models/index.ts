@@ -15,3 +15,4 @@ export { CareGuideModel } from './CareGuide';
 export { SystemSettingsModel } from './SystemSettings';
 export { ConsultationSettingsModel } from './ConsultationSettings';
 export { RevenueModel } from './Revenue';
+export { FavoriteModel } from './Favorite';

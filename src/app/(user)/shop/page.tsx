@@ -19,6 +19,7 @@ import { Loading } from '@/components/shared/molecules/loading';
 import { Db } from '@/lib/db';
 import { useCartStore } from '@/store/cart-store';
 import { useAuthStore } from '@/store/auth-store';
+import { useFavoriteStore } from '@/store/favorite-store';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { formatPrice } from '@/constants/pricing';
@@ -131,7 +132,7 @@ function FilterPanel({
 export default function ShopPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [likedIds, setLikedIds] = useState<string[]>([]);
+  const { likedIds, toggleLike, isLiked } = useFavoriteStore();
   const [search, setSearch] = useState('');
   const [mainCategory, setMainCategory] = useState<string>('All');
   const [habitat, setHabitat] = useState('');
@@ -168,11 +169,6 @@ export default function ShopPage() {
       setProducts(await Db.getAll<Product>('products'));
       setLoading(false);
     }, 300);
-
-    const savedLikes = localStorage.getItem('arachnidsark_liked_products');
-    if (savedLikes) {
-      setLikedIds(JSON.parse(savedLikes));
-    }
   }, []);
 
   const handleLike = async (e: React.MouseEvent, productId: string) => {
@@ -186,19 +182,18 @@ export default function ShopPage() {
       return;
     }
 
-    const isLiked = likedIds.includes(productId);
-    let newLikedIds = isLiked ? likedIds.filter(id => id !== productId) : [...likedIds, productId];
-
-    setLikedIds(newLikedIds);
-    localStorage.setItem('arachnidsark_liked_products', JSON.stringify(newLikedIds));
-
-    const product = products.find(p => p.id === productId);
-    if (product) {
-      const newLikes = isLiked ? Math.max(0, (product.likes || 0) - 1) : (product.likes || 0) + 1;
-      await Db.update<Product>('products', productId, { likes: newLikes });
-      setProducts(prev => prev.map(p => p.id === productId ? { ...p, likes: newLikes } : p));
-      if (!isLiked) toast.success(`You liked ${product.name}!`, { icon: <Heart className="h-4 w-4 text-red-500 fill-red-500" /> });
-    }
+    const { user } = useAuthStore.getState();
+    await toggleLike(productId, 'product', user?.id);
+    
+    // Refresh the local products list to update like count (UI only)
+    const currentIsLiked = isLiked(productId, 'product');
+    setProducts(prev => prev.map(p => {
+        if (p.id === productId) {
+            const delta = currentIsLiked ? -1 : 1;
+            return { ...p, likes: Math.max(0, (p.likes || 0) + delta) };
+        }
+        return p;
+    }));
   };
 
   useEffect(() => {
@@ -353,7 +348,7 @@ export default function ShopPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filtered.map((product) => (
-            <ProductCard key={product.id} product={product} isLiked={likedIds.includes(product.id)} onLike={(e) => handleLike(e, product.id)} onAddToCart={(e) => handleAddToCart(e, product)} />
+            <ProductCard key={product.id} product={product} isLiked={isLiked(product.id, 'product')} onLike={(e) => handleLike(e, product.id)} onAddToCart={(e) => handleAddToCart(e, product)} />
           ))}
         </div>
       )}

@@ -25,6 +25,7 @@ import Link from 'next/link';
 import { useModules } from '@/hooks/use-modules';
 import { useReviewStore } from '@/store/review-store';
 import { useCartStore } from '@/store/cart-store';
+import { useFavoriteStore } from '@/store/favorite-store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const careLevelColors: Record<string, string> = {
@@ -52,7 +53,8 @@ export default function ProductDetailPage() {
   const [inquiryOpen, setInquiryOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [quantity, setQuantity] = useState(1);
-  const [isLiked, setIsLiked] = useState(false);
+  const { isLiked: checkIsLiked, toggleLike } = useFavoriteStore();
+  const isLiked = checkIsLiked(params.id as string, 'product');
   const [deliveryName, setDeliveryName] = useState(user?.name || '');
   const [deliveryPhone, setDeliveryPhone] = useState(user?.phone || '');
   const [deliveryAddress, setDeliveryAddress] = useState('');
@@ -89,14 +91,6 @@ export default function ProductDetailPage() {
           );
           setHasPurchased(purchased);
         }
-  
-        // Load liked status from store
-        // (This will be updated later when I use favoriteStore in the UI)
-        const savedLikes = localStorage.getItem('arachnidsark_liked_products');
-        if (savedLikes) {
-          const likedIds = JSON.parse(savedLikes);
-          setIsLiked(likedIds.includes(params.id as string));
-        }
       }, 0);
     })();
   }, [params.id, loadReviews, user]);
@@ -114,32 +108,13 @@ export default function ProductDetailPage() {
       return;
     }
     
-    const savedLikes = localStorage.getItem('arachnidsark_liked_products');
-    let likedIds = savedLikes ? JSON.parse(savedLikes) : [];
-    const currentlyLiked = likedIds.includes(product.id);
+    const { user } = useAuthStore.getState();
+    await toggleLike(product.id, 'product', user?.id);
     
-    let newLikedIds: string[];
-    if (currentlyLiked) {
-      newLikedIds = likedIds.filter((id: string) => id !== product.id);
-    } else {
-      newLikedIds = [...likedIds, product.id];
-    }
-    
-    localStorage.setItem('arachnidsark_liked_products', JSON.stringify(newLikedIds));
-    setIsLiked(!currentlyLiked);
-    
-    // Update the like count in the mock database
-    const newLikes = currentlyLiked ? Math.max(0, (product.likes || 0) - 1) : (product.likes || 0) + 1;
-    await Db.update<Product>('products', product.id, { likes: newLikes });
-    
-    // Update local state to reflect new like count
-    setProduct({ ...product, likes: newLikes });
-    
-    if (!currentlyLiked) {
-      toast.success(`You liked ${product.name}!`, {
-        icon: <Heart className="h-4 w-4 text-red-500 fill-red-500" />,
-      });
-    }
+    // Refresh the local product to update like count (UI only)
+    const currentIsLiked = checkIsLiked(product.id, 'product');
+    const delta = currentIsLiked ? -1 : 1;
+    setProduct(prev => prev ? { ...prev, likes: Math.max(0, (prev.likes || 0) + delta) } : null);
   };
 
   useEffect(() => {

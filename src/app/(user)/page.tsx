@@ -14,6 +14,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/auth-store';
+import { useFavoriteStore } from '@/store/favorite-store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useModules } from '@/hooks/use-modules';
 
@@ -155,21 +156,18 @@ function HeroSection() {
 // ========== FEATURED TARANTULAS ==========
 function FeaturedTarantulas() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [likedIds, setLikedIds] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { isLiked: checkIsLiked, toggleLike } = useFavoriteStore();
   const { isAuthenticated } = useAuthStore();
   const router = useRouter();
   const { isVisible } = useModules();
 
   useEffect(() => {
       (async () => {
+      setIsLoading(true);
       const all = await Db.getAll<Product>('products');
       setProducts(all.filter(p => p.featured && p.isVisible !== false).slice(0, 4));
-  
-      // Load liked products from local storage
-      const savedLikes = localStorage.getItem('arachnidsark_liked_products');
-      if (savedLikes) {
-        setLikedIds(JSON.parse(savedLikes));
-      }
+      setIsLoading(false);
       })();
   }, []);
 
@@ -187,35 +185,18 @@ function FeaturedTarantulas() {
       return;
     }
     
-    const isLiked = likedIds.includes(productId);
-    let newLikedIds: string[];
+    const { user } = useAuthStore.getState();
+    await toggleLike(productId, 'product', user?.id);
     
-    if (isLiked) {
-      newLikedIds = likedIds.filter(id => id !== productId);
-    } else {
-      newLikedIds = [...likedIds, productId];
-    }
-    
-    setLikedIds(newLikedIds);
-    localStorage.setItem('arachnidsark_liked_products', JSON.stringify(newLikedIds));
-    
-    // Update the like count in the mock database
-    const product = products.find(p => p.id === productId);
-    if (product) {
-      const newLikes = isLiked ? Math.max(0, (product.likes || 0) - 1) : (product.likes || 0) + 1;
-      await Db.update<Product>('products', productId, { likes: newLikes });
-      
-      // Update local state to reflect new like count
-      setProducts(prev => prev.map(p => 
-        p.id === productId ? { ...p, likes: newLikes } : p
-      ));
-      
-      if (!isLiked) {
-        toast.success(`You liked ${product.name}!`, {
-          icon: <Heart className="h-4 w-4 text-red-500 fill-red-500" />,
-        });
-      }
-    }
+    // Refresh the local products list to update like count (UI only)
+    const currentIsLiked = checkIsLiked(productId, 'product');
+    setProducts(prev => prev.map(p => {
+        if (p.id === productId) {
+            const delta = currentIsLiked ? -1 : 1;
+            return { ...p, likes: Math.max(0, (p.likes || 0) + delta) };
+        }
+        return p;
+    }));
   };
 
   const careLevelColors: Record<string, string> = {
@@ -248,7 +229,14 @@ function FeaturedTarantulas() {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-72 rounded-2xl bg-card/20 animate-pulse border border-border" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {products.map((product, i) => (
             <motion.div
               key={product.id}
@@ -281,12 +269,12 @@ function FeaturedTarantulas() {
                     <button
                       onClick={(e) => handleLike(e, product.id)}
                       className={`absolute bottom-3 right-3 z-10 p-2 rounded-full backdrop-blur-md border border-white/20 shadow-xl transition-all duration-300 group/like ${
-                        likedIds.includes(product.id) 
+                        checkIsLiked(product.id, 'product') 
                           ? 'bg-red-500 text-white border-red-400' 
                           : 'bg-black/60 text-white hover:bg-black/80'
                       }`}
                     >
-                      <Heart className={`h-4 w-4 ${likedIds.includes(product.id) ? 'fill-current' : 'group-hover/like:scale-110 transition-transform'}`} />
+                      <Heart className={`h-4 w-4 ${checkIsLiked(product.id, 'product') ? 'fill-current' : 'group-hover/like:scale-110 transition-transform'}`} />
                     </button>
                     
                     {/* Like Count */}
@@ -372,6 +360,7 @@ function FeaturedTarantulas() {
             </motion.div>
           ))}
         </div>
+        )}
 
         <div className="text-center mt-10">
           <Link href="/shop">
@@ -390,12 +379,15 @@ function FeaturedTarantulas() {
 // ========== FEATURED COURSES ==========
 function FeaturedCourses() {
   const [courses, setCourses] = useState<Course[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { isVisible } = useModules();
 
   useEffect(() => {
     (async () => {
+    setIsLoading(true);
     const all = await Db.getAll<Course>('courses');
     setCourses(all.filter(c => c.featured).slice(0, 3));
+    setIsLoading(false);
   })();
   }, []);
 
@@ -421,7 +413,14 @@ function FeaturedCourses() {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-64 rounded-2xl bg-card/20 animate-pulse border border-border" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {courses.map((course, i) => (
             <motion.div
               key={course.id}
@@ -462,6 +461,7 @@ function FeaturedCourses() {
             </motion.div>
           ))}
         </div>
+        )}
 
         <div className="text-center mt-10">
           <Link href="/courses">
@@ -480,10 +480,13 @@ function FeaturedCourses() {
 // ========== CARE GUIDES PREVIEW ==========
 function CareGuidesPreview() {
   const [guides, setGuides] = useState<CareGuide[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
+    setIsLoading(true);
     setGuides((await Db.getAll<CareGuide>('care_guides')).slice(0, 4));
+    setIsLoading(false);
   })();
   }, []);
 
@@ -508,7 +511,14 @@ function CareGuidesPreview() {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-32 rounded-2xl bg-card/20 animate-pulse border border-border" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {guides.map((guide, i) => (
             <motion.div
               key={guide.id}
@@ -528,6 +538,7 @@ function CareGuidesPreview() {
             </motion.div>
           ))}
         </div>
+        )}
       </div>
     </section>
   );

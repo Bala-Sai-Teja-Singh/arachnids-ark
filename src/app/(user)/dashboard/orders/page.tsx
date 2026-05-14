@@ -19,12 +19,14 @@ import { formatPrice } from '@/constants/pricing';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { Loading } from '@/components/shared/molecules/loading';
 import { cn } from '@/lib/utils';
 
 export default function MyOrdersPage() {
   const { user } = useAuthStore();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
   const [orders, setOrders] = useState<Order[]>([]);
   const [uploadId, setUploadId] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -37,13 +39,13 @@ export default function MyOrdersPage() {
   useEffect(() => {
       (async () => {
       if (!user) return;
+      setIsLoading(true);
       const allOrders = await Db.getAll<Order>('orders');
       const data = allOrders
         .filter(o => o.userId === user.id)
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setTimeout(() => {
-        setOrders(data);
-      }, 0);
+      
+      setOrders(data);
   
       const settingsData = await Db.getSettings<SystemSettings>('system_settings');
       if (settingsData) {
@@ -51,6 +53,8 @@ export default function MyOrdersPage() {
         const defaultUPI = settingsData.upiIds.find(u => u.isDefault) || settingsData.upiIds[0];
         if (defaultUPI) setSelectedUPI(defaultUPI.value);
       }
+      
+      setIsLoading(false);
   
       // Auto-expand if ID is in search params
       const orderId = searchParams.get('id');
@@ -87,6 +91,10 @@ export default function MyOrdersPage() {
   };
 
 
+
+  if (isLoading) {
+    return <Loading text="Retrieving your collection history..." />;
+  }
 
   return (
     <div>
