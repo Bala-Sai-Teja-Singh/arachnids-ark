@@ -59,6 +59,7 @@ const systemSettingsSchema = new Schema(
         return ret;
       },
     },
+    collection: 'system-settings',
   }
 );
 

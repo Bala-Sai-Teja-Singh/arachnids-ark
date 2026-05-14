@@ -46,6 +46,7 @@ const consultationSettingsSchema = new Schema(
         return ret;
       },
     },
+    collection: 'consultation-settings'
   }
 );
 

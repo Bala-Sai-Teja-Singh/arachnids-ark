@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { connectDB } from '@/lib/mongoose';
 import { ConsultationSettingsModel } from '@/models';
 
@@ -7,7 +8,7 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     await connectDB();
-    const settings = await ConsultationSettingsModel.findById('default');
+    const settings = await ConsultationSettingsModel.findOne({ _id: 'default' });
     if (!settings) return Response.json(null);
     return Response.json(settings.toJSON());
   } catch (error: any) {

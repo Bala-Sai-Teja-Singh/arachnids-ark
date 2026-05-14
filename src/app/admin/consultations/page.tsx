@@ -47,7 +47,15 @@ export default function AdminConsultationsSettingsPage() {
     toast.success('Pricing entry removed');
   };
 
-  if (!settings) return null;
+  if (!settings) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-gold"></div>
+        <p className="text-muted-foreground animate-pulse">Loading Consultation Settings...</p>
+        <p className="text-xs text-muted-foreground">If this takes too long, please refresh or check your database connection.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

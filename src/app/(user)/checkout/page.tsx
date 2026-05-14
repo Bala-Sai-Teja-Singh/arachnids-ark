@@ -185,7 +185,7 @@ export default function CheckoutPage() {
 
       if (paymentDetails) {
         const adminUser = (await Db.getAll<User>('users')).find(u => u.role === 'admin');
-        const adminEmail = adminUser?.email || 'harrysweettt@gmail.com';
+        const adminEmail = adminUser?.email || process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'arachnidsark.store@gmail.com';
 
         fetch('/api/emails/order-confirmation', {
           method: 'POST',

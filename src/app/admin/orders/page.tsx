@@ -328,7 +328,7 @@ export default function AdminOrdersPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         order,
-        adminEmail: (await Db.getAll<User>('users')).find(u => u.role === 'admin')?.email || 'harrysweettt@gmail.com'
+        adminEmail: (await Db.getAll<User>('users')).find(u => u.role === 'admin')?.email || process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'arachnidsark.store@gmail.com'
       })
     })
       .then(async () => {
@@ -367,7 +367,7 @@ export default function AdminOrdersPage() {
             bankDetails: settingsData.bankDetails,
             paymentInstructions: settingsData.paymentInstructions
           },
-          adminEmail: adminUsers.find(u => u.role === 'admin')?.email || 'harrysweettt@gmail.com'
+          adminEmail: adminUsers.find(u => u.role === 'admin')?.email || process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'arachnidsark.store@gmail.com'
         })
       })
         .then(() => toast.success('Payment instruction email resent!'))
@@ -495,7 +495,7 @@ export default function AdminOrdersPage() {
           body: JSON.stringify({
             order: updatedOrder,
             changeSummary: updateSummary,
-            adminEmail: (await Db.getAll<User>('users')).find(u => u.role === 'admin')?.email || 'harrysweettt@gmail.com'
+            adminEmail: (await Db.getAll<User>('users')).find(u => u.role === 'admin')?.email || process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'arachnidsark.store@gmail.com'
           })
         });
         toast.success('Order updated and customer notified');

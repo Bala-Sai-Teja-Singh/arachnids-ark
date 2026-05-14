@@ -35,6 +35,7 @@ const careGuideSchema = new Schema(
         return ret;
       },
     },
+    collection: 'care-guides',
   }
 );
 
